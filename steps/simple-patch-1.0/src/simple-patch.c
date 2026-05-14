@@ -13,51 +13,59 @@ This program is written in a subset of C called M2, which is from the
 stage0-posix bootstrap project.
 
 Example usage:
-./simple-patch file_to_patch before_pattern_file after_pattern_file
+./simple-patch -p1 -i patch_file
 
 */
 
 // function prototypes
 void read_file_or_die(char *file_name, char **buffer, int *file_size);
-void patch_buffer_or_die(char *patch_file_before_buffer, int patch_file_before_size,
-                 char *before_pattern_buffer, int before_pattern_size,
-                 char *after_pattern_buffer, int after_pattern_size,
-                 char *patch_file_after_buffer);
+void write_file_or_die(char *file_name, char *buffer, int file_size);
+void patch_unified_or_die(char *patch_buffer, int patch_size, int strip);
+void apply_hunk_or_die(char **file_buffer, int *file_size, int *offset,
+                 char *before_buffer, int before_size,
+                 char *after_buffer, int after_size);
 void writestr_fd(int fd, char *str);
+void usage(void);
 int memsame(char *search_buffer, int search_size,
             char *pattern_buffer, int pattern_size);
+int starts_with(char *buffer, int size, char *pattern);
+int line_size(char *pos, char *end);
+int next_line_starts_with(char *line, int size, char *end, char *pattern);
+char *copy_patch_path(char *line, int size, int strip);
+int parse_strip(char *arg);
 
 
 int main(int argc, char **argv) {
-    char *patch_file_before_buffer;
-    int patch_file_before_size;
+    int strip;
+    char *patch_name;
+    char *patch_buffer;
+    int patch_size;
+    int i;
 
-    char *before_pattern_buffer;
-    int before_pattern_size;
+    strip = 0;
+    patch_name = NULL;
+    i = 1;
+    while(i < argc) {
+        if(strcmp(argv[i], "-i") == 0) {
+            i = i + 1;
+            if(i >= argc) usage();
+            patch_name = argv[i];
+        } else if(strcmp(argv[i], "-N") == 0) {
+            /* Already-applied patch detection is not needed for bootstrap use. */
+        } else if(starts_with(argv[i], strlen(argv[i]), "-p")) {
+            strip = parse_strip(argv[i] + 2);
+        } else if(starts_with(argv[i], strlen(argv[i]), "-Np")) {
+            strip = parse_strip(argv[i] + 3);
+        } else {
+            patch_name = argv[i];
+        }
+        i = i + 1;
+    }
 
-    char *after_pattern_buffer;
-    int after_pattern_size;
+    if(patch_name == NULL) usage();
 
-    int patch_file_after_size;
-    char *patch_file_after_buffer;
-
-    int patch_file_fd;
-
-    read_file_or_die(argv[1], &patch_file_before_buffer, &patch_file_before_size);
-    read_file_or_die(argv[2], &before_pattern_buffer, &before_pattern_size);
-    read_file_or_die(argv[3], &after_pattern_buffer, &after_pattern_size);
-
-    patch_file_after_size = patch_file_before_size - before_pattern_size + after_pattern_size;
-    patch_file_after_buffer = calloc(patch_file_after_size, sizeof(char));
-
-    patch_buffer_or_die(patch_file_before_buffer, patch_file_before_size,
-                 before_pattern_buffer, before_pattern_size,
-                 after_pattern_buffer, after_pattern_size,
-                 patch_file_after_buffer);
-    
-    patch_file_fd = open(argv[1], O_WRONLY | O_CREAT | O_TRUNC, 0);
-    write(patch_file_fd, patch_file_after_buffer, patch_file_after_size);
-    close(patch_file_fd);
+    read_file_or_die(patch_name, &patch_buffer, &patch_size);
+    patch_unified_or_die(patch_buffer, patch_size, strip);
 
     return EXIT_SUCCESS;
 }
@@ -79,7 +87,7 @@ void read_file_or_die(char *file_name, char **buffer, int *file_size) {
     // go back to beginning of file
     lseek(file_fd, 0, SEEK_SET);
     // alloc a buffer to read the entire file
-    *buffer = calloc(*file_size, sizeof(char));
+    *buffer = calloc(*file_size + 1, sizeof(char));
 
     // read the entire patch file
     num_bytes_read = read(file_fd, *buffer, *file_size);
@@ -92,31 +100,172 @@ void read_file_or_die(char *file_name, char **buffer, int *file_size) {
     close(file_fd);
 }
 
-void patch_buffer_or_die(char *patch_file_before_buffer, int patch_file_before_size,
-                 char *before_pattern_buffer, int before_pattern_size,
-                 char *after_pattern_buffer, int after_pattern_size,
-                 char *patch_file_after_buffer) {
+void write_file_or_die(char *file_name, char *buffer, int file_size) {
+    int file_fd;
+    int num_bytes_written;
 
-    char *pos = patch_file_before_buffer;
-    int prefix_len = 0;
+    file_fd = open(file_name, O_WRONLY | O_CREAT | O_TRUNC, 0);
+    if (file_fd == -1) {
+        writestr_fd(2, "Could not write file: ");
+        writestr_fd(2, file_name);
+        writestr_fd(2, "\n");
+        exit(1);
+    }
+    num_bytes_written = write(file_fd, buffer, file_size);
+    if (num_bytes_written != file_size) {
+        writestr_fd(2, "Could not write file: ");
+        writestr_fd(2, file_name);
+        writestr_fd(2, "\n");
+        exit(1);
+    }
+    close(file_fd);
+}
 
-    // look for the pattern at every offset
-    while (prefix_len < patch_file_before_size) {
-        // if we find the pattern, replace it and return
-        if (memsame(pos, patch_file_before_size - prefix_len, before_pattern_buffer, before_pattern_size)) {
-           memcpy(patch_file_after_buffer, patch_file_before_buffer, prefix_len);
-           memcpy(patch_file_after_buffer + prefix_len, after_pattern_buffer, after_pattern_size);
-           memcpy(patch_file_after_buffer + prefix_len + after_pattern_size, 
-                  patch_file_before_buffer + prefix_len + before_pattern_size, 
-                  patch_file_before_size - (prefix_len + before_pattern_size));
-           return;
+void patch_unified_or_die(char *patch_buffer, int patch_size, int strip) {
+    char *pos;
+    char *end;
+    int size;
+    char *file_name;
+    char *file_buffer;
+    int file_size;
+    int file_offset;
+    int file_dirty;
+    char *before_buffer;
+    char *after_buffer;
+    int before_size;
+    int after_size;
+    char prefix;
+    int content_size;
+
+    pos = patch_buffer;
+    end = patch_buffer + patch_size;
+    file_name = NULL;
+    file_buffer = NULL;
+    file_size = 0;
+    file_offset = 0;
+    file_dirty = FALSE;
+
+    while(pos < end) {
+        size = line_size(pos, end);
+
+        if(starts_with(pos, size, "--- ")) {
+            if(file_dirty) {
+                write_file_or_die(file_name, file_buffer, file_size);
+                file_dirty = FALSE;
+            }
+
+            pos = pos + size;
+            if(pos >= end) {
+                writestr_fd(2, "Missing +++ line\n");
+                exit(1);
+            }
+            size = line_size(pos, end);
+            if(!starts_with(pos, size, "+++ ")) {
+                writestr_fd(2, "Missing +++ line\n");
+                exit(1);
+            }
+            file_name = copy_patch_path(pos + 4, size - 4, strip);
+            read_file_or_die(file_name, &file_buffer, &file_size);
+            file_offset = 0;
+            pos = pos + size;
+        } else if(starts_with(pos, size, "@@ ")) {
+            if(file_name == NULL) {
+                writestr_fd(2, "Patch hunk has no file header\n");
+                exit(1);
+            }
+
+            pos = pos + size;
+            before_buffer = calloc(patch_size + 1, sizeof(char));
+            after_buffer = calloc(patch_size + 1, sizeof(char));
+            before_size = 0;
+            after_size = 0;
+
+            while(pos < end) {
+                size = line_size(pos, end);
+                if(starts_with(pos, size, "@@ ")) {
+                    break;
+                }
+                if(starts_with(pos, size, "diff ")) {
+                    break;
+                }
+                if(starts_with(pos, size, "--- ") &&
+                   next_line_starts_with(pos, size, end, "+++ ")) {
+                    break;
+                }
+                if(starts_with(pos, size, "\\ No newline")) {
+                    pos = pos + size;
+                    continue;
+                }
+
+                prefix = pos[0];
+                content_size = size - 1;
+                if(prefix == ' ') {
+                    memcpy(before_buffer + before_size, pos + 1, content_size);
+                    memcpy(after_buffer + after_size, pos + 1, content_size);
+                    before_size = before_size + content_size;
+                    after_size = after_size + content_size;
+                } else if(prefix == '-') {
+                    memcpy(before_buffer + before_size, pos + 1, content_size);
+                    before_size = before_size + content_size;
+                } else if(prefix == '+') {
+                    memcpy(after_buffer + after_size, pos + 1, content_size);
+                    after_size = after_size + content_size;
+                } else {
+                    writestr_fd(2, "Unsupported patch hunk line\n");
+                    exit(1);
+                }
+                pos = pos + size;
+            }
+
+            apply_hunk_or_die(&file_buffer, &file_size, &file_offset,
+                         before_buffer, before_size,
+                         after_buffer, after_size);
+            file_dirty = TRUE;
+        } else {
+            pos = pos + size;
         }
-        pos = pos + 1;
-        prefix_len = prefix_len + 1;
     }
 
-    /* if we don't find the pattern, something is wrong, so exit with error */
-    exit(1);
+    if(file_dirty) {
+        write_file_or_die(file_name, file_buffer, file_size);
+    }
+}
+
+void apply_hunk_or_die(char **file_buffer, int *file_size, int *offset,
+                 char *before_buffer, int before_size,
+                 char *after_buffer, int after_size) {
+    int pos;
+    int new_size;
+    char *new_buffer;
+
+    pos = *offset;
+    if(before_size == 0) {
+        pos = *offset;
+    } else {
+        while(pos < *file_size) {
+            if(memsame(*file_buffer + pos, *file_size - pos,
+                       before_buffer, before_size)) {
+                break;
+            }
+            pos = pos + 1;
+        }
+        if(pos >= *file_size) {
+            writestr_fd(2, "Patch hunk did not match\n");
+            exit(1);
+        }
+    }
+
+    new_size = *file_size - before_size + after_size;
+    new_buffer = calloc(new_size + 1, sizeof(char));
+    memcpy(new_buffer, *file_buffer, pos);
+    memcpy(new_buffer + pos, after_buffer, after_size);
+    memcpy(new_buffer + pos + after_size,
+           *file_buffer + pos + before_size,
+           *file_size - pos - before_size);
+
+    *file_buffer = new_buffer;
+    *file_size = new_size;
+    *offset = pos + after_size;
 }
 
 /*
@@ -124,6 +273,11 @@ void patch_buffer_or_die(char *patch_file_before_buffer, int patch_file_before_s
 */
 void writestr_fd(int fd, char *str) {
     write(fd, str, strlen(str));
+}
+
+void usage(void) {
+    writestr_fd(2, "Usage: simple-patch [-pN] [-N] -i patch\n");
+    exit(1);
 }
 
 /*
@@ -145,4 +299,84 @@ int memsame(char *search_buffer, int search_size,
         check_offset = check_offset + 1;
     }
     return TRUE;
+}
+
+int starts_with(char *buffer, int size, char *pattern) {
+    return memsame(buffer, size, pattern, strlen(pattern));
+}
+
+int line_size(char *pos, char *end) {
+    int size;
+
+    size = 0;
+    while(pos + size < end) {
+        size = size + 1;
+        if(pos[size - 1] == '\n') {
+            return size;
+        }
+    }
+    return size;
+}
+
+int next_line_starts_with(char *line, int size, char *end, char *pattern) {
+    char *next;
+    int next_size;
+
+    next = line + size;
+    if(next >= end) {
+        return FALSE;
+    }
+    next_size = line_size(next, end);
+    return starts_with(next, next_size, pattern);
+}
+
+char *copy_patch_path(char *line, int size, int strip) {
+    int start;
+    int stop;
+    int components;
+    int out_size;
+    char *path;
+
+    start = 0;
+    while(start < size &&
+          (line[start] == ' ' || line[start] == '\t')) {
+        start = start + 1;
+    }
+
+    if(starts_with(line + start, size - start, "/dev/null")) {
+        writestr_fd(2, "Creating or deleting files is not supported\n");
+        exit(1);
+    }
+
+    components = 0;
+    while(start < size && components < strip) {
+        if(line[start] == '/') {
+            components = components + 1;
+        }
+        start = start + 1;
+    }
+
+    stop = start;
+    while(stop < size &&
+          line[stop] != ' ' &&
+          line[stop] != '\t' &&
+          line[stop] != '\n') {
+        stop = stop + 1;
+    }
+
+    out_size = stop - start;
+    if(out_size <= 0) {
+        writestr_fd(2, "Empty patch path\n");
+        exit(1);
+    }
+    path = calloc(out_size + 1, sizeof(char));
+    memcpy(path, line + start, out_size);
+    return path;
+}
+
+int parse_strip(char *arg) {
+    if(arg[0] == 0) {
+        return 0;
+    }
+    return atoi(arg);
 }

@@ -32,7 +32,6 @@ steps
 │   ├── pass1.kaem
 │   ├── pass2.sh
 │   ├── files
-│   ├── simple-patches
 │   ├── mk
 │   └── patches
 ```
@@ -57,7 +56,6 @@ Permissible folders/files:
 - `files`: auxiliary files required for the build distributed by live-bootstrap.
 - `mk`: makefiles.
 - `patches`: patches for the source.
-- `simple-patches`: patches for the source that use the before/after convention of simple-patch.c
 - `*.checksums`: files containing the checksums for the resulting binaries and
 libraries that are compiled and installed.
   - Otherwise, the package's checksum is in SHA256SUMS.pkgs.

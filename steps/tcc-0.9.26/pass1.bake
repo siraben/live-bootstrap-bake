@@ -21,8 +21,8 @@ cd build
 ungz --file ${DISTFILES}/${TCC_TAR}.tar.gz --output ${TCC_TAR}.tar
 ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
 untar --non-strict --file ${TCC_TAR}.tar
-simple-patch ${TCC_PKG}/tcctools.c ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
-simple-patch ${TCC_PKG}/tcctools.c ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
+simple-patch -Np0 -i ../patches/remove-fileopen.patch
+simple-patch -Np0 -i ../patches/addback-fileopen.patch
 untar --non-strict --file ${MES_PKG}.tar
 catm ${MES_PKG}/include/mes/config.h
 catm ${TCC_PKG}/config.h

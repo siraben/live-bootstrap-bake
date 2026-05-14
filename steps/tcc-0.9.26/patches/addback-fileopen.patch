@@ -1,0 +1,14 @@
+SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
+
+SPDX-License-Identifier: LGPL-2.0-or-later
+
+--- tcc-0.9.26-1147-gee75a10c/tcctools.c
++++ tcc-0.9.26-1147-gee75a10c/tcctools.c
+@@ -1 +1,8 @@
++    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
++    {
++        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
++        goto the_end;
++    }
++
+     // write header

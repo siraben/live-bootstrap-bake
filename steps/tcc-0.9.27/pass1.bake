@@ -12,10 +12,10 @@ cd build
 unbz2 --file ${DISTFILES}/${pkg}.tar.bz2 --output ${pkg}.tar
 ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
 untar --file ${pkg}.tar
-simple-patch tcc-0.9.27/tcctools.c ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
-simple-patch tcc-0.9.27/tcctools.c ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
-simple-patch tcc-0.9.27/tccelf.c ../simple-patches/fiwix-paddr.before ../simple-patches/fiwix-paddr.after
-simple-patch tcc-0.9.27/tccelf.c ../simple-patches/check-reloc-null.before ../simple-patches/check-reloc-null.after
+simple-patch -Np0 -i ../patches/remove-fileopen.patch
+simple-patch -Np0 -i ../patches/addback-fileopen.patch
+simple-patch -Np0 -i ../patches/fiwix-paddr.patch
+simple-patch -Np0 -i ../patches/check-reloc-null.patch
 untar --non-strict --file ${MES_PKG}.tar
 cd ${pkg}
 catm config.h

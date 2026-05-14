@@ -1,0 +1,10 @@
+SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
+
+SPDX-License-Identifier: LGPL-2.0-or-later
+
+--- tcc-0.9.27/tccelf.c
++++ tcc-0.9.27/tccelf.c
+@@ -1 +1,3 @@
+                         ph->p_paddr = ph->p_vaddr;
++                        if (s1->text_addr == 0x80100000)
++                            ph->p_paddr = ph->p_paddr - 0x80000000;
