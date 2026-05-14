@@ -533,8 +533,25 @@ char *make_target(char *prefix, char *name, int pass_no) {
 	return target;
 }
 
+int has_bake_script(char *name, int pass_no) {
+	char *filename = calloc(MAX_STRING, sizeof(char));
+	FILE *script;
+	strcpy(filename, "/steps/");
+	strcat(filename, name);
+	strcat(filename, "/pass");
+	strcat(filename, int2str(pass_no, 10, 0));
+	strcat(filename, ".bake");
+	script = fopen(filename, "r");
+	if (script == NULL) {
+		return 0;
+	}
+	fclose(script);
+	return 1;
+}
+
 char *output_build(FILE *out, Directive *directive, int pass_no, int bash_build, char *previous) {
 	char *target;
+	int use_bake;
 	if (bash_build) {
 		fputs("build ", out);
 		fputs(directive->arg, out);
@@ -543,6 +560,7 @@ char *output_build(FILE *out, Directive *directive, int pass_no, int bash_build,
 		fputs(".sh\n", out);
 		return previous;
 	} else {
+		use_bake = has_bake_script(directive->arg, pass_no);
 		target = make_target("", directive->arg, pass_no);
 		fputs(": ", out);
 		fputs(target, out);
@@ -554,9 +572,17 @@ char *output_build(FILE *out, Directive *directive, int pass_no, int bash_build,
 		fputs(directive->arg, out);
 		fputs("\n", out);
 		fputs("cd ${pkg}\n", out);
-		fputs("kaem --file pass", out);
+		if (use_bake) {
+			fputs("bake --file pass", out);
+		} else {
+			fputs("kaem --file pass", out);
+		}
 		fputs(int2str(pass_no, 10, 0), out);
-		fputs(".kaem\n", out);
+		if (use_bake) {
+			fputs(".bake all\n", out);
+		} else {
+			fputs(".kaem\n", out);
+		}
 		fputs("cd ..\n", out);
 		fputs("\n", out);
 		return target;
