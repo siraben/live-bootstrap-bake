@@ -1,3 +1,36 @@
+diff --git a/DEVEL.md b/DEVEL.md
+index 44aced6..68658c3 100644
+--- a/DEVEL.md
++++ b/DEVEL.md
+@@ -32,7 +32,6 @@ steps
+ │   ├── pass1.kaem
+ │   ├── pass2.sh
+ │   ├── files
+-│   ├── simple-patches
+ │   ├── mk
+ │   └── patches
+ ```
+@@ -57,7 +56,6 @@ Permissible folders/files:
+ - `files`: auxiliary files required for the build distributed by live-bootstrap.
+ - `mk`: makefiles.
+ - `patches`: patches for the source.
+-- `simple-patches`: patches for the source that use the before/after convention of simple-patch.c
+ - `*.checksums`: files containing the checksums for the resulting binaries and
+ libraries that are compiled and installed.
+   - Otherwise, the package's checksum is in SHA256SUMS.pkgs.
+diff --git a/REUSE.toml b/REUSE.toml
+index 34e3737..e345bbb 100644
+--- a/REUSE.toml
++++ b/REUSE.toml
+@@ -4,7 +4,7 @@ SPDX-PackageSupplier = "Samuel Tyler <samuel@samuelt.me>"
+ SPDX-PackageDownloadLocation = "https://github.com/fosslinux/live-bootstrap"
+ 
+ [[annotations]]
+-path = ["steps/**/sources", "steps/**/**.checksums", "steps/SHA256SUMS.pkgs", "steps/**/simple-patches/**", "seed/**.checksums"]
++path = ["steps/**/sources", "steps/**/**.checksums", "steps/SHA256SUMS.pkgs", "seed/**.checksums"]
+ precedence = "aggregate"
+ SPDX-FileCopyrightText = "none"
+ SPDX-License-Identifier = "MIT"
 diff --git a/seed/after.bake b/seed/after.bake
 new file mode 100644
 index 0000000..4e33058
@@ -567,6 +600,13 @@ index 5fd7449..0000000
 -./script-generator /steps/manifest
 -
 -kaem --file /steps/0.sh
+diff --git a/seed/stage0-posix b/seed/stage0-posix
+index 45d90f5..a8d1929 160000
+--- a/seed/stage0-posix
++++ b/seed/stage0-posix
+@@ -1 +1 @@
+-Subproject commit 45d90f5955b6907dc6cdea9ebafce558359edcd3
++Subproject commit a8d1929c613a97d8c1d40285a75b5c6b680d09b3
 diff --git a/steps/bash-2.05b/pass1.bake b/steps/bash-2.05b/pass1.bake
 new file mode 100644
 index 0000000..f659fcd
@@ -1039,7 +1079,7 @@ index 0000000..bf1a60b
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/mes-0.27.1/pass1.bake b/steps/mes-0.27.1/pass1.bake
 new file mode 100644
-index 0000000..8b742d3
+index 0000000..6609040
 --- /dev/null
 +++ b/steps/mes-0.27.1/pass1.bake
 @@ -0,0 +1,183 @@
@@ -1088,7 +1128,7 @@ index 0000000..8b742d3
 +replace --file ${mes_run} --output ${mes_run} --match-on 0x1000000 --replace-with 0x8048000
 +rm ${NYACC_PKG}.tar ${MES_PKG}.tar
 +cp ../files/config.h ${MES_PREFIX}/include/mes
-+simple-patch ${MES_PREFIX}/lib/linux/wait4.c ../simple-patches/wait4.before ../simple-patches/wait4.after
++simple-patch -Np0 -i ../patches/wait4.patch
 +cd ${MES_PREFIX}
 +mkdir include/arch
 +cp include/linux/${MES_ARCH}/kernel-stat.h include/arch/kernel-stat.h
@@ -1226,6 +1266,56 @@ index 0000000..8b742d3
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums ${MES_CHECKSUMS}
 +? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
+diff --git a/steps/mes-0.27.1/pass1.kaem b/steps/mes-0.27.1/pass1.kaem
+index c833f7c..d36a0b9 100755
+--- a/steps/mes-0.27.1/pass1.kaem
++++ b/steps/mes-0.27.1/pass1.kaem
+@@ -46,8 +46,7 @@ rm ${NYACC_PKG}.tar ${MES_PKG}.tar
+ cp ../files/config.h ${MES_PREFIX}/include/mes
+ 
+ # This patch was upstreamed after mes 0.27.1
+-simple-patch ${MES_PREFIX}/lib/linux/wait4.c \
+-    ../simple-patches/wait4.before ../simple-patches/wait4.after
++simple-patch -Np0 -i ../patches/wait4.patch
+ 
+ cd ${MES_PREFIX}
+ mkdir include/arch
+diff --git a/steps/mes-0.27.1/patches/wait4.patch b/steps/mes-0.27.1/patches/wait4.patch
+new file mode 100644
+index 0000000..17e99d3
+--- /dev/null
++++ b/steps/mes-0.27.1/patches/wait4.patch
+@@ -0,0 +1,11 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: GPL-3.0-or-later
++
++--- mes-0.27.1/lib/linux/wait4.c
+++++ mes-0.27.1/lib/linux/wait4.c
++@@ -1,3 +1,4 @@
++   long long_status_ptr = cast_voidp_to_long (status_ptr);
++   long long_options = options;
++   long long_rusage = cast_voidp_to_long (rusage);
+++  *long_status_ptr = 0;
+diff --git a/steps/mes-0.27.1/simple-patches/wait4.after b/steps/mes-0.27.1/simple-patches/wait4.after
+deleted file mode 100644
+index 6b1d845..0000000
+--- a/steps/mes-0.27.1/simple-patches/wait4.after
++++ /dev/null
+@@ -1,4 +0,0 @@
+-  long long_status_ptr = cast_voidp_to_long (status_ptr);
+-  long long_options = options;
+-  long long_rusage = cast_voidp_to_long (rusage);
+-  *long_status_ptr = 0;
+diff --git a/steps/mes-0.27.1/simple-patches/wait4.before b/steps/mes-0.27.1/simple-patches/wait4.before
+deleted file mode 100644
+index fe36af7..0000000
+--- a/steps/mes-0.27.1/simple-patches/wait4.before
++++ /dev/null
+@@ -1,3 +0,0 @@
+-  long long_status_ptr = cast_voidp_to_long (status_ptr);
+-  long long_options = options;
+-  long long_rusage = cast_voidp_to_long (rusage);
 diff --git a/steps/oyacc-6.6/pass1.bake b/steps/oyacc-6.6/pass1.bake
 new file mode 100644
 index 0000000..75aec5c
@@ -1329,6 +1419,420 @@ index 0000000..505148c
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/simple-patch
 +? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
+diff --git a/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums b/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums
+index f339112..1108e86 100644
+--- a/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums
++++ b/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums
+@@ -1 +1 @@
+-f07472c09834572a3162f0978e8e69523f285f3048310f9d43e54ca7bef1d7e5  /usr/bin/simple-patch
++59efc3ec48cd7bc2ca5d5e80b3ac48a629abd2b84a7808ae284b9a4b931fafe9  /usr/bin/simple-patch
+diff --git a/steps/simple-patch-1.0/simple-patch-1.0.riscv64.checksums b/steps/simple-patch-1.0/simple-patch-1.0.riscv64.checksums
+index f809f45..1991e8e 100644
+--- a/steps/simple-patch-1.0/simple-patch-1.0.riscv64.checksums
++++ b/steps/simple-patch-1.0/simple-patch-1.0.riscv64.checksums
+@@ -1 +1 @@
+-dc72b76c8835b1a08b1ecaa2ab8e9179c290805dd2c8bf3636004f375948c238  /usr/bin/simple-patch
++69ebc57948328a35bd1b711491c28f81b9e7769de49d5bdb0d4ecb0263c15d2d  /usr/bin/simple-patch
+diff --git a/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums b/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums
+index de5f92d..291fcba 100644
+--- a/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums
++++ b/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums
+@@ -1 +1 @@
+-887c9270655ceb8a07b7b244d893ba9d0377d66bacd85b4cf9ceb28e5884000f  /usr/bin/simple-patch
++370f170025e3c13659202c8b7ba876efb63b27b7747ef781f1176e071dba4a9d  /usr/bin/simple-patch
+diff --git a/steps/simple-patch-1.0/src/simple-patch.c b/steps/simple-patch-1.0/src/simple-patch.c
+index ed6faea..0f930b7 100644
+--- a/steps/simple-patch-1.0/src/simple-patch.c
++++ b/steps/simple-patch-1.0/src/simple-patch.c
+@@ -13,51 +13,59 @@ This program is written in a subset of C called M2, which is from the
+ stage0-posix bootstrap project.
+ 
+ Example usage:
+-./simple-patch file_to_patch before_pattern_file after_pattern_file
++./simple-patch -p1 -i patch_file
+ 
+ */
+ 
+ // function prototypes
+ void read_file_or_die(char *file_name, char **buffer, int *file_size);
+-void patch_buffer_or_die(char *patch_file_before_buffer, int patch_file_before_size,
+-                 char *before_pattern_buffer, int before_pattern_size,
+-                 char *after_pattern_buffer, int after_pattern_size,
+-                 char *patch_file_after_buffer);
++void write_file_or_die(char *file_name, char *buffer, int file_size);
++void patch_unified_or_die(char *patch_buffer, int patch_size, int strip);
++void apply_hunk_or_die(char **file_buffer, int *file_size, int *offset,
++                 char *before_buffer, int before_size,
++                 char *after_buffer, int after_size);
+ void writestr_fd(int fd, char *str);
++void usage(void);
+ int memsame(char *search_buffer, int search_size,
+             char *pattern_buffer, int pattern_size);
++int starts_with(char *buffer, int size, char *pattern);
++int line_size(char *pos, char *end);
++int next_line_starts_with(char *line, int size, char *end, char *pattern);
++char *copy_patch_path(char *line, int size, int strip);
++int parse_strip(char *arg);
+ 
+ 
+ int main(int argc, char **argv) {
+-    char *patch_file_before_buffer;
+-    int patch_file_before_size;
++    int strip;
++    char *patch_name;
++    char *patch_buffer;
++    int patch_size;
++    int i;
+ 
+-    char *before_pattern_buffer;
+-    int before_pattern_size;
++    strip = 0;
++    patch_name = NULL;
++    i = 1;
++    while(i < argc) {
++        if(strcmp(argv[i], "-i") == 0) {
++            i = i + 1;
++            if(i >= argc) usage();
++            patch_name = argv[i];
++        } else if(strcmp(argv[i], "-N") == 0) {
++            /* Already-applied patch detection is not needed for bootstrap use. */
++        } else if(starts_with(argv[i], strlen(argv[i]), "-p")) {
++            strip = parse_strip(argv[i] + 2);
++        } else if(starts_with(argv[i], strlen(argv[i]), "-Np")) {
++            strip = parse_strip(argv[i] + 3);
++        } else {
++            patch_name = argv[i];
++        }
++        i = i + 1;
++    }
+ 
+-    char *after_pattern_buffer;
+-    int after_pattern_size;
++    if(patch_name == NULL) usage();
+ 
+-    int patch_file_after_size;
+-    char *patch_file_after_buffer;
+-
+-    int patch_file_fd;
+-
+-    read_file_or_die(argv[1], &patch_file_before_buffer, &patch_file_before_size);
+-    read_file_or_die(argv[2], &before_pattern_buffer, &before_pattern_size);
+-    read_file_or_die(argv[3], &after_pattern_buffer, &after_pattern_size);
+-
+-    patch_file_after_size = patch_file_before_size - before_pattern_size + after_pattern_size;
+-    patch_file_after_buffer = calloc(patch_file_after_size, sizeof(char));
+-
+-    patch_buffer_or_die(patch_file_before_buffer, patch_file_before_size,
+-                 before_pattern_buffer, before_pattern_size,
+-                 after_pattern_buffer, after_pattern_size,
+-                 patch_file_after_buffer);
+-    
+-    patch_file_fd = open(argv[1], O_WRONLY | O_CREAT | O_TRUNC, 0);
+-    write(patch_file_fd, patch_file_after_buffer, patch_file_after_size);
+-    close(patch_file_fd);
++    read_file_or_die(patch_name, &patch_buffer, &patch_size);
++    patch_unified_or_die(patch_buffer, patch_size, strip);
+ 
+     return EXIT_SUCCESS;
+ }
+@@ -79,7 +87,7 @@ void read_file_or_die(char *file_name, char **buffer, int *file_size) {
+     // go back to beginning of file
+     lseek(file_fd, 0, SEEK_SET);
+     // alloc a buffer to read the entire file
+-    *buffer = calloc(*file_size, sizeof(char));
++    *buffer = calloc(*file_size + 1, sizeof(char));
+ 
+     // read the entire patch file
+     num_bytes_read = read(file_fd, *buffer, *file_size);
+@@ -92,31 +100,172 @@ void read_file_or_die(char *file_name, char **buffer, int *file_size) {
+     close(file_fd);
+ }
+ 
+-void patch_buffer_or_die(char *patch_file_before_buffer, int patch_file_before_size,
+-                 char *before_pattern_buffer, int before_pattern_size,
+-                 char *after_pattern_buffer, int after_pattern_size,
+-                 char *patch_file_after_buffer) {
++void write_file_or_die(char *file_name, char *buffer, int file_size) {
++    int file_fd;
++    int num_bytes_written;
+ 
+-    char *pos = patch_file_before_buffer;
+-    int prefix_len = 0;
++    file_fd = open(file_name, O_WRONLY | O_CREAT | O_TRUNC, 0);
++    if (file_fd == -1) {
++        writestr_fd(2, "Could not write file: ");
++        writestr_fd(2, file_name);
++        writestr_fd(2, "\n");
++        exit(1);
++    }
++    num_bytes_written = write(file_fd, buffer, file_size);
++    if (num_bytes_written != file_size) {
++        writestr_fd(2, "Could not write file: ");
++        writestr_fd(2, file_name);
++        writestr_fd(2, "\n");
++        exit(1);
++    }
++    close(file_fd);
++}
+ 
+-    // look for the pattern at every offset
+-    while (prefix_len < patch_file_before_size) {
+-        // if we find the pattern, replace it and return
+-        if (memsame(pos, patch_file_before_size - prefix_len, before_pattern_buffer, before_pattern_size)) {
+-           memcpy(patch_file_after_buffer, patch_file_before_buffer, prefix_len);
+-           memcpy(patch_file_after_buffer + prefix_len, after_pattern_buffer, after_pattern_size);
+-           memcpy(patch_file_after_buffer + prefix_len + after_pattern_size, 
+-                  patch_file_before_buffer + prefix_len + before_pattern_size, 
+-                  patch_file_before_size - (prefix_len + before_pattern_size));
+-           return;
++void patch_unified_or_die(char *patch_buffer, int patch_size, int strip) {
++    char *pos;
++    char *end;
++    int size;
++    char *file_name;
++    char *file_buffer;
++    int file_size;
++    int file_offset;
++    int file_dirty;
++    char *before_buffer;
++    char *after_buffer;
++    int before_size;
++    int after_size;
++    char prefix;
++    int content_size;
++
++    pos = patch_buffer;
++    end = patch_buffer + patch_size;
++    file_name = NULL;
++    file_buffer = NULL;
++    file_size = 0;
++    file_offset = 0;
++    file_dirty = FALSE;
++
++    while(pos < end) {
++        size = line_size(pos, end);
++
++        if(starts_with(pos, size, "--- ")) {
++            if(file_dirty) {
++                write_file_or_die(file_name, file_buffer, file_size);
++                file_dirty = FALSE;
++            }
++
++            pos = pos + size;
++            if(pos >= end) {
++                writestr_fd(2, "Missing +++ line\n");
++                exit(1);
++            }
++            size = line_size(pos, end);
++            if(!starts_with(pos, size, "+++ ")) {
++                writestr_fd(2, "Missing +++ line\n");
++                exit(1);
++            }
++            file_name = copy_patch_path(pos + 4, size - 4, strip);
++            read_file_or_die(file_name, &file_buffer, &file_size);
++            file_offset = 0;
++            pos = pos + size;
++        } else if(starts_with(pos, size, "@@ ")) {
++            if(file_name == NULL) {
++                writestr_fd(2, "Patch hunk has no file header\n");
++                exit(1);
++            }
++
++            pos = pos + size;
++            before_buffer = calloc(patch_size + 1, sizeof(char));
++            after_buffer = calloc(patch_size + 1, sizeof(char));
++            before_size = 0;
++            after_size = 0;
++
++            while(pos < end) {
++                size = line_size(pos, end);
++                if(starts_with(pos, size, "@@ ")) {
++                    break;
++                }
++                if(starts_with(pos, size, "diff ")) {
++                    break;
++                }
++                if(starts_with(pos, size, "--- ") &&
++                   next_line_starts_with(pos, size, end, "+++ ")) {
++                    break;
++                }
++                if(starts_with(pos, size, "\\ No newline")) {
++                    pos = pos + size;
++                    continue;
++                }
++
++                prefix = pos[0];
++                content_size = size - 1;
++                if(prefix == ' ') {
++                    memcpy(before_buffer + before_size, pos + 1, content_size);
++                    memcpy(after_buffer + after_size, pos + 1, content_size);
++                    before_size = before_size + content_size;
++                    after_size = after_size + content_size;
++                } else if(prefix == '-') {
++                    memcpy(before_buffer + before_size, pos + 1, content_size);
++                    before_size = before_size + content_size;
++                } else if(prefix == '+') {
++                    memcpy(after_buffer + after_size, pos + 1, content_size);
++                    after_size = after_size + content_size;
++                } else {
++                    writestr_fd(2, "Unsupported patch hunk line\n");
++                    exit(1);
++                }
++                pos = pos + size;
++            }
++
++            apply_hunk_or_die(&file_buffer, &file_size, &file_offset,
++                         before_buffer, before_size,
++                         after_buffer, after_size);
++            file_dirty = TRUE;
++        } else {
++            pos = pos + size;
+         }
+-        pos = pos + 1;
+-        prefix_len = prefix_len + 1;
+     }
+ 
+-    /* if we don't find the pattern, something is wrong, so exit with error */
+-    exit(1);
++    if(file_dirty) {
++        write_file_or_die(file_name, file_buffer, file_size);
++    }
++}
++
++void apply_hunk_or_die(char **file_buffer, int *file_size, int *offset,
++                 char *before_buffer, int before_size,
++                 char *after_buffer, int after_size) {
++    int pos;
++    int new_size;
++    char *new_buffer;
++
++    pos = *offset;
++    if(before_size == 0) {
++        pos = *offset;
++    } else {
++        while(pos < *file_size) {
++            if(memsame(*file_buffer + pos, *file_size - pos,
++                       before_buffer, before_size)) {
++                break;
++            }
++            pos = pos + 1;
++        }
++        if(pos >= *file_size) {
++            writestr_fd(2, "Patch hunk did not match\n");
++            exit(1);
++        }
++    }
++
++    new_size = *file_size - before_size + after_size;
++    new_buffer = calloc(new_size + 1, sizeof(char));
++    memcpy(new_buffer, *file_buffer, pos);
++    memcpy(new_buffer + pos, after_buffer, after_size);
++    memcpy(new_buffer + pos + after_size,
++           *file_buffer + pos + before_size,
++           *file_size - pos - before_size);
++
++    *file_buffer = new_buffer;
++    *file_size = new_size;
++    *offset = pos + after_size;
+ }
+ 
+ /*
+@@ -126,6 +275,11 @@ void writestr_fd(int fd, char *str) {
+     write(fd, str, strlen(str));
+ }
+ 
++void usage(void) {
++    writestr_fd(2, "Usage: simple-patch [-pN] [-N] -i patch\n");
++    exit(1);
++}
++
+ /*
+     Is the pattern located at the start of the search buffer
+     (and not exceeding the length of the search buffer)?
+@@ -146,3 +300,83 @@ int memsame(char *search_buffer, int search_size,
+     }
+     return TRUE;
+ }
++
++int starts_with(char *buffer, int size, char *pattern) {
++    return memsame(buffer, size, pattern, strlen(pattern));
++}
++
++int line_size(char *pos, char *end) {
++    int size;
++
++    size = 0;
++    while(pos + size < end) {
++        size = size + 1;
++        if(pos[size - 1] == '\n') {
++            return size;
++        }
++    }
++    return size;
++}
++
++int next_line_starts_with(char *line, int size, char *end, char *pattern) {
++    char *next;
++    int next_size;
++
++    next = line + size;
++    if(next >= end) {
++        return FALSE;
++    }
++    next_size = line_size(next, end);
++    return starts_with(next, next_size, pattern);
++}
++
++char *copy_patch_path(char *line, int size, int strip) {
++    int start;
++    int stop;
++    int components;
++    int out_size;
++    char *path;
++
++    start = 0;
++    while(start < size &&
++          (line[start] == ' ' || line[start] == '\t')) {
++        start = start + 1;
++    }
++
++    if(starts_with(line + start, size - start, "/dev/null")) {
++        writestr_fd(2, "Creating or deleting files is not supported\n");
++        exit(1);
++    }
++
++    components = 0;
++    while(start < size && components < strip) {
++        if(line[start] == '/') {
++            components = components + 1;
++        }
++        start = start + 1;
++    }
++
++    stop = start;
++    while(stop < size &&
++          line[stop] != ' ' &&
++          line[stop] != '\t' &&
++          line[stop] != '\n') {
++        stop = stop + 1;
++    }
++
++    out_size = stop - start;
++    if(out_size <= 0) {
++        writestr_fd(2, "Empty patch path\n");
++        exit(1);
++    }
++    path = calloc(out_size + 1, sizeof(char));
++    memcpy(path, line + start, out_size);
++    return path;
++}
++
++int parse_strip(char *arg) {
++    if(arg[0] == 0) {
++        return 0;
++    }
++    return atoi(arg);
++}
 diff --git a/steps/tar-1.12/pass1.bake b/steps/tar-1.12/pass1.bake
 new file mode 100644
 index 0000000..6ef461b
@@ -1362,7 +1866,7 @@ index 0000000..6ef461b
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/tcc-0.9.26/pass1.bake b/steps/tcc-0.9.26/pass1.bake
 new file mode 100644
-index 0000000..d82e5f8
+index 0000000..57afb8d
 --- /dev/null
 +++ b/steps/tcc-0.9.26/pass1.bake
 @@ -0,0 +1,127 @@
@@ -1389,8 +1893,8 @@ index 0000000..d82e5f8
 +ungz --file ${DISTFILES}/${TCC_TAR}.tar.gz --output ${TCC_TAR}.tar
 +ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
 +untar --non-strict --file ${TCC_TAR}.tar
-+simple-patch ${TCC_PKG}/tcctools.c ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
-+simple-patch ${TCC_PKG}/tcctools.c ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
++simple-patch -Np0 -i ../patches/remove-fileopen.patch
++simple-patch -Np0 -i ../patches/addback-fileopen.patch
 +untar --non-strict --file ${MES_PKG}.tar
 +catm ${MES_PKG}/include/mes/config.h
 +catm ${TCC_PKG}/config.h
@@ -1493,9 +1997,109 @@ index 0000000..d82e5f8
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums ${TCC_CHECKSUMS}
 +? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
+diff --git a/steps/tcc-0.9.26/pass1.kaem b/steps/tcc-0.9.26/pass1.kaem
+index 3a5b669..b49a6b4 100755
+--- a/steps/tcc-0.9.26/pass1.kaem
++++ b/steps/tcc-0.9.26/pass1.kaem
+@@ -28,10 +28,8 @@ cd build
+ ungz --file ${DISTFILES}/${TCC_TAR}.tar.gz --output ${TCC_TAR}.tar
+ ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
+ untar --non-strict --file ${TCC_TAR}.tar
+-simple-patch ${TCC_PKG}/tcctools.c \
+-    ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
+-simple-patch ${TCC_PKG}/tcctools.c \
+-    ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
++simple-patch -Np0 -i ../patches/remove-fileopen.patch
++simple-patch -Np0 -i ../patches/addback-fileopen.patch
+ 
+ untar --non-strict --file ${MES_PKG}.tar
+ 
+diff --git a/steps/tcc-0.9.26/patches/addback-fileopen.patch b/steps/tcc-0.9.26/patches/addback-fileopen.patch
+new file mode 100644
+index 0000000..76f17bc
+--- /dev/null
++++ b/steps/tcc-0.9.26/patches/addback-fileopen.patch
+@@ -0,0 +1,14 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.26-1147-gee75a10c/tcctools.c
+++++ tcc-0.9.26-1147-gee75a10c/tcctools.c
++@@ -1 +1,8 @@
+++    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+++    {
+++        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+++        goto the_end;
+++    }
+++
++     // write header
+diff --git a/steps/tcc-0.9.26/patches/remove-fileopen.patch b/steps/tcc-0.9.26/patches/remove-fileopen.patch
+new file mode 100644
+index 0000000..5d951ee
+--- /dev/null
++++ b/steps/tcc-0.9.26/patches/remove-fileopen.patch
+@@ -0,0 +1,15 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.26-1147-gee75a10c/tcctools.c
+++++ tcc-0.9.26-1147-gee75a10c/tcctools.c
++@@ -1,10 +1,2 @@
++     if (ret == 1)
++         return ar_usage(ret);
++-
++-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
++-    {
++-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
++-        goto the_end;
++-    }
+diff --git a/steps/tcc-0.9.26/simple-patches/addback-fileopen.after b/steps/tcc-0.9.26/simple-patches/addback-fileopen.after
+deleted file mode 100644
+index 0e981f0..0000000
+--- a/steps/tcc-0.9.26/simple-patches/addback-fileopen.after
++++ /dev/null
+@@ -1,7 +0,0 @@
+-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+-    {
+-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+-        goto the_end;
+-    }
+-
+-    // write header
+diff --git a/steps/tcc-0.9.26/simple-patches/addback-fileopen.before b/steps/tcc-0.9.26/simple-patches/addback-fileopen.before
+deleted file mode 100644
+index 116b347..0000000
+--- a/steps/tcc-0.9.26/simple-patches/addback-fileopen.before
++++ /dev/null
+@@ -1 +0,0 @@
+-    // write header
+diff --git a/steps/tcc-0.9.26/simple-patches/remove-fileopen.after b/steps/tcc-0.9.26/simple-patches/remove-fileopen.after
+deleted file mode 100644
+index 44fb725..0000000
+--- a/steps/tcc-0.9.26/simple-patches/remove-fileopen.after
++++ /dev/null
+@@ -1,2 +0,0 @@
+-    if (ret == 1)
+-        return ar_usage(ret);
+diff --git a/steps/tcc-0.9.26/simple-patches/remove-fileopen.before b/steps/tcc-0.9.26/simple-patches/remove-fileopen.before
+deleted file mode 100644
+index 4641e1b..0000000
+--- a/steps/tcc-0.9.26/simple-patches/remove-fileopen.before
++++ /dev/null
+@@ -1,8 +0,0 @@
+-    if (ret == 1)
+-        return ar_usage(ret);
+-
+-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+-    {
+-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+-        goto the_end;
+-    }
 diff --git a/steps/tcc-0.9.27/pass1.bake b/steps/tcc-0.9.27/pass1.bake
 new file mode 100644
-index 0000000..184ca6d
+index 0000000..5662833
 --- /dev/null
 +++ b/steps/tcc-0.9.27/pass1.bake
 @@ -0,0 +1,41 @@
@@ -1513,10 +2117,10 @@ index 0000000..184ca6d
 +unbz2 --file ${DISTFILES}/${pkg}.tar.bz2 --output ${pkg}.tar
 +ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
 +untar --file ${pkg}.tar
-+simple-patch tcc-0.9.27/tcctools.c ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
-+simple-patch tcc-0.9.27/tcctools.c ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
-+simple-patch tcc-0.9.27/tccelf.c ../simple-patches/fiwix-paddr.before ../simple-patches/fiwix-paddr.after
-+simple-patch tcc-0.9.27/tccelf.c ../simple-patches/check-reloc-null.before ../simple-patches/check-reloc-null.after
++simple-patch -Np0 -i ../patches/remove-fileopen.patch
++simple-patch -Np0 -i ../patches/addback-fileopen.patch
++simple-patch -Np0 -i ../patches/fiwix-paddr.patch
++simple-patch -Np0 -i ../patches/check-reloc-null.patch
 +untar --non-strict --file ${MES_PKG}.tar
 +cd ${pkg}
 +catm config.h
@@ -1540,3 +2144,183 @@ index 0000000..184ca6d
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/tcc
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/tcc-0.9.27/pass1.kaem b/steps/tcc-0.9.27/pass1.kaem
+index 29258c6..5e07fe9 100755
+--- a/steps/tcc-0.9.27/pass1.kaem
++++ b/steps/tcc-0.9.27/pass1.kaem
+@@ -17,15 +17,11 @@ cd build
+ unbz2 --file ${DISTFILES}/${pkg}.tar.bz2 --output ${pkg}.tar
+ ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
+ untar --file ${pkg}.tar
+-simple-patch tcc-0.9.27/tcctools.c \
+-    ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
+-simple-patch tcc-0.9.27/tcctools.c \
+-    ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
+-simple-patch tcc-0.9.27/tccelf.c \
+-    ../simple-patches/fiwix-paddr.before ../simple-patches/fiwix-paddr.after
++simple-patch -Np0 -i ../patches/remove-fileopen.patch
++simple-patch -Np0 -i ../patches/addback-fileopen.patch
++simple-patch -Np0 -i ../patches/fiwix-paddr.patch
+ # Fix SIGSEGV while building lwext4
+-simple-patch tcc-0.9.27/tccelf.c \
+-    ../simple-patches/check-reloc-null.before ../simple-patches/check-reloc-null.after
++simple-patch -Np0 -i ../patches/check-reloc-null.patch
+ untar --non-strict --file ${MES_PKG}.tar
+ cd ${pkg}
+ 
+diff --git a/steps/tcc-0.9.27/patches/addback-fileopen.patch b/steps/tcc-0.9.27/patches/addback-fileopen.patch
+new file mode 100644
+index 0000000..ceaf521
+--- /dev/null
++++ b/steps/tcc-0.9.27/patches/addback-fileopen.patch
+@@ -0,0 +1,14 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.27/tcctools.c
+++++ tcc-0.9.27/tcctools.c
++@@ -1 +1,8 @@
+++    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+++    {
+++        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+++        goto the_end;
+++    }
+++
++     // write header
+diff --git a/steps/tcc-0.9.27/patches/check-reloc-null.patch b/steps/tcc-0.9.27/patches/check-reloc-null.patch
+new file mode 100644
+index 0000000..989c29e
+--- /dev/null
++++ b/steps/tcc-0.9.27/patches/check-reloc-null.patch
+@@ -0,0 +1,13 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.27/tccelf.c
+++++ tcc-0.9.27/tccelf.c
++@@ -1,4 +1,6 @@
++ static void fill_local_got_entries(TCCState *s1)
++ {
++     ElfW_Rel *rel;
+++    if (!s1->got->reloc)
+++	return;
++     for_each_elem(s1->got->reloc, 0, rel, ElfW_Rel) {
+diff --git a/steps/tcc-0.9.27/patches/fiwix-paddr.patch b/steps/tcc-0.9.27/patches/fiwix-paddr.patch
+new file mode 100644
+index 0000000..7c6a956
+--- /dev/null
++++ b/steps/tcc-0.9.27/patches/fiwix-paddr.patch
+@@ -0,0 +1,10 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.27/tccelf.c
+++++ tcc-0.9.27/tccelf.c
++@@ -1 +1,3 @@
++                         ph->p_paddr = ph->p_vaddr;
+++                        if (s1->text_addr == 0x80100000)
+++                            ph->p_paddr = ph->p_paddr - 0x80000000;
+diff --git a/steps/tcc-0.9.27/patches/remove-fileopen.patch b/steps/tcc-0.9.27/patches/remove-fileopen.patch
+new file mode 100644
+index 0000000..a8fbc5a
+--- /dev/null
++++ b/steps/tcc-0.9.27/patches/remove-fileopen.patch
+@@ -0,0 +1,15 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.27/tcctools.c
+++++ tcc-0.9.27/tcctools.c
++@@ -1,10 +1,2 @@
++     if (ret == 1)
++         return ar_usage(ret);
++-
++-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
++-    {
++-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
++-        goto the_end;
++-    }
+diff --git a/steps/tcc-0.9.27/simple-patches/addback-fileopen.after b/steps/tcc-0.9.27/simple-patches/addback-fileopen.after
+deleted file mode 100644
+index 0e981f0..0000000
+--- a/steps/tcc-0.9.27/simple-patches/addback-fileopen.after
++++ /dev/null
+@@ -1,7 +0,0 @@
+-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+-    {
+-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+-        goto the_end;
+-    }
+-
+-    // write header
+diff --git a/steps/tcc-0.9.27/simple-patches/addback-fileopen.before b/steps/tcc-0.9.27/simple-patches/addback-fileopen.before
+deleted file mode 100644
+index 116b347..0000000
+--- a/steps/tcc-0.9.27/simple-patches/addback-fileopen.before
++++ /dev/null
+@@ -1 +0,0 @@
+-    // write header
+diff --git a/steps/tcc-0.9.27/simple-patches/check-reloc-null.after b/steps/tcc-0.9.27/simple-patches/check-reloc-null.after
+deleted file mode 100644
+index 86d63cf..0000000
+--- a/steps/tcc-0.9.27/simple-patches/check-reloc-null.after
++++ /dev/null
+@@ -1,6 +0,0 @@
+-static void fill_local_got_entries(TCCState *s1)
+-{
+-    ElfW_Rel *rel;
+-    if (!s1->got->reloc)
+-	return;
+-    for_each_elem(s1->got->reloc, 0, rel, ElfW_Rel) {
+diff --git a/steps/tcc-0.9.27/simple-patches/check-reloc-null.before b/steps/tcc-0.9.27/simple-patches/check-reloc-null.before
+deleted file mode 100644
+index af9bb3f..0000000
+--- a/steps/tcc-0.9.27/simple-patches/check-reloc-null.before
++++ /dev/null
+@@ -1,4 +0,0 @@
+-static void fill_local_got_entries(TCCState *s1)
+-{
+-    ElfW_Rel *rel;
+-    for_each_elem(s1->got->reloc, 0, rel, ElfW_Rel) {
+diff --git a/steps/tcc-0.9.27/simple-patches/fiwix-paddr.after b/steps/tcc-0.9.27/simple-patches/fiwix-paddr.after
+deleted file mode 100644
+index 10d2090..0000000
+--- a/steps/tcc-0.9.27/simple-patches/fiwix-paddr.after
++++ /dev/null
+@@ -1,3 +0,0 @@
+-                        ph->p_paddr = ph->p_vaddr;
+-                        if (s1->text_addr == 0x80100000)
+-                            ph->p_paddr = ph->p_paddr - 0x80000000;
+diff --git a/steps/tcc-0.9.27/simple-patches/fiwix-paddr.before b/steps/tcc-0.9.27/simple-patches/fiwix-paddr.before
+deleted file mode 100644
+index 316b48f..0000000
+--- a/steps/tcc-0.9.27/simple-patches/fiwix-paddr.before
++++ /dev/null
+@@ -1 +0,0 @@
+-                        ph->p_paddr = ph->p_vaddr;
+diff --git a/steps/tcc-0.9.27/simple-patches/remove-fileopen.after b/steps/tcc-0.9.27/simple-patches/remove-fileopen.after
+deleted file mode 100644
+index 44fb725..0000000
+--- a/steps/tcc-0.9.27/simple-patches/remove-fileopen.after
++++ /dev/null
+@@ -1,2 +0,0 @@
+-    if (ret == 1)
+-        return ar_usage(ret);
+diff --git a/steps/tcc-0.9.27/simple-patches/remove-fileopen.before b/steps/tcc-0.9.27/simple-patches/remove-fileopen.before
+deleted file mode 100644
+index 4641e1b..0000000
+--- a/steps/tcc-0.9.27/simple-patches/remove-fileopen.before
++++ /dev/null
+@@ -1,8 +0,0 @@
+-    if (ret == 1)
+-        return ar_usage(ret);
+-
+-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+-    {
+-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+-        goto the_end;
+-    }
