@@ -14,7 +14,7 @@ untar --file ${pkg}.tar
 cd ${pkg}
 mkdir -p build_generic/include/generated
 catm build_generic/include/generated/ext4_config.h ../../config/ext4_config.h
-cp ../../../files/make_fiwix_initrd.c src/make_fiwix_initrd.c
+cp ../../files/make_fiwix_initrd.c src/make_fiwix_initrd.c
 
 : %.o %.c setup
 cd src
