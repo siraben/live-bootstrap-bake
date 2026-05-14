@@ -1,0 +1,15 @@
+: all mescc-tools-full mescc-tools-extra check after
+
+: mescc-tools-full
+./${ARCH_DIR}/bin/bake --file ${ARCH_DIR}/mescc-tools-full.bake all
+
+: mescc-tools-extra mescc-tools-full
+cd mescc-tools-extra
+${BINDIR}/bake --file mescc-tools-extra.bake all
+cd ..
+
+: check mescc-tools-extra
+./${ARCH_DIR}/bin/sha256sum -c ${ARCH}.answers
+
+: after check
+./${ARCH_DIR}/bin/kaem --verbose --strict --file ./after.kaem

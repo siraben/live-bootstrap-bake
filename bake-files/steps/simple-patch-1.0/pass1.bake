@@ -1,0 +1,9 @@
+: all build checksum
+
+: build
+M2-Mesoplanet --architecture ${ARCH} -f src/simple-patch.c -o ${BINDIR}/simple-patch
+
+: checksum build
+? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/simple-patch
+? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
+! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums

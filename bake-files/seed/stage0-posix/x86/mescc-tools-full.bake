@@ -1,0 +1,25 @@
+: all M2-Mesoplanet blood-elf get_machine M2-Planet
+
+: M2-Mesoplanet
+./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} -f ./M2libc/sys/types.h -f ./M2libc/stddef.h -f ./M2libc/${ARCH}/linux/fcntl.c -f ./M2libc/fcntl.c -f ./M2libc/sys/utsname.h -f ./M2libc/${ARCH}/linux/unistd.c -f ./M2libc/${ARCH}/linux/sys/stat.c -f ./M2libc/ctype.c -f ./M2libc/stdlib.c -f ./M2libc/stdarg.h -f ./M2libc/stdio.h -f ./M2libc/stdio.c -f ./M2libc/string.c -f ./M2libc/bootstrappable.c -f ./M2-Mesoplanet/cc.h -f ./M2-Mesoplanet/cc_globals.c -f ./M2-Mesoplanet/cc_env.c -f ./M2-Mesoplanet/cc_reader.c -f ./M2-Mesoplanet/cc_spawn.c -f ./M2-Mesoplanet/cc_core.c -f ./M2-Mesoplanet/cc_macro.c -f ./M2-Mesoplanet/cc.c --debug -o ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.M1
+./${ARCH_DIR}/artifact/blood-elf-0 ${ENDIAN_FLAG} -f ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.M1 -o ./${ARCH_DIR}/artifact/M2-Mesoplanet-1-footer.M1
+./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} -f ./M2libc/${ARCH}/${ARCH}_defs.M1 -f ./M2libc/${ARCH}/libc-full.M1 -f ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.M1 -f ./${ARCH_DIR}/artifact/M2-Mesoplanet-1-footer.M1 -o ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.hex2
+./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} -f ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -f ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.hex2 -o ./${ARCH_DIR}/bin/M2-Mesoplanet
+
+: blood-elf M2-Mesoplanet
+./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} -f ./M2libc/sys/types.h -f ./M2libc/stddef.h -f ./M2libc/${ARCH}/linux/fcntl.c -f ./M2libc/fcntl.c -f ./M2libc/sys/utsname.h -f ./M2libc/${ARCH}/linux/unistd.c -f ./M2libc/ctype.c -f ./M2libc/stdlib.c -f ./M2libc/stdarg.h -f ./M2libc/stdio.h -f ./M2libc/stdio.c -f ./M2libc/bootstrappable.c -f ./mescc-tools/stringify.c -f ./mescc-tools/blood-elf.c --debug -o ./${ARCH_DIR}/artifact/blood-elf-1.M1
+./${ARCH_DIR}/artifact/blood-elf-0 ${ENDIAN_FLAG} -f ./${ARCH_DIR}/artifact/blood-elf-1.M1 -o ./${ARCH_DIR}/artifact/blood-elf-1-footer.M1
+./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} -f ./M2libc/${ARCH}/${ARCH}_defs.M1 -f ./M2libc/${ARCH}/libc-full.M1 -f ./${ARCH_DIR}/artifact/blood-elf-1.M1 -f ./${ARCH_DIR}/artifact/blood-elf-1-footer.M1 -o ./${ARCH_DIR}/artifact/blood-elf-1.hex2
+./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} -f ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -f ./${ARCH_DIR}/artifact/blood-elf-1.hex2 -o ./${ARCH_DIR}/bin/blood-elf
+
+: get_machine blood-elf
+./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} -f ./M2libc/sys/types.h -f ./M2libc/stddef.h -f ./M2libc/sys/utsname.h -f ./M2libc/${ARCH}/linux/unistd.c -f ./M2libc/${ARCH}/linux/fcntl.c -f ./M2libc/fcntl.c -f ./M2libc/ctype.c -f ./M2libc/stdlib.c -f ./M2libc/stdarg.h -f ./M2libc/stdio.h -f ./M2libc/stdio.c -f ./M2libc/bootstrappable.c -f ./mescc-tools/get_machine.c --debug -o ./${ARCH_DIR}/artifact/get_machine.M1
+./${ARCH_DIR}/bin/blood-elf ${ENDIAN_FLAG} -f ./${ARCH_DIR}/artifact/get_machine.M1 -o ./${ARCH_DIR}/artifact/get_machine-footer.M1
+./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} -f ./M2libc/${ARCH}/${ARCH}_defs.M1 -f ./M2libc/${ARCH}/libc-full.M1 -f ./${ARCH_DIR}/artifact/get_machine.M1 -f ./${ARCH_DIR}/artifact/get_machine-footer.M1 -o ./${ARCH_DIR}/artifact/get_machine.hex2
+./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} -f ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -f ./${ARCH_DIR}/artifact/get_machine.hex2 -o ./${ARCH_DIR}/bin/get_machine
+
+: M2-Planet get_machine
+./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} -f ./M2libc/sys/types.h -f ./M2libc/stddef.h -f ./M2libc/sys/utsname.h -f ./M2libc/${ARCH}/linux/unistd.c -f ./M2libc/${ARCH}/linux/fcntl.c -f ./M2libc/fcntl.c -f ./M2libc/ctype.c -f ./M2libc/stdlib.c -f ./M2libc/stdarg.h -f ./M2libc/stdio.h -f ./M2libc/stdio.c -f ./M2libc/bootstrappable.c -f ./M2-Planet/cc.h -f ./M2-Planet/cc_globals.c -f ./M2-Planet/cc_reader.c -f ./M2-Planet/cc_strings.c -f ./M2-Planet/cc_types.c -f ./M2-Planet/cc_emit.c -f ./M2-Planet/cc_core.c -f ./M2-Planet/cc_macro.c -f ./M2-Planet/cc.c --debug -o ./${ARCH_DIR}/artifact/M2-1.M1
+./${ARCH_DIR}/bin/blood-elf ${ENDIAN_FLAG} -f ./${ARCH_DIR}/artifact/M2-1.M1 -o ./${ARCH_DIR}/artifact/M2-1-footer.M1
+./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} -f ./M2libc/${ARCH}/${ARCH}_defs.M1 -f ./M2libc/${ARCH}/libc-full.M1 -f ./${ARCH_DIR}/artifact/M2-1.M1 -f ./${ARCH_DIR}/artifact/M2-1-footer.M1 -o ./${ARCH_DIR}/artifact/M2-1.hex2
+./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} -f ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -f ./${ARCH_DIR}/artifact/M2-1.hex2 -o ./${ARCH_DIR}/bin/M2-Planet

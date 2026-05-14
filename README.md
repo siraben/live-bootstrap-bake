@@ -43,6 +43,10 @@ GENERATE_ONLY=1 ./scripts/run-kaem-era.sh
 
 ## Patch Layout
 
+The `bake-files/` directory also contains the `.bake` files directly, mirrored
+at their intended upstream paths. This makes the recipes readable without first
+applying the patch stack.
+
 `patches/0001-mescc-tools-add-bake.patch`
 : adds the bootstrappable `bake` implementation and builds it in stage0.
 

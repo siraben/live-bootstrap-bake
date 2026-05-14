@@ -1,0 +1,23 @@
+: all build checksum
+
+: build
+checksum-transcriber sources
+sha256sum -c sources.SHA256SUM
+mkdir build src
+cd build
+cp ${DISTFILES}/${pkg}.tar.gz ../src/
+gzip -d -f ../src/${pkg}.tar.gz
+tar xf ../src/${pkg}.tar
+rm -r ../src
+cd ${pkg}
+cp ../../mk/main.mk Makefile
+catm config.h
+make -f Makefile LIBC=mes
+cp sed/sed ${PREFIX}/bin/sed
+chmod 755 ${PREFIX}/bin/sed
+cd ../..
+
+: checksum build
+? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/sed
+? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
+! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
