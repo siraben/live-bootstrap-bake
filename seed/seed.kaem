@@ -16,6 +16,7 @@ PATH=/${ARCH_DIR}/bin
 
 # Remove remaining dependencies on /bin (stage0-posix directory)
 cp /${ARCH_DIR}/bin/blood-elf ${BINDIR}/blood-elf
+cp /${ARCH_DIR}/bin/bake ${BINDIR}/bake
 cp /${ARCH_DIR}/bin/catm ${BINDIR}/catm
 cp /${ARCH_DIR}/bin/chmod ${BINDIR}/chmod
 cp /${ARCH_DIR}/bin/get_machine ${BINDIR}/get_machine
@@ -36,6 +37,7 @@ cp /${ARCH_DIR}/bin/replace ${BINDIR}/replace
 cp /${ARCH_DIR}/bin/rm ${BINDIR}/rm
 
 chmod 755 ${BINDIR}/blood-elf
+chmod 755 ${BINDIR}/bake
 chmod 755 ${BINDIR}/catm
 chmod 755 ${BINDIR}/chmod
 chmod 755 ${BINDIR}/cp
@@ -82,4 +84,4 @@ else
 fi
 ./script-generator /steps/manifest
 
-kaem --file /steps/0.sh
+bake --file /steps/0.bake all

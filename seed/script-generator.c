@@ -165,6 +165,51 @@ void output_config(FILE *out) {
 	}
 }
 
+void output_bake_export(FILE *out, char *name, char *val) {
+	int len = strlen(val);
+	char *copy;
+	if (len > 1 && val[0] == '"' && val[len - 1] == '"') {
+		copy = calloc(len - 1, sizeof(char));
+		strncpy(copy, val + 1, len - 2);
+		val = copy;
+	}
+	fputs("export ", out);
+	fputs(name, out);
+	fputs(" ", out);
+	fputs(val, out);
+	fputs("\n", out);
+}
+
+void output_bake_config(FILE *out) {
+	Variable *variable;
+	for (variable = variables; variable != NULL; variable = variable->next) {
+		output_bake_export(out, variable->name, variable->val);
+	}
+}
+
+void output_bake_assignment(FILE *out, char *line) {
+	char *equals = strchr(line, '=');
+	char *name;
+	char *val;
+	int len;
+	if (equals == 0) {
+		return;
+	}
+	name = calloc(equals - line + 1, sizeof(char));
+	strncpy(name, line, equals - line);
+	val = equals + 1;
+	len = strlen(val);
+	if (len > 0 && val[len - 1] == '\n') {
+		val[len - 1] = 0;
+		len = len - 1;
+	}
+	if (len > 1 && val[0] == '"' && val[len - 1] == '"') {
+		val[len - 1] = 0;
+		val = val + 1;
+	}
+	output_bake_export(out, name, val);
+}
+
 char *get_var(char *name) {
 	/* Search through existing variables. */
 	Variable *var;
@@ -392,11 +437,15 @@ Directive *interpreter(Directive *directives) {
 
 /* Script generator. */
 FILE *start_script(int id, int bash_build) {
-	/* Create the file /steps/$id.sh */
+	/* Create the file /steps/$id.sh or /steps/$id.bake */
 	char *filename = calloc(MAX_STRING, sizeof(char));
 	strcpy(filename, "/steps/");
 	strcat(filename, int2str(id, 10, 0));
-	strcat(filename, ".sh");
+	if (bash_build) {
+		strcat(filename, ".sh");
+	} else {
+		strcat(filename, ".bake");
+	}
 
 	FILE *out = fopen(filename, "w");
 	if (out == NULL) {
@@ -425,9 +474,10 @@ FILE *start_script(int id, int bash_build) {
 		fputs(". ./env\n", out);
 		fputs(". ./helpers.sh\n", out);
 	} else {
-		fputs("set -ex\n", out);
+		fputs(": all\n\n", out);
+		fputs(": env\n", out);
 		fputs("cd /steps\n", out);
-		output_config(out);
+		output_bake_config(out);
 		FILE *env = fopen("/steps/env", "r");
 		char *line = calloc(MAX_STRING, sizeof(char));
 		while (fgets(line, MAX_STRING, env) != 0) {
@@ -435,10 +485,11 @@ FILE *start_script(int id, int bash_build) {
 			if (*line == 0) {
 				break;
 			}
-			fputs(line, out);
+			output_bake_assignment(out, line);
 			line = calloc(MAX_STRING, sizeof(char));
 		}
 		fclose(env);
+		fputs("\n", out);
 	}
 
 	return out;
@@ -452,7 +503,11 @@ void output_call_script(FILE *out, char *type, char *name, int bash_build, int s
 			fputs("bash ", out);
 		}
 	} else {
-		fputs("kaem --file ", out);
+		if (strlen(type) == 0) {
+			fputs("bake --file ", out);
+		} else {
+			fputs("kaem --file ", out);
+		}
 	}
 	fputs("/steps/", out);
 	if (strlen(type) != 0) {
@@ -460,18 +515,42 @@ void output_call_script(FILE *out, char *type, char *name, int bash_build, int s
 		fputs("/", out);
 	}
 	fputs(name, out);
-	fputs(".sh\n", out);
+	if (!bash_build && strlen(type) == 0) {
+		fputs(".bake all\n", out);
+	} else {
+		fputs(".sh\n", out);
+	}
 }
 
-void output_build(FILE *out, Directive *directive, int pass_no, int bash_build) {
+char *make_target(char *prefix, char *name, int pass_no) {
+	char *target = calloc(MAX_STRING, sizeof(char));
+	strcpy(target, prefix);
+	strcat(target, name);
+	if (pass_no != 0) {
+		strcat(target, "-pass");
+		strcat(target, int2str(pass_no, 10, 0));
+	}
+	return target;
+}
+
+char *output_build(FILE *out, Directive *directive, int pass_no, int bash_build, char *previous) {
+	char *target;
 	if (bash_build) {
 		fputs("build ", out);
 		fputs(directive->arg, out);
 		fputs(" pass", out);
 		fputs(int2str(pass_no, 10, 0), out);
 		fputs(".sh\n", out);
+		return previous;
 	} else {
-		fputs("pkg=", out);
+		target = make_target("", directive->arg, pass_no);
+		fputs(": ", out);
+		fputs(target, out);
+		fputs(" : ", out);
+		fputs(previous, out);
+		fputs("\n", out);
+		fputs("cd /steps\n", out);
+		fputs("export pkg ", out);
 		fputs(directive->arg, out);
 		fputs("\n", out);
 		fputs("cd ${pkg}\n", out);
@@ -479,7 +558,31 @@ void output_build(FILE *out, Directive *directive, int pass_no, int bash_build) 
 		fputs(int2str(pass_no, 10, 0), out);
 		fputs(".kaem\n", out);
 		fputs("cd ..\n", out);
+		fputs("\n", out);
+		return target;
 	}
+}
+
+char *output_action(FILE *out, char *kind, char *name, int bash_build, char *previous) {
+	char *target;
+	char *prefix;
+	if (bash_build) {
+		output_call_script(out, kind, name, bash_build, 1);
+		return previous;
+	}
+	prefix = calloc(MAX_STRING, sizeof(char));
+	strcpy(prefix, kind);
+	strcat(prefix, "-");
+	target = make_target(prefix, name, 0);
+	fputs(": ", out);
+	fputs(target, out);
+	fputs(" : ", out);
+	fputs(previous, out);
+	fputs("\n", out);
+	fputs("cd /steps\n", out);
+	output_call_script(out, kind, name, bash_build, 1);
+	fputs("\n", out);
+	return target;
 }
 
 void generate_preseed_jump(int id) {
@@ -505,6 +608,7 @@ void generate(Directive *directives) {
 
 	/* Initially, we use kaem, not bash. */
 	int bash_build = 0;
+	char *previous = "env";
 
 	FILE *out = start_script(counter, bash_build);
 	counter += 1;
@@ -522,8 +626,9 @@ void generate(Directive *directives) {
 					pass_no += 1;
 				}
 			}
-			output_build(out, directive, pass_no, bash_build);
+			previous = output_build(out, directive, pass_no, bash_build, previous);
 			if (strncmp(directive->arg, "bash-", 5) == 0) {
+				int was_bake = !bash_build;
 				if (!bash_build) {
 					/*
 					 * We are transitioning from bash to kaem, the point at which "early
@@ -534,12 +639,18 @@ void generate(Directive *directives) {
 				bash_build += 1;
 				/* Create call to new script. */
 				output_call_script(out, "", int2str(counter, 10, 0), bash_build, 0);
+				if (was_bake) {
+					fputs("\n: all ", out);
+					fputs(previous, out);
+					fputs("\n", out);
+				}
 				fclose(out);
 				out = start_script(counter, bash_build);
+				previous = "env";
 				counter += 1;
 			}
 		} else if (directive->type == TYPE_IMPROVE) {
-			output_call_script(out, "improve", directive->arg, bash_build, 1);
+			previous = output_action(out, "improve", directive->arg, bash_build, previous);
 		} else if (directive->type == TYPE_JUMP) {
 			/*
 			 * Create /init to call new script.
@@ -567,6 +678,11 @@ void generate(Directive *directives) {
 			}
 
 			output_call_script(out, "jump", directive->arg, bash_build, 1);
+			if (!bash_build) {
+				fputs("\n: all ", out);
+				fputs(previous, out);
+				fputs("\n", out);
+			}
 			fclose(out);
 
 			if (bash_build) {
@@ -587,12 +703,18 @@ void generate(Directive *directives) {
 			output_call_script(out, "", int2str(counter, 10, 0), bash_build, 0);
 			fclose(out);
 			out = start_script(counter, bash_build);
+			previous = "env";
 			counter += 1;
 		} else if (directive->type == TYPE_UNINSTALL) {
 			fputs("uninstall ", out);
 			fputs(directive->arg, out);
 			fputs("\n", out);
 		}
+	}
+	if (!bash_build) {
+		fputs("\n: all ", out);
+		fputs(previous, out);
+		fputs("\n", out);
 	}
 	fclose(out);
 }
