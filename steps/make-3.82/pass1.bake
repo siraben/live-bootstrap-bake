@@ -82,4 +82,3 @@ cd ../..
 ? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/make
 ? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 ! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
-
