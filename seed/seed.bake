@@ -1,8 +1,8 @@
 : all run
 
 : setup
-mkdir --parents ${PREFIX} ${BINDIR} ${LIBDIR} ${INCDIR} ${SRCDIR} ${TMPDIR} /dev
 export PATH /${ARCH_DIR}/bin
+mkdir --parents ${PREFIX} ${BINDIR} ${LIBDIR} ${INCDIR} ${SRCDIR} ${TMPDIR} /dev
 cp /${ARCH_DIR}/bin/blood-elf ${BINDIR}/blood-elf
 cp /${ARCH_DIR}/bin/bake ${BINDIR}/bake
 cp /${ARCH_DIR}/bin/catm ${BINDIR}/catm
