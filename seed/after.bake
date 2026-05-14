@@ -1,0 +1,3 @@
+: all
+./${ARCH_DIR}/bin/catm seed-full.bake /steps/bootstrap.cfg /steps/env seed.bake
+./${ARCH_DIR}/bin/bake --file seed-full.bake all

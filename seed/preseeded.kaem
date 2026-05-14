@@ -5,4 +5,4 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 /script-generator /steps/manifest
-/usr/bin/kaem --file /preseed-jump.kaem
+/usr/bin/bake --file /preseed-jump.bake all

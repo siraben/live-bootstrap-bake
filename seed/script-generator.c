@@ -436,6 +436,8 @@ Directive *interpreter(Directive *directives) {
 }
 
 /* Script generator. */
+int has_bake_action(char *type, char *name);
+
 FILE *start_script(int id, int bash_build) {
 	/* Create the file /steps/$id.sh or /steps/$id.bake */
 	char *filename = calloc(MAX_STRING, sizeof(char));
@@ -496,6 +498,7 @@ FILE *start_script(int id, int bash_build) {
 }
 
 void output_call_script(FILE *out, char *type, char *name, int bash_build, int source) {
+	int use_bake_action = 0;
 	if (bash_build) {
 		if (source) {
 			fputs(". ", out);
@@ -503,11 +506,14 @@ void output_call_script(FILE *out, char *type, char *name, int bash_build, int s
 			fputs("bash ", out);
 		}
 	} else {
-		if (strlen(type) == 0) {
-			fputs("bake --file ", out);
-		} else {
-			fputs("kaem --file ", out);
+		if (strlen(type) != 0) {
+			use_bake_action = has_bake_action(type, name);
 		}
+		if (strlen(type) != 0 && !use_bake_action) {
+			fputs("Missing bake script for action\n", stderr);
+			exit(1);
+		}
+		fputs("bake --file ", out);
 	}
 	fputs("/steps/", out);
 	if (strlen(type) != 0) {
@@ -515,7 +521,7 @@ void output_call_script(FILE *out, char *type, char *name, int bash_build, int s
 		fputs("/", out);
 	}
 	fputs(name, out);
-	if (!bash_build && strlen(type) == 0) {
+	if (!bash_build && (strlen(type) == 0 || use_bake_action)) {
 		fputs(".bake all\n", out);
 	} else {
 		fputs(".sh\n", out);
@@ -549,6 +555,22 @@ int has_bake_script(char *name, int pass_no) {
 	return 1;
 }
 
+int has_bake_action(char *type, char *name) {
+	char *filename = calloc(MAX_STRING, sizeof(char));
+	FILE *script;
+	strcpy(filename, "/steps/");
+	strcat(filename, type);
+	strcat(filename, "/");
+	strcat(filename, name);
+	strcat(filename, ".bake");
+	script = fopen(filename, "r");
+	if (script == NULL) {
+		return 0;
+	}
+	fclose(script);
+	return 1;
+}
+
 char *output_build(FILE *out, Directive *directive, int pass_no, int bash_build, char *previous) {
 	char *target;
 	int use_bake;
@@ -561,6 +583,10 @@ char *output_build(FILE *out, Directive *directive, int pass_no, int bash_build,
 		return previous;
 	} else {
 		use_bake = has_bake_script(directive->arg, pass_no);
+		if (!use_bake) {
+			fputs("Missing bake script for build\n", stderr);
+			exit(1);
+		}
 		target = make_target("", directive->arg, pass_no);
 		fputs(": ", out);
 		fputs(target, out);
@@ -572,17 +598,9 @@ char *output_build(FILE *out, Directive *directive, int pass_no, int bash_build,
 		fputs(directive->arg, out);
 		fputs("\n", out);
 		fputs("cd ${pkg}\n", out);
-		if (use_bake) {
-			fputs("bake --file pass", out);
-		} else {
-			fputs("kaem --file pass", out);
-		}
+		fputs("bake --file pass", out);
 		fputs(int2str(pass_no, 10, 0), out);
-		if (use_bake) {
-			fputs(".bake all\n", out);
-		} else {
-			fputs(".kaem\n", out);
-		}
+		fputs(".bake all\n", out);
 		fputs("cd ..\n", out);
 		fputs("\n", out);
 		return target;
@@ -612,9 +630,9 @@ char *output_action(FILE *out, char *kind, char *name, int bash_build, char *pre
 }
 
 void generate_preseed_jump(int id) {
-	FILE *out = fopen("/preseed-jump.kaem", "w");
-	fputs("set -ex\n", out);
-	fputs("PATH=/usr/bin\n", out);
+	FILE *out = fopen("/preseed-jump.bake", "w");
+	fputs(": all\n", out);
+	fputs("export PATH /usr/bin\n", out);
 	fputs("bash /steps/", out);
 	fputs(int2str(id, 10, 0), out);
 	fputs(".sh\n", out);
@@ -694,12 +712,12 @@ void generate(Directive *directives) {
 				fputs(" /init\n", out);
 				fputs("chmod 755 /init\n", out);
 			} else {
-				strcpy(filename, "/kaem.run.");
+				strcpy(filename, "/build.bake.");
 				strcat(filename, int2str(counter, 10, 0));
 				fputs("cp ", out);
 				fputs(filename, out);
-				fputs(" /kaem.run\n", out);
-				fputs("cp /usr/bin/kaem /init\n", out);
+				fputs(" /build.bake\n", out);
+				fputs("cp /usr/bin/bake /init\n", out);
 				fputs("chmod 755 /init\n", out);
 			}
 
@@ -721,10 +739,10 @@ void generate(Directive *directives) {
 			} else {
 				out = fopen(filename, "w");
 				if (out == NULL) {
-					fputs("Error opening /kaem.run\n", stderr);
+					fputs("Error opening /build.bake\n", stderr);
 					exit(1);
 				}
-				fputs("set -ex\n", out);
+				fputs(": all\n", out);
 			}
 			output_call_script(out, "", int2str(counter, 10, 0), bash_build, 0);
 			fclose(out);

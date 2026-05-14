@@ -7,6 +7,26 @@
 
 #define MULTIBOOT_MAGIC 0x2BADB002
 
+char *join_tail(int argc, char **argv, int start) {
+	int i;
+	size_t len = 0;
+	char *out;
+
+	for (i = start; i < argc; i++) {
+		len += strlen(argv[i]) + 1;
+	}
+
+	out = calloc(len + 1, sizeof(char));
+	for (i = start; i < argc; i++) {
+		if (i != start) {
+			strcat(out, " ");
+		}
+		strcat(out, argv[i]);
+	}
+
+	return out;
+}
+
 multiboot_uint32_t get_memmap(char *filename, void *memmap_addr) {
 
 	if (!filename) {
@@ -52,7 +72,8 @@ int main(int argc, char **argv) {
 	for (i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "-c")) {
 			i++;
-			cmdline = argv[i];
+			cmdline = join_tail(argc, argv, i);
+			break;
 		} else if (!strcmp(argv[i], "-i")) {
 			i++;
 			initrd_filename = argv[i];

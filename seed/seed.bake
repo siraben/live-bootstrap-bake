@@ -1,27 +1,14 @@
-#!/bin/sh
+: all run
 
-# SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
-# SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
-# SPDX-FileCopyrightText: 2020-2022 Samuel Tyler <samuel@samuelt.me>
-# SPDX-FileCopyrightText: 2022 Dor Askayo <dor.askayo@gmail.com>
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
-
-set -ex
-
+: setup
 mkdir -p ${PREFIX} ${BINDIR} ${LIBDIR} ${INCDIR} ${SRCDIR} ${TMPDIR} /dev
-
-# Temporarily change PATH
-PATH=/${ARCH_DIR}/bin
-
-# Remove remaining dependencies on /bin (stage0-posix directory)
+export PATH /${ARCH_DIR}/bin
 cp /${ARCH_DIR}/bin/blood-elf ${BINDIR}/blood-elf
 cp /${ARCH_DIR}/bin/bake ${BINDIR}/bake
 cp /${ARCH_DIR}/bin/catm ${BINDIR}/catm
 cp /${ARCH_DIR}/bin/chmod ${BINDIR}/chmod
 cp /${ARCH_DIR}/bin/get_machine ${BINDIR}/get_machine
 cp /${ARCH_DIR}/bin/hex2 ${BINDIR}/hex2
-cp /${ARCH_DIR}/bin/kaem ${BINDIR}/kaem
 cp /${ARCH_DIR}/bin/match ${BINDIR}/match
 cp /${ARCH_DIR}/bin/M1 ${BINDIR}/M1
 cp /${ARCH_DIR}/bin/M2-Mesoplanet ${BINDIR}/M2-Mesoplanet
@@ -35,7 +22,6 @@ cp /${ARCH_DIR}/bin/unxz ${BINDIR}/unxz
 cp /${ARCH_DIR}/bin/cp ${BINDIR}/cp
 cp /${ARCH_DIR}/bin/replace ${BINDIR}/replace
 cp /${ARCH_DIR}/bin/rm ${BINDIR}/rm
-
 chmod 755 ${BINDIR}/blood-elf
 chmod 755 ${BINDIR}/bake
 chmod 755 ${BINDIR}/catm
@@ -43,7 +29,6 @@ chmod 755 ${BINDIR}/chmod
 chmod 755 ${BINDIR}/cp
 chmod 755 ${BINDIR}/get_machine
 chmod 755 ${BINDIR}/hex2
-chmod 755 ${BINDIR}/kaem
 chmod 755 ${BINDIR}/match
 chmod 755 ${BINDIR}/M1
 chmod 755 ${BINDIR}/M2-Mesoplanet
@@ -56,32 +41,24 @@ chmod 755 ${BINDIR}/untar
 chmod 755 ${BINDIR}/unxz
 chmod 755 ${BINDIR}/replace
 chmod 755 ${BINDIR}/rm
+export PATH ${BINDIR}
+export M2LIBC_PATH /M2libc
+export NYACC_PKG nyacc-1.00.2
+export MES_PKG mes-0.27.1
+export MES_PREFIX ${SRCDIR}/${MES_PKG}/build/${MES_PKG}
+export GUILE_LOAD_PATH ${MES_PREFIX}/mes/module:${MES_PREFIX}/module:${SRCDIR}/${MES_PKG}/build/${NYACC_PKG}/module
 
-PATH=${BINDIR}
-M2LIBC_PATH=/M2libc
-
-# mes envars
-NYACC_PKG=nyacc-1.00.2
-MES_PKG=mes-0.27.1
-MES_PREFIX=${SRCDIR}/${MES_PKG}/build/${MES_PKG}
-GUILE_LOAD_PATH=${MES_PREFIX}/mes/module:${MES_PREFIX}/module:${SRCDIR}/${MES_PKG}/build/${NYACC_PKG}/module
-
-M2-Mesoplanet --architecture ${ARCH} -f configurator.c -o configurator
-# Checksums
-if match x${UPDATE_CHECKSUMS} xTrue; then
-    sha256sum -o configurator.${ARCH}.checksums configurator
-else
-    sha256sum -c configurator.${ARCH}.checksums
-fi
+: configurator setup
+M2-Mesoplanet --architecture ${ARCH} -o configurator configurator.c
+? UPDATE_CHECKSUMS True sha256sum -o configurator.${ARCH}.checksums configurator
+! UPDATE_CHECKSUMS True sha256sum -c configurator.${ARCH}.checksums
 ./configurator /steps/configurator
 
-M2-Mesoplanet --architecture ${ARCH} -f script-generator.c -o script-generator
-# Checksums
-if match x${UPDATE_CHECKSUMS} xTrue; then
-    sha256sum -o script-generator.${ARCH}.checksums script-generator
-else
-    sha256sum -c script-generator.${ARCH}.checksums
-fi
+: script-generator configurator
+M2-Mesoplanet --architecture ${ARCH} -o script-generator script-generator.c
+? UPDATE_CHECKSUMS True sha256sum -o script-generator.${ARCH}.checksums script-generator
+! UPDATE_CHECKSUMS True sha256sum -c script-generator.${ARCH}.checksums
 ./script-generator /steps/manifest
 
+: run script-generator
 bake --file /steps/0.bake all
