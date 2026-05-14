@@ -1,0 +1,38 @@
+diff --git a/makefile b/makefile
+index 3399ba1..eaff688 100644
+--- a/makefile
++++ b/makefile
+@@ -36,6 +36,7 @@ x86/bin/mkdir \
+ x86/bin/replace \
+ x86/bin/rm \
+ x86/bin/sha256sum \
++x86/bin/bake \
+ x86/bin/ungz \
+ x86/bin/unbz2 \
+ x86/bin/unxz \
+diff --git a/mescc-tools-extra b/mescc-tools-extra
+index a151c24..e726e2d 160000
+--- a/mescc-tools-extra
++++ b/mescc-tools-extra
+@@ -1 +1 @@
+-Subproject commit a151c245e512076971a3c85bb1502cf92cfa83b6
++Subproject commit e726e2d65f20d9833d92986dd70613fa4424c551
+diff --git a/x86 b/x86
+index 3b9c2bb..386a46e 160000
+--- a/x86
++++ b/x86
+@@ -1 +1 @@
+-Subproject commit 3b9c2bb6d4155e4f2e5f642b5e0f59255dfc5934
++Subproject commit 386a46e03e7087c0708f14d545d3696536e5e71c
+diff --git a/x86.answers b/x86.answers
+index 4f57177..bdd881e 100644
+--- a/x86.answers
++++ b/x86.answers
+@@ -13,6 +13,7 @@ f7a77caae8673b9013ce15f590ccd3030c3b4bcd27a6ce705d196e379cdbc530  x86/bin/mkdir
+ 68376f384dcc0463fd202a224424a0c8db4d81c2082a1f3f68e67505704984b1  x86/bin/replace
+ abf00777b3e3268cfb342d2418719265002c5ef3557c3cbfd488b78560c2679f  x86/bin/rm
+ 6853fea40a41d77d2ccf40e6fa8b3e78c834705ab6c39ad158d45e190d970768  x86/bin/sha256sum
++709d74b4fde14d1399a8e30be98d569a4bdb4bdd608aa6cc3fe89e68202c2d5e  x86/bin/bake
+ a4dd35e9ce1595a7ec9cfe81728e10afcca800795324d251c9365b0e7ee81b37  x86/bin/ungz
+ d332d96d200d7752f551b5b45777ab8dfd0cfb6c1cadb14a19405a3823d2833e  x86/bin/unbz2
+ 1cf1d3ea82b5c3586d5f4fd13bcade9d292ffda0ed1d38b50857533564520b26  x86/bin/unxz
