@@ -1,7 +1,7 @@
 : all build checksum
 
 : build
-M2-Mesoplanet --architecture ${ARCH} -f src/checksum-transcriber.c -o ${BINDIR}/checksum-transcriber
+M2-Mesoplanet --architecture ${ARCH} -o ${BINDIR}/checksum-transcriber src/checksum-transcriber.c
 
 : checksum build
 ? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/checksum-transcriber

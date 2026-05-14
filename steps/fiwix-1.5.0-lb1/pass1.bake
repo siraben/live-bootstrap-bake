@@ -1,0 +1,55 @@
+: all build checksum
+
+= KINC -I/${SRCDIR}/${pkg}/build/${pkg}/include
+= KDEF -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc"
+= KCBASE -m32 -march=i386 -std=c89 ${KDEF}
+= KCFLAGS ${KCBASE} ${KINC} -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes
+= KASFLAGS ${KCBASE} -traditional ${KINC}
+= KERNEL_OBJS kernel/boot.o kernel/core386.o kernel/main.o kernel/init.o kernel/gdt.o kernel/idt.o kernel/syscalls.o kernel/pic.o kernel/pit.o kernel/irq.o kernel/traps.o kernel/cpu.o kernel/cmos.o kernel/timer.o kernel/sched.o kernel/sleep.o kernel/signal.o kernel/process.o kernel/multiboot.o kernel/kexec.o
+= KERNEL_SYSCALLS_OBJS kernel/syscalls/umount.o kernel/syscalls/getgid.o kernel/syscalls/getppid.o kernel/syscalls/fstatfs.o kernel/syscalls/getgroups.o kernel/syscalls/fsync.o kernel/syscalls/setreuid.o kernel/syscalls/newuname.o kernel/syscalls/fork.o kernel/syscalls/setitimer.o kernel/syscalls/fdatasync.o kernel/syscalls/chmod.o kernel/syscalls/mmap2.o kernel/syscalls/msgsnd.o kernel/syscalls/exit.o kernel/syscalls/readlink.o kernel/syscalls/socketcall.o kernel/syscalls/stat64.o kernel/syscalls/readv.o kernel/syscalls/sigaction.o kernel/syscalls/fstat.o kernel/syscalls/waitpid.o kernel/syscalls/setfsgid.o kernel/syscalls/chown.o kernel/syscalls/flock.o kernel/syscalls/uname.o kernel/syscalls/lseek.o kernel/syscalls/setsid.o kernel/syscalls/settimeofday.o kernel/syscalls/unlink.o kernel/syscalls/sigprocmask.o kernel/syscalls/ustat.o kernel/syscalls/open.o kernel/syscalls/sync.o kernel/syscalls/iopl.o kernel/syscalls/msgget.o kernel/syscalls/pipe.o kernel/syscalls/shmdt.o kernel/syscalls/getsid.o kernel/syscalls/setfsuid.o kernel/syscalls/signal.o kernel/syscalls/newfstat.o kernel/syscalls/mkdir.o kernel/syscalls/getcwd.o kernel/syscalls/link.o kernel/syscalls/msgctl.o kernel/syscalls/sethostname.o kernel/syscalls/semctl.o kernel/syscalls/sysinfo.o kernel/syscalls/setdomainname.o kernel/syscalls/getegid.o kernel/syscalls/personality.o kernel/syscalls/setregid.o kernel/syscalls/setgid.o kernel/syscalls/lstat.o kernel/syscalls/getuid.o kernel/syscalls/llseek.o kernel/syscalls/select.o kernel/syscalls/ftruncate.o kernel/syscalls/getpgid.o kernel/syscalls/brk.o kernel/syscalls/getrusage.o kernel/syscalls/sigsuspend.o kernel/syscalls/writev.o kernel/syscalls/times.o kernel/syscalls/ssetmask.o kernel/syscalls/stat.o kernel/syscalls/fchdir.o kernel/syscalls/chdir.o kernel/syscalls/setgroups.o kernel/syscalls/newstat.o kernel/syscalls/creat.o kernel/syscalls/getdents64.o kernel/syscalls/getpid.o kernel/syscalls/read.o kernel/syscalls/dup.o kernel/syscalls/utimes.o kernel/syscalls/semget.o kernel/syscalls/mount.o kernel/syscalls/rmdir.o kernel/syscalls/setrlimit.o kernel/syscalls/sgetmask.o kernel/syscalls/pause.o kernel/syscalls/utime.o kernel/syscalls/statfs.o kernel/syscalls/ioperm.o kernel/syscalls/ftime.o kernel/syscalls/truncate.o kernel/syscalls/old_mmap.o kernel/syscalls/olduname.o kernel/syscalls/kill.o kernel/syscalls/gettimeofday.o kernel/syscalls/fchmod.o kernel/syscalls/fcntl64.o kernel/syscalls/mprotect.o kernel/syscalls/getitimer.o kernel/syscalls/old_select.o kernel/syscalls/symlink.o kernel/syscalls/mknod.o kernel/syscalls/write.o kernel/syscalls/rename.o kernel/syscalls/shmat.o kernel/syscalls/ipc.o kernel/syscalls/lstat64.o kernel/syscalls/access.o kernel/syscalls/getrlimit.o kernel/syscalls/sigreturn.o kernel/syscalls/ioctl.o kernel/syscalls/umask.o kernel/syscalls/geteuid.o kernel/syscalls/munmap.o kernel/syscalls/alarm.o kernel/syscalls/nanosleep.o kernel/syscalls/close.o kernel/syscalls/chroot.o kernel/syscalls/ftruncate64.o kernel/syscalls/truncate64.o kernel/syscalls/msgrcv.o kernel/syscalls/umount2.o kernel/syscalls/time.o kernel/syscalls/stime.o kernel/syscalls/semop.o kernel/syscalls/newlstat.o kernel/syscalls/sigpending.o kernel/syscalls/reboot.o kernel/syscalls/setuid.o kernel/syscalls/wait4.o kernel/syscalls/chown32.o kernel/syscalls/fcntl.o kernel/syscalls/fstat64.o kernel/syscalls/shmctl.o kernel/syscalls/dup2.o kernel/syscalls/setpgid.o kernel/syscalls/getdents.o kernel/syscalls/getpgrp.o kernel/syscalls/fchown.o kernel/syscalls/execve.o kernel/syscalls/shmget.o kernel/syscalls/lchown.o
+= MM_OBJS mm/bios_map.o mm/buddy_low.o mm/memory.o mm/page.o mm/alloc.o mm/fault.o mm/mmap.o mm/swapper.o
+= FS_OBJS fs/filesystems.o fs/devices.o fs/buffer.o fs/fd.o fs/locks.o fs/super.o fs/inode.o fs/namei.o fs/elf.o fs/script.o
+= FS_MINIX_OBJS fs/minix/super.o fs/minix/bitmaps.o fs/minix/inode.o fs/minix/namei.o fs/minix/symlink.o fs/minix/dir.o fs/minix/file.o fs/minix/v1_inode.o fs/minix/v2_inode.o
+= FS_EXT2_OBJS fs/ext2/inode.o fs/ext2/super.o fs/ext2/namei.o fs/ext2/symlink.o fs/ext2/dir.o fs/ext2/file.o fs/ext2/bitmaps.o
+= FS_PIPEFS_OBJS fs/pipefs/super.o fs/pipefs/fifo.o fs/pipefs/pipe.o
+= FS_ISO9660_OBJS fs/iso9660/inode.o fs/iso9660/super.o fs/iso9660/namei.o fs/iso9660/dir.o fs/iso9660/file.o fs/iso9660/rrip.o fs/iso9660/symlink.o
+= FS_PROCFS_OBJS fs/procfs/super.o fs/procfs/inode.o fs/procfs/namei.o fs/procfs/dir.o fs/procfs/file.o fs/procfs/symlink.o fs/procfs/tree.o fs/procfs/data.o
+= DRIVERS_CHAR_OBJS drivers/char/console.o drivers/char/tty.o drivers/char/tty_queue.o drivers/char/vt.o drivers/char/defkeymap.o drivers/char/keyboard.o drivers/char/memdev.o drivers/char/serial.o drivers/char/lp.o drivers/char/fb.o drivers/char/sysrq.o
+= DRIVERS_BLOCK_OBJS drivers/block/dma.o drivers/block/floppy.o drivers/block/part.o drivers/block/ata.o drivers/block/ata_hd.o drivers/block/ata_pci.o drivers/block/atapi.o drivers/block/atapi_cd.o drivers/block/ramdisk.o
+= DRIVERS_PCI_OBJS drivers/pci/pci.o
+= DRIVERS_VIDEO_OBJS drivers/video/video.o drivers/video/vgacon.o drivers/video/fbcon.o drivers/video/fonts.o drivers/video/bga.o
+= LIB_OBJS lib/ctype.o lib/strings.o lib/printk.o
+= FIWIX_OBJS ${KERNEL_OBJS} ${KERNEL_SYSCALLS_OBJS} ${MM_OBJS} ${FS_OBJS} ${FS_MINIX_OBJS} ${FS_EXT2_OBJS} ${FS_PIPEFS_OBJS} ${FS_ISO9660_OBJS} ${FS_PROCFS_OBJS} ${DRIVERS_CHAR_OBJS} ${DRIVERS_BLOCK_OBJS} ${DRIVERS_PCI_OBJS} ${DRIVERS_VIDEO_OBJS} ${LIB_OBJS}
+
+: build /boot/fiwix
+
+: setup
+checksum-transcriber sources
+sha256sum -c sources.SHA256SUM
+mkdir build
+cd build
+ungz --file ${DISTFILES}/${pkg}.tar.gz --output ${pkg}.tar
+untar --file ${pkg}.tar
+cd ${pkg}
+cp ../../files/custom_config.h include/fiwix
+cp ../../files/custom_limits.h include/fiwix
+cp ../../files/custom_kernel.h include/fiwix
+cp ../../files/custom_system.h include/fiwix
+
+: kernel/boot.o kernel/boot.S setup
+tcc ${KASFLAGS} -c -o $@ $<
+
+: kernel/core386.o kernel/core386.S setup
+tcc ${KASFLAGS} -c -o $@ $<
+
+: %.o %.c setup
+tcc ${KCFLAGS} -c -o $@ $<
+
+: /boot/fiwix ${FIWIX_OBJS}
+mkdir /boot
+tcc -m32 -Wl,-Ttext=0x80100000 -static -nostdlib -nostdinc ${FIWIX_OBJS} -o $@
+
+: checksum build
+? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /boot/fiwix
+? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
+! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
