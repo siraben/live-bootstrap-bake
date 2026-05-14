@@ -1,6 +1,11 @@
 : all build checksum
 
-: build
+= MAKE_CFLAGS -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART
+= MAKE_OBJS getopt.o getopt1.o ar.o arscan.o commands.o default.o dir.o expand.o file.o function.o implicit.o job.o main.o misc.o read.o remake.o rule.o signame.o strcache.o variable.o version.o vpath.o hash.o remote-stub.o getloadavg.o fnmatch.o glob.o
+
+: build ${BINDIR}/make
+
+: setup
 checksum-transcriber sources
 sha256sum -c sources.SHA256SUM
 mkdir build
@@ -10,34 +15,66 @@ untar --file ${pkg}.tar
 rm ${pkg}.tar
 cd ${pkg}
 catm config.h
+
+: %.o %.c setup
+tcc -c ${MAKE_CFLAGS} $<
+
+: getopt.o getopt.c setup
 tcc -c getopt.c
+
+: getopt1.o getopt1.c setup
 tcc -c getopt1.c
-tcc -c -I. -Iglob -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_STDINT_H ar.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_FCNTL_H arscan.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DFILE_TIMESTAMP_HI_RES=0 commands.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DSCCS_GET="/nullop" default.c
-tcc -c -I. -Iglob -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_DIRENT_H dir.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART expand.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DFILE_TIMESTAMP_HI_RES=0 file.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -Dvfork=fork function.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART implicit.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_DUP2 -DHAVE_STRCHR -Dvfork=fork job.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DLOCALEDIR="/fake-locale" -DPACKAGE="fake-make" -DHAVE_MKTEMP -DHAVE_GETCWD main.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_STRERROR -DHAVE_VPRINTF -DHAVE_ANSI_COMPILER -DHAVE_STDARG_H misc.c
-tcc -c -I. -Iglob -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DINCLUDEDIR="${PREFIX}/include" read.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DFILE_TIMESTAMP_HI_RES=0 -DHAVE_FCNTL_H -DLIBDIR="${PREFIX}/lib" remake.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART rule.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART signame.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART strcache.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART variable.c
+
+: ar.o ar.c setup
+tcc -c ${MAKE_CFLAGS} -Iglob ar.c
+
+: arscan.o arscan.c setup
+tcc -c ${MAKE_CFLAGS} -DHAVE_FCNTL_H arscan.c
+
+: commands.o commands.c setup
+tcc -c ${MAKE_CFLAGS} -DFILE_TIMESTAMP_HI_RES=0 commands.c
+
+: default.o default.c setup
+tcc -c ${MAKE_CFLAGS} -DSCCS_GET="/nullop" default.c
+
+: dir.o dir.c setup
+tcc -c ${MAKE_CFLAGS} -Iglob -DHAVE_DIRENT_H dir.c
+
+: file.o file.c setup
+tcc -c ${MAKE_CFLAGS} -DFILE_TIMESTAMP_HI_RES=0 file.c
+
+: function.o function.c setup
+tcc -c ${MAKE_CFLAGS} -Dvfork=fork function.c
+
+: job.o job.c setup
+tcc -c ${MAKE_CFLAGS} -DHAVE_DUP2 -DHAVE_STRCHR -Dvfork=fork job.c
+
+: main.o main.c setup
+tcc -c ${MAKE_CFLAGS} -DLOCALEDIR="/fake-locale" -DPACKAGE="fake-make" -DHAVE_MKTEMP -DHAVE_GETCWD main.c
+
+: misc.o misc.c setup
+tcc -c ${MAKE_CFLAGS} -DHAVE_STRERROR -DHAVE_VPRINTF -DHAVE_ANSI_COMPILER -DHAVE_STDARG_H misc.c
+
+: read.o read.c setup
+tcc -c ${MAKE_CFLAGS} -Iglob -DINCLUDEDIR="${PREFIX}/include" read.c
+
+: remake.o remake.c setup
+tcc -c ${MAKE_CFLAGS} -DFILE_TIMESTAMP_HI_RES=0 -DHAVE_FCNTL_H -DLIBDIR="${PREFIX}/lib" remake.c
+
+: version.o version.c setup
 tcc -c -I. -DVERSION="3.82" version.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART vpath.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART hash.c
-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART remote-stub.c
+
+: getloadavg.o getloadavg.c setup
 tcc -c -DHAVE_FCNTL_H getloadavg.c
+
+: fnmatch.o glob/fnmatch.c setup
 tcc -c -Iglob -DSTDC_HEADERS glob/fnmatch.c
+
+: glob.o glob/glob.c setup
 tcc -c -Iglob -DHAVE_STRDUP -DHAVE_DIRENT_H glob/glob.c
-tcc -static -o ${BINDIR}/make getopt.o getopt1.o ar.o arscan.o commands.o default.o dir.o expand.o file.o function.o implicit.o job.o main.o misc.o read.o remake.o rule.o signame.o strcache.o variable.o version.o vpath.o hash.o remote-stub.o getloadavg.o fnmatch.o glob.o
+
+: ${BINDIR}/make ${MAKE_OBJS}
+tcc -static -o $@ ${MAKE_OBJS}
 make --version
 cd ../..
 

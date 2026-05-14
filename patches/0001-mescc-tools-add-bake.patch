@@ -1,9 +1,81 @@
+diff --git a/M1-macro.c b/M1-macro.c
+index 32c0e18..e3d9918 100644
+--- a/M1-macro.c
++++ b/M1-macro.c
+@@ -91,6 +91,25 @@ int blob_count;
+ char* SCRATCH;
+ struct blob** hash_table;
+ 
++struct Token* Tokenize_Line(struct Token* head, char* filename);
++
++void read_input_file(char* name)
++{
++	source_file = fopen(name, "r");
++
++	if(NULL == source_file)
++	{
++		fputs("The file: ", stderr);
++		fputs(name, stderr);
++		fputs(" can not be opened!\n", stderr);
++		exit(EXIT_FAILURE);
++	}
++
++	token_list = Tokenize_Line(token_list, name);
++
++	fclose(source_file);
++}
++
+ void line_error(char* filename, int linenumber)
+ {
+ 	fputs(filename, stderr);
+@@ -860,7 +879,7 @@ int main(int argc, char **argv)
+ 		{
+ 			fputs("Usage: ", stderr);
+ 			fputs(argv[0], stderr);
+-			fputs(" --file FILENAME1 {-f FILENAME2} (--big-endian|--little-endian) ", stderr);
++			fputs(" [options] FILENAME1 {FILENAME2}\n", stderr);
+ 			fputs("[--architecture name]\nArchitectures: knight-native, knight-posix, x86, amd64, armv7, riscv32 and riscv64\n", stderr);
+ 			fputs("To leverage octal or binary output: --octal, --binary\n", stderr);
+ 			exit(EXIT_SUCCESS);
+@@ -868,20 +887,7 @@ int main(int argc, char **argv)
+ 		else if(match(argv[option_index], "-f") || match(argv[option_index], "--file"))
+ 		{
+ 			filename = argv[option_index + 1];
+-			source_file = fopen(filename, "r");
+-
+-			if(NULL == source_file)
+-			{
+-				fputs("The file: ", stderr);
+-				fputs(argv[option_index + 1], stderr);
+-				fputs(" can not be opened!\n", stderr);
+-				exit(EXIT_FAILURE);
+-			}
+-
+-			token_list = Tokenize_Line(token_list, filename);
+-
+-			fclose(source_file);
+-
++			read_input_file(filename);
+ 			option_index = option_index + 2;
+ 		}
+ 		else if(match(argv[option_index], "-o") || match(argv[option_index], "--output"))
+@@ -909,8 +915,8 @@ int main(int argc, char **argv)
+ 		}
+ 		else
+ 		{
+-			fputs("Unknown option\n", stderr);
+-			exit(EXIT_FAILURE);
++			read_input_file(argv[option_index]);
++			option_index = option_index + 1;
+ 		}
+ 	}
+ 
 diff --git a/bake.c b/bake.c
 new file mode 100644
-index 0000000..50c9f9e
+index 0000000..53a395a
 --- /dev/null
 +++ b/bake.c
-@@ -0,0 +1,625 @@
+@@ -0,0 +1,877 @@
 +/* Copyright (C) 2026
 + * This file is part of mescc-tools.
 + *
@@ -23,11 +95,11 @@ index 0000000..50c9f9e
 +
 +#define MAX_LINE 8192
 +#define MAX_ARGS 512
-+#define MAX_TARGETS 256
-+#define MAX_DEPS 64
++#define MAX_TARGETS 1024
++#define MAX_DEPS 512
 +#define MAX_COMMANDS 128
 +#define MAX_ENV 512
-+#define MAX_WORD 4096
++#define MAX_WORD 16384
 +
 +#define MARK_NONE 0
 +#define MARK_TEMP 1
@@ -48,10 +120,17 @@ index 0000000..50c9f9e
 +};
 +
 +struct Target** targets;
++struct Target** patterns;
 +int target_count;
++int pattern_count;
 +char** global_envp;
 +int global_envc;
 +char* active_target;
++char* active_first_dep;
++
++char* expand_vars(char* word);
++char* expand_vars_depth(char* word, int depth);
++void set_env(char* name, char* value);
 +
 +void die(char* message)
 +{
@@ -137,6 +216,31 @@ index 0000000..50c9f9e
 +	return target;
 +}
 +
++int contains_percent(char* name)
++{
++	int i = 0;
++	while(0 != name[i])
++	{
++		if('%' == name[i]) return 1;
++		i = i + 1;
++	}
++	return 0;
++}
++
++struct Target* add_pattern(char* name)
++{
++	struct Target* target;
++	if(pattern_count >= MAX_TARGETS) die("too many pattern rules");
++
++	target = calloc(1, sizeof(struct Target));
++	target->name = copy_string(name);
++	target->deps = calloc(MAX_DEPS, sizeof(char*));
++	target->commands = calloc(MAX_COMMANDS, sizeof(char*));
++	patterns[pattern_count] = target;
++	pattern_count = pattern_count + 1;
++	return target;
++}
++
 +void add_dep(struct Target* target, char* value)
 +{
 +	if(target->dep_count >= MAX_DEPS) die("too many dependencies");
@@ -153,6 +257,7 @@ index 0000000..50c9f9e
 +
 +int parse_rule(char* text, struct Target** out)
 +{
++	char* expanded = expand_vars(text);
 +	int i = 0;
 +	int start;
 +	int name_count = 0;
@@ -165,6 +270,7 @@ index 0000000..50c9f9e
 +	int n;
 +	int d;
 +
++	text = expanded;
 +	while(is_space(text[i])) i = i + 1;
 +	if(0 == text[i]) die("target line missing target");
 +
@@ -192,7 +298,8 @@ index 0000000..50c9f9e
 +	if(0 == name_count) die("target line missing target");
 +	if(!seen_colon)
 +	{
-+		target = add_target(names[0]);
++		if(contains_percent(names[0])) target = add_pattern(names[0]);
++		else target = add_target(names[0]);
 +		n = 1;
 +		while(n < name_count)
 +		{
@@ -206,7 +313,8 @@ index 0000000..50c9f9e
 +	n = 0;
 +	while(n < name_count)
 +	{
-+		target = add_target(names[n]);
++		if(contains_percent(names[n])) target = add_pattern(names[n]);
++		else target = add_target(names[n]);
 +		d = 0;
 +		while(d < dep_count)
 +		{
@@ -218,6 +326,55 @@ index 0000000..50c9f9e
 +		n = n + 1;
 +	}
 +	return out_count;
++}
++
++void parse_assignment(char* line)
++{
++	int i = 1;
++	int start;
++	char* name;
++	char* value;
++
++	while(is_space(line[i])) i = i + 1;
++	if(0 == line[i]) die("assignment missing variable");
++	start = i;
++	while((0 != line[i]) && !is_space(line[i])) i = i + 1;
++	name = copy_range(line, start, i);
++
++	while(is_space(line[i])) i = i + 1;
++	value = line + i;
++	set_env(name, value);
++}
++
++int is_assignment_name_char(int c)
++{
++	if(('a' <= c) && ('z' >= c)) return 1;
++	if(('A' <= c) && ('Z' >= c)) return 1;
++	if(('0' <= c) && ('9' >= c)) return 1;
++	if('_' == c) return 1;
++	return 0;
++}
++
++int parse_shell_assignment(char* line)
++{
++	int i = 0;
++	char* name;
++	char* value;
++	int len;
++	if((0 == line[0]) || (!is_assignment_name_char(line[0]))) return 0;
++	while(is_assignment_name_char(line[i])) i = i + 1;
++	if('=' != line[i]) return 0;
++
++	name = copy_range(line, 0, i);
++	value = line + i + 1;
++	len = strlen(value);
++	if((len > 1) && ('"' == value[0]) && ('"' == value[len - 1]))
++	{
++		value[len - 1] = 0;
++		value = value + 1;
++	}
++	set_env(name, value);
++	return 1;
 +}
 +
 +void read_makefile(char* filename)
@@ -235,6 +392,13 @@ index 0000000..50c9f9e
 +		strip_newline(line);
 +
 +		if((0 == line[0]) || ('#' == line[0]))
++		{
++		}
++		else if('=' == line[0])
++		{
++			parse_assignment(line);
++		}
++		else if(parse_shell_assignment(line))
 +		{
 +		}
 +		else if(':' == line[0])
@@ -300,6 +464,100 @@ index 0000000..50c9f9e
 +	return NULL;
 +}
 +
++char* replace_percent(char* pattern, char* stem)
++{
++	char* out = calloc(MAX_WORD, sizeof(char));
++	int i = 0;
++	int j = 0;
++	int k;
++	while(0 != pattern[i])
++	{
++		if('%' == pattern[i])
++		{
++			k = 0;
++			while(0 != stem[k])
++			{
++				out[j] = stem[k];
++				j = j + 1;
++				k = k + 1;
++			}
++			i = i + 1;
++		}
++		else
++		{
++			out[j] = pattern[i];
++			j = j + 1;
++			i = i + 1;
++		}
++	}
++	out[j] = 0;
++	return out;
++}
++
++char* pattern_stem(char* pattern, char* name)
++{
++	int percent = 0;
++	int prefix_len;
++	int suffix_len;
++	int name_len = strlen(name);
++	int pattern_len = strlen(pattern);
++	int i = 0;
++	while((0 != pattern[percent]) && ('%' != pattern[percent])) percent = percent + 1;
++	if(0 == pattern[percent]) return NULL;
++
++	prefix_len = percent;
++	suffix_len = pattern_len - percent - 1;
++	if(name_len < (prefix_len + suffix_len)) return NULL;
++	i = 0;
++	while(i < prefix_len)
++	{
++		if(pattern[i] != name[i]) return NULL;
++		i = i + 1;
++	}
++	i = 0;
++	while(i < suffix_len)
++	{
++		if(pattern[percent + 1 + i] != name[name_len - suffix_len + i]) return NULL;
++		i = i + 1;
++	}
++	return copy_range(name, prefix_len, name_len - suffix_len);
++}
++
++struct Target* instantiate_pattern(char* name)
++{
++	int i = 0;
++	int d;
++	int c;
++	char* stem;
++	struct Target* pattern;
++	struct Target* target;
++	while(i < pattern_count)
++	{
++		pattern = patterns[i];
++		stem = pattern_stem(pattern->name, name);
++		if(NULL != stem)
++		{
++			target = add_target(name);
++			target->mark = MARK_NONE;
++			d = 0;
++			while(d < pattern->dep_count)
++			{
++				add_dep(target, replace_percent(pattern->deps[d], stem));
++				d = d + 1;
++			}
++			c = 0;
++			while(c < pattern->command_count)
++			{
++				add_command(target, pattern->commands[c]);
++				c = c + 1;
++			}
++			return target;
++		}
++		i = i + 1;
++	}
++	return NULL;
++}
++
 +void init_env(char** envp)
 +{
 +	int i = 0;
@@ -341,15 +599,16 @@ index 0000000..50c9f9e
 +	global_envp[global_envc] = NULL;
 +}
 +
-+char* expand_vars(char* word)
++char* expand_vars_depth(char* word, int depth)
 +{
 +	char* out = calloc(MAX_WORD, sizeof(char));
 +	char* name;
 +	char* value;
++	char* expanded;
 +	int i = 0;
 +	int j = 0;
-+	int start;
-+	int end;
++	int start = 0;
++	int end = 0;
 +	int k;
 +
 +	while(0 != word[i])
@@ -380,6 +639,21 @@ index 0000000..50c9f9e
 +				}
 +				continue;
 +			}
++			else if('<' == word[i])
++			{
++				i = i + 1;
++				if(NULL != active_first_dep)
++				{
++					k = 0;
++					while(0 != active_first_dep[k])
++					{
++						out[j] = active_first_dep[k];
++						j = j + 1;
++						k = k + 1;
++					}
++				}
++				continue;
++			}
 +			else
 +				die("unsupported variable syntax");
 +
@@ -393,10 +667,12 @@ index 0000000..50c9f9e
 +				value = lookup_env(name);
 +				if(NULL != value)
 +				{
++					if(8 < depth) die("variable expansion too deep");
++					expanded = expand_vars_depth(value, depth + 1);
 +					k = 0;
-+					while(0 != value[k])
++					while(0 != expanded[k])
 +					{
-+						out[j] = value[k];
++						out[j] = expanded[k];
 +						j = j + 1;
 +						k = k + 1;
 +					}
@@ -414,6 +690,11 @@ index 0000000..50c9f9e
 +	return out;
 +}
 +
++char* expand_vars(char* word)
++{
++	return expand_vars_depth(word, 0);
++}
++
 +char** split_command(char* line)
 +{
 +	struct Arg* head = NULL;
@@ -422,6 +703,7 @@ index 0000000..50c9f9e
 +	int i = 0;
 +	int start;
 +	char* word;
++	char* expanded;
 +	while(0 != line[i])
 +	{
 +		while(is_space(line[i])) i = i + 1;
@@ -429,10 +711,41 @@ index 0000000..50c9f9e
 +		start = i;
 +		while((0 != line[i]) && !is_space(line[i])) i = i + 1;
 +		word = copy_range(line, start, i);
-+		word = expand_vars(word);
-+		append_arg(&head, &tail, &argc, word);
++		expanded = expand_vars(word);
++		if(0 == expanded[0])
++		{
++			append_arg(&head, &tail, &argc, expanded);
++		}
++		else
++		{
++			int j = 0;
++			int word_start;
++			while(0 != expanded[j])
++			{
++				while(is_space(expanded[j])) j = j + 1;
++				if(0 == expanded[j]) break;
++				word_start = j;
++				while((0 != expanded[j]) && !is_space(expanded[j])) j = j + 1;
++				append_arg(&head, &tail, &argc, copy_range(expanded, word_start, j));
++			}
++		}
 +	}
 +	return args_to_argv(head);
++}
++
++char* command_word_tail(char* line, int word_number)
++{
++	int i = 0;
++	int word = 0;
++	while(0 != line[i])
++	{
++		while(is_space(line[i])) i = i + 1;
++		if(0 == line[i]) return NULL;
++		word = word + 1;
++		if(word == word_number) return line + i;
++		while((0 != line[i]) && !is_space(line[i])) i = i + 1;
++	}
++	return NULL;
 +}
 +
 +int contains_slash(char* word)
@@ -547,7 +860,7 @@ index 0000000..50c9f9e
 +	{
 +		if(NULL == argv[1]) die("export requires a variable");
 +		if(NULL == argv[2]) die("export requires a value");
-+		set_env(argv[1], argv[2]);
++		set_env(argv[1], expand_vars(command_word_tail(line, 3)));
 +		return;
 +	}
 +
@@ -565,6 +878,8 @@ index 0000000..50c9f9e
 +{
 +	int i;
 +	struct Target* dep_target;
++	char* previous_target;
++	char* previous_first_dep;
 +	if(NULL == target) die("unknown target");
 +	if(MARK_DONE == target->mark) return;
 +	if(MARK_TEMP == target->mark) die("dependency cycle");
@@ -574,17 +889,24 @@ index 0000000..50c9f9e
 +	while(i < target->dep_count)
 +	{
 +		dep_target = find_target(target->deps[i]);
++		if(NULL == dep_target) dep_target = instantiate_pattern(target->deps[i]);
 +		if(NULL != dep_target) build_target(dep_target);
 +		i = i + 1;
 +	}
 +
++	previous_target = active_target;
++	previous_first_dep = active_first_dep;
 +	i = 0;
 +	while(i < target->command_count)
 +	{
 +		active_target = target->name;
++		if(0 < target->dep_count) active_first_dep = target->deps[0];
++		else active_first_dep = NULL;
 +		run_command(target->commands[i]);
 +		i = i + 1;
 +	}
++	active_target = previous_target;
++	active_first_dep = previous_first_dep;
 +	target->mark = MARK_DONE;
 +}
 +
@@ -602,7 +924,9 @@ index 0000000..50c9f9e
 +	int i = 1;
 +	init_env(envp);
 +	targets = calloc(MAX_TARGETS, sizeof(struct Target*));
++	patterns = calloc(MAX_TARGETS, sizeof(struct Target*));
 +	target_count = 0;
++	pattern_count = 0;
 +
 +	while(i < argc)
 +	{
@@ -629,6 +953,126 @@ index 0000000..50c9f9e
 +	build_target(find_target(target_name));
 +	return EXIT_SUCCESS;
 +}
+diff --git a/blood-elf.c b/blood-elf.c
+index e2d26cc..3813d61 100644
+--- a/blood-elf.c
++++ b/blood-elf.c
+@@ -420,6 +420,14 @@ void setup_strings(int ByteMode)
+ 	twentyfour_32 = setup_string(24, 4, ByteMode);
+ }
+ 
++struct entry* add_input_file(struct entry* input, char* name)
++{
++	struct entry* temp = calloc(1, sizeof(struct entry));
++	temp->name = name;
++	temp->next = input;
++	return temp;
++}
++
+ /* Standard C main program */
+ int main(int argc, char **argv)
+ {
+@@ -433,7 +441,6 @@ int main(int argc, char **argv)
+ 	BigEndian = TRUE;
+ 	int ByteMode = HEX;
+ 	int set = FALSE;
+-	struct entry* temp;
+ 	struct entry* head;
+ 
+ 	int option_index = 1;
+@@ -447,7 +454,7 @@ int main(int argc, char **argv)
+ 		{
+ 			fputs("Usage: ", stderr);
+ 			fputs(argv[0], stderr);
+-			fputs(" --file FILENAME1 {--file FILENAME2} --output FILENAME\n", stderr);
++			fputs(" [options] FILENAME1 {FILENAME2} --output FILENAME\n", stderr);
+ 			exit(EXIT_SUCCESS);
+ 		}
+ 		else if(match(argv[option_index], "--64"))
+@@ -457,10 +464,7 @@ int main(int argc, char **argv)
+ 		}
+ 		else if(match(argv[option_index], "-f") || match(argv[option_index], "--file"))
+ 		{
+-			temp = calloc(1, sizeof(struct entry));
+-			temp->name = argv[option_index + 1];
+-			temp->next = input;
+-			input = temp;
++			input = add_input_file(input, argv[option_index + 1]);
+ 			option_index = option_index + 2;
+ 		}
+ 		else if(match(argv[option_index], "-o") || match(argv[option_index], "--output"))
+@@ -523,8 +527,8 @@ int main(int argc, char **argv)
+ 		}
+ 		else
+ 		{
+-			fputs("Unknown option\n", stderr);
+-			exit(EXIT_FAILURE);
++			input = add_input_file(input, argv[option_index]);
++			option_index = option_index + 1;
+ 		}
+ 	}
+ 
+diff --git a/hex2.c b/hex2.c
+index 0e3c85a..b9d1f30 100644
+--- a/hex2.c
++++ b/hex2.c
+@@ -25,6 +25,15 @@ void second_pass(struct input_files* input);
+ void WordFirstPass(struct input_files* input);
+ void WordSecondPass(struct input_files* input);
+ 
++struct input_files* add_input_file(struct input_files* input, char* name)
++{
++	struct input_files* temp = calloc(1, sizeof(struct input_files));
++	require(NULL != temp, "failed to allocate file for processing\n");
++	temp->filename = name;
++	temp->next = input;
++	return temp;
++}
++
+ /* Standard C main program */
+ int main(int argc, char **argv)
+ {
+@@ -44,7 +53,6 @@ int main(int argc, char **argv)
+ 	scratch = calloc(max_string + 1, sizeof(char));
+ 	require(NULL != scratch, "failed to allocate our scratch buffer\n");
+ 	char* arch;
+-	struct input_files* temp;
+ 
+ 	int option_index = 1;
+ 	while(option_index <= argc)
+@@ -101,7 +109,7 @@ int main(int argc, char **argv)
+ 		{
+ 			fputs("Usage: ", stderr);
+ 			fputs(argv[0], stderr);
+-			fputs(" --file FILENAME1 {-f FILENAME2} (--big-endian|--little-endian)", stderr);
++			fputs(" [options] FILENAME1 {FILENAME2}", stderr);
+ 			fputs(" [--base-address 0x12345] [--architecture name]\nArchitecture:", stderr);
+ 			fputs(" knight-native, knight-posix, x86, amd64, armv7l, aarch64, riscv32 and riscv64\n", stderr);
+ 			fputs("To leverage octal or binary input: --octal, --binary\n", stderr);
+@@ -109,11 +117,7 @@ int main(int argc, char **argv)
+ 		}
+ 		else if(match(argv[option_index], "-f") || match(argv[option_index], "--file"))
+ 		{
+-			temp = calloc(1, sizeof(struct input_files));
+-			require(NULL != temp, "failed to allocate file for processing\n");
+-			temp->filename = argv[option_index + 1];
+-			temp->next = input;
+-			input = temp;
++			input = add_input_file(input, argv[option_index + 1]);
+ 			option_index = option_index + 2;
+ 		}
+ 		else if(match(argv[option_index], "-o") || match(argv[option_index], "--output"))
+@@ -142,8 +146,8 @@ int main(int argc, char **argv)
+ 		}
+ 		else
+ 		{
+-			fputs("Unknown option\n", stderr);
+-			exit(EXIT_FAILURE);
++			input = add_input_file(input, argv[option_index]);
++			option_index = option_index + 1;
+ 		}
+ 	}
+ 
 diff --git a/makefile b/makefile
 index 33d7300..69f1507 100644
 --- a/makefile

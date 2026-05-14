@@ -1,3 +1,76 @@
+diff --git a/DEVEL.md b/DEVEL.md
+index 44aced6..68658c3 100644
+--- a/DEVEL.md
++++ b/DEVEL.md
+@@ -32,7 +32,6 @@ steps
+ │   ├── pass1.kaem
+ │   ├── pass2.sh
+ │   ├── files
+-│   ├── simple-patches
+ │   ├── mk
+ │   └── patches
+ ```
+@@ -57,7 +56,6 @@ Permissible folders/files:
+ - `files`: auxiliary files required for the build distributed by live-bootstrap.
+ - `mk`: makefiles.
+ - `patches`: patches for the source.
+-- `simple-patches`: patches for the source that use the before/after convention of simple-patch.c
+ - `*.checksums`: files containing the checksums for the resulting binaries and
+ libraries that are compiled and installed.
+   - Otherwise, the package's checksum is in SHA256SUMS.pkgs.
+diff --git a/REUSE.toml b/REUSE.toml
+index 34e3737..e345bbb 100644
+--- a/REUSE.toml
++++ b/REUSE.toml
+@@ -4,7 +4,7 @@ SPDX-PackageSupplier = "Samuel Tyler <samuel@samuelt.me>"
+ SPDX-PackageDownloadLocation = "https://github.com/fosslinux/live-bootstrap"
+ 
+ [[annotations]]
+-path = ["steps/**/sources", "steps/**/**.checksums", "steps/SHA256SUMS.pkgs", "steps/**/simple-patches/**", "seed/**.checksums"]
++path = ["steps/**/sources", "steps/**/**.checksums", "steps/SHA256SUMS.pkgs", "seed/**.checksums"]
+ precedence = "aggregate"
+ SPDX-FileCopyrightText = "none"
+ SPDX-License-Identifier = "MIT"
+diff --git a/seed/after.bake b/seed/after.bake
+new file mode 100644
+index 0000000..4e33058
+--- /dev/null
++++ b/seed/after.bake
+@@ -0,0 +1,3 @@
++: all
++./${ARCH_DIR}/bin/catm seed-full.bake /steps/bootstrap.cfg /steps/env seed.bake
++./${ARCH_DIR}/bin/bake --file seed-full.bake all
+diff --git a/seed/after.kaem b/seed/after.kaem
+deleted file mode 100755
+index 348ec23..0000000
+--- a/seed/after.kaem
++++ /dev/null
+@@ -1,15 +0,0 @@
+-#!/bin/sh
+-
+-# SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+-# SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
+-# SPDX-FileCopyrightText: 2020-2022 Samuel Tyler <samuel@samuelt.me>
+-# SPDX-FileCopyrightText: 2022 Dor Askayo <dor.askayo@gmail.com>
+-#
+-# SPDX-License-Identifier: GPL-3.0-or-later
+-
+-set -ex
+-
+-PATH=/${ARCH_DIR}/bin
+-
+-catm seed-full.kaem /steps/bootstrap.cfg /steps/env seed.kaem
+-kaem --file seed-full.kaem
+diff --git a/seed/preseeded.kaem b/seed/preseeded.kaem
+index 0d92eaa..784061d 100755
+--- a/seed/preseeded.kaem
++++ b/seed/preseeded.kaem
+@@ -5,4 +5,4 @@
+ # SPDX-License-Identifier: GPL-3.0-or-later
+ 
+ /script-generator /steps/manifest
+-/usr/bin/kaem --file /preseed-jump.kaem
++/usr/bin/bake --file /preseed-jump.bake all
 diff --git a/seed/script-generator.amd64.checksums b/seed/script-generator.amd64.checksums
 index 66da31c..5abc933 100644
 --- a/seed/script-generator.amd64.checksums
@@ -6,7 +79,7 @@ index 66da31c..5abc933 100644
 -91cced9f6d7bae32b47b8fc456567e73be382fd8b00693b7d3eedd0d52bea890  script-generator
 +28bd503ce7f9933826d244b51e6aa422ab79e40a51f1ba6e62a01fef2a0b8fb6  script-generator
 diff --git a/seed/script-generator.c b/seed/script-generator.c
-index faedd1d..5afb1ac 100644
+index faedd1d..419a04e 100644
 --- a/seed/script-generator.c
 +++ b/seed/script-generator.c
 @@ -165,6 +165,51 @@ void output_config(FILE *out) {
@@ -61,9 +134,12 @@ index faedd1d..5afb1ac 100644
  char *get_var(char *name) {
  	/* Search through existing variables. */
  	Variable *var;
-@@ -392,11 +437,15 @@ Directive *interpreter(Directive *directives) {
+@@ -391,12 +436,18 @@ Directive *interpreter(Directive *directives) {
+ }
  
  /* Script generator. */
++int has_bake_action(char *type, char *name);
++
  FILE *start_script(int id, int bash_build) {
 -	/* Create the file /steps/$id.sh */
 +	/* Create the file /steps/$id.sh or /steps/$id.bake */
@@ -79,7 +155,7 @@ index faedd1d..5afb1ac 100644
  
  	FILE *out = fopen(filename, "w");
  	if (out == NULL) {
-@@ -425,9 +474,10 @@ FILE *start_script(int id, int bash_build) {
+@@ -425,9 +476,10 @@ FILE *start_script(int id, int bash_build) {
  		fputs(". ./env\n", out);
  		fputs(". ./helpers.sh\n", out);
  	} else {
@@ -92,7 +168,7 @@ index faedd1d..5afb1ac 100644
  		FILE *env = fopen("/steps/env", "r");
  		char *line = calloc(MAX_STRING, sizeof(char));
  		while (fgets(line, MAX_STRING, env) != 0) {
-@@ -435,10 +485,11 @@ FILE *start_script(int id, int bash_build) {
+@@ -435,16 +487,18 @@ FILE *start_script(int id, int bash_build) {
  			if (*line == 0) {
  				break;
  			}
@@ -105,25 +181,35 @@ index faedd1d..5afb1ac 100644
  	}
  
  	return out;
-@@ -452,7 +503,11 @@ void output_call_script(FILE *out, char *type, char *name, int bash_build, int s
+ }
+ 
+ void output_call_script(FILE *out, char *type, char *name, int bash_build, int source) {
++	int use_bake_action = 0;
+ 	if (bash_build) {
+ 		if (source) {
+ 			fputs(". ", out);
+@@ -452,7 +506,14 @@ void output_call_script(FILE *out, char *type, char *name, int bash_build, int s
  			fputs("bash ", out);
  		}
  	} else {
 -		fputs("kaem --file ", out);
-+		if (strlen(type) == 0) {
-+			fputs("bake --file ", out);
-+		} else {
-+			fputs("kaem --file ", out);
++		if (strlen(type) != 0) {
++			use_bake_action = has_bake_action(type, name);
 +		}
++		if (strlen(type) != 0 && !use_bake_action) {
++			fputs("Missing bake script for action\n", stderr);
++			exit(1);
++		}
++		fputs("bake --file ", out);
  	}
  	fputs("/steps/", out);
  	if (strlen(type) != 0) {
-@@ -460,28 +515,102 @@ void output_call_script(FILE *out, char *type, char *name, int bash_build, int s
+@@ -460,32 +521,118 @@ void output_call_script(FILE *out, char *type, char *name, int bash_build, int s
  		fputs("/", out);
  	}
  	fputs(name, out);
 -	fputs(".sh\n", out);
-+	if (!bash_build && strlen(type) == 0) {
++	if (!bash_build && (strlen(type) == 0 || use_bake_action)) {
 +		fputs(".bake all\n", out);
 +	} else {
 +		fputs(".sh\n", out);
@@ -158,6 +244,22 @@ index faedd1d..5afb1ac 100644
 +	return 1;
 +}
 +
++int has_bake_action(char *type, char *name) {
++	char *filename = calloc(MAX_STRING, sizeof(char));
++	FILE *script;
++	strcpy(filename, "/steps/");
++	strcat(filename, type);
++	strcat(filename, "/");
++	strcat(filename, name);
++	strcat(filename, ".bake");
++	script = fopen(filename, "r");
++	if (script == NULL) {
++		return 0;
++	}
++	fclose(script);
++	return 1;
++}
++
 +char *output_build(FILE *out, Directive *directive, int pass_no, int bash_build, char *previous) {
 +	char *target;
 +	int use_bake;
@@ -171,6 +273,10 @@ index faedd1d..5afb1ac 100644
  	} else {
 -		fputs("pkg=", out);
 +		use_bake = has_bake_script(directive->arg, pass_no);
++		if (!use_bake) {
++			fputs("Missing bake script for build\n", stderr);
++			exit(1);
++		}
 +		target = make_target("", directive->arg, pass_no);
 +		fputs(": ", out);
 +		fputs(target, out);
@@ -183,18 +289,10 @@ index faedd1d..5afb1ac 100644
  		fputs("\n", out);
  		fputs("cd ${pkg}\n", out);
 -		fputs("kaem --file pass", out);
-+		if (use_bake) {
-+			fputs("bake --file pass", out);
-+		} else {
-+			fputs("kaem --file pass", out);
-+		}
++		fputs("bake --file pass", out);
  		fputs(int2str(pass_no, 10, 0), out);
 -		fputs(".kaem\n", out);
-+		if (use_bake) {
-+			fputs(".bake all\n", out);
-+		} else {
-+			fputs(".kaem\n", out);
-+		}
++		fputs(".bake all\n", out);
  		fputs("cd ..\n", out);
 +		fputs("\n", out);
 +		return target;
@@ -224,9 +322,16 @@ index faedd1d..5afb1ac 100644
 +}
 +
  void generate_preseed_jump(int id) {
- 	FILE *out = fopen("/preseed-jump.kaem", "w");
- 	fputs("set -ex\n", out);
-@@ -505,6 +634,7 @@ void generate(Directive *directives) {
+-	FILE *out = fopen("/preseed-jump.kaem", "w");
+-	fputs("set -ex\n", out);
+-	fputs("PATH=/usr/bin\n", out);
++	FILE *out = fopen("/preseed-jump.bake", "w");
++	fputs(": all\n", out);
++	fputs("export PATH /usr/bin\n", out);
+ 	fputs("bash /steps/", out);
+ 	fputs(int2str(id, 10, 0), out);
+ 	fputs(".sh\n", out);
+@@ -505,6 +652,7 @@ void generate(Directive *directives) {
  
  	/* Initially, we use kaem, not bash. */
  	int bash_build = 0;
@@ -234,7 +339,7 @@ index faedd1d..5afb1ac 100644
  
  	FILE *out = start_script(counter, bash_build);
  	counter += 1;
-@@ -522,8 +652,9 @@ void generate(Directive *directives) {
+@@ -522,8 +670,9 @@ void generate(Directive *directives) {
  					pass_no += 1;
  				}
  			}
@@ -245,7 +350,7 @@ index faedd1d..5afb1ac 100644
  				if (!bash_build) {
  					/*
  					 * We are transitioning from bash to kaem, the point at which "early
-@@ -534,12 +665,18 @@ void generate(Directive *directives) {
+@@ -534,12 +683,18 @@ void generate(Directive *directives) {
  				bash_build += 1;
  				/* Create call to new script. */
  				output_call_script(out, "", int2str(counter, 10, 0), bash_build, 0);
@@ -265,7 +370,20 @@ index faedd1d..5afb1ac 100644
  		} else if (directive->type == TYPE_JUMP) {
  			/*
  			 * Create /init to call new script.
-@@ -567,6 +704,11 @@ void generate(Directive *directives) {
+@@ -557,16 +712,21 @@ void generate(Directive *directives) {
+ 				fputs(" /init\n", out);
+ 				fputs("chmod 755 /init\n", out);
+ 			} else {
+-				strcpy(filename, "/kaem.run.");
++				strcpy(filename, "/build.bake.");
+ 				strcat(filename, int2str(counter, 10, 0));
+ 				fputs("cp ", out);
+ 				fputs(filename, out);
+-				fputs(" /kaem.run\n", out);
+-				fputs("cp /usr/bin/kaem /init\n", out);
++				fputs(" /build.bake\n", out);
++				fputs("cp /usr/bin/bake /init\n", out);
+ 				fputs("chmod 755 /init\n", out);
  			}
  
  			output_call_script(out, "jump", directive->arg, bash_build, 1);
@@ -277,7 +395,17 @@ index faedd1d..5afb1ac 100644
  			fclose(out);
  
  			if (bash_build) {
-@@ -587,6 +729,7 @@ void generate(Directive *directives) {
+@@ -579,14 +739,15 @@ void generate(Directive *directives) {
+ 			} else {
+ 				out = fopen(filename, "w");
+ 				if (out == NULL) {
+-					fputs("Error opening /kaem.run\n", stderr);
++					fputs("Error opening /build.bake\n", stderr);
+ 					exit(1);
+ 				}
+-				fputs("set -ex\n", out);
++				fputs(": all\n", out);
+ 			}
  			output_call_script(out, "", int2str(counter, 10, 0), bash_build, 0);
  			fclose(out);
  			out = start_script(counter, bash_build);
@@ -285,7 +413,7 @@ index faedd1d..5afb1ac 100644
  			counter += 1;
  		} else if (directive->type == TYPE_UNINSTALL) {
  			fputs("uninstall ", out);
-@@ -594,6 +737,11 @@ void generate(Directive *directives) {
+@@ -594,6 +755,11 @@ void generate(Directive *directives) {
  			fputs("\n", out);
  		}
  	}
@@ -305,82 +433,180 @@ index 4fed61e..31116be 100644
 -13f1d4db2e248fe736ee20ef99826cbdcb28557d5109054869ceff7b6844ade3  script-generator
 +08c1aeb379fcb9d3819bd13561fe1c547f0480b854545561c5f2551cf0a6a58b  script-generator
 diff --git a/seed/script-generator.x86.checksums b/seed/script-generator.x86.checksums
-index 36175af..1cc4de2 100644
+index 36175af..9b3b9bf 100644
 --- a/seed/script-generator.x86.checksums
 +++ b/seed/script-generator.x86.checksums
 @@ -1 +1 @@
 -fbec25d987c89e66fd7dd89d780be0629bab84f78ebf1878fd2528fca9e46c45  script-generator
-+443c0bd50508a6f5d28c9fd5d69ba76b6d7da5230a19141e44eaff15a38587af  script-generator
-diff --git a/seed/seed.kaem b/seed/seed.kaem
-index 5fd7449..ff49361 100755
---- a/seed/seed.kaem
-+++ b/seed/seed.kaem
-@@ -16,6 +16,7 @@ PATH=/${ARCH_DIR}/bin
- 
- # Remove remaining dependencies on /bin (stage0-posix directory)
- cp /${ARCH_DIR}/bin/blood-elf ${BINDIR}/blood-elf
++45d2f5ed898ccdc8803f0f34c8ae9927ec404cff625ed33950d17d6c74643479  script-generator
+diff --git a/seed/seed.bake b/seed/seed.bake
+new file mode 100644
+index 0000000..2643fc8
+--- /dev/null
++++ b/seed/seed.bake
+@@ -0,0 +1,64 @@
++: all run
++
++: setup
++export PATH /${ARCH_DIR}/bin
++mkdir --parents ${PREFIX} ${BINDIR} ${LIBDIR} ${INCDIR} ${SRCDIR} ${TMPDIR} /dev
++cp /${ARCH_DIR}/bin/blood-elf ${BINDIR}/blood-elf
 +cp /${ARCH_DIR}/bin/bake ${BINDIR}/bake
- cp /${ARCH_DIR}/bin/catm ${BINDIR}/catm
- cp /${ARCH_DIR}/bin/chmod ${BINDIR}/chmod
- cp /${ARCH_DIR}/bin/get_machine ${BINDIR}/get_machine
-@@ -36,6 +37,7 @@ cp /${ARCH_DIR}/bin/replace ${BINDIR}/replace
- cp /${ARCH_DIR}/bin/rm ${BINDIR}/rm
- 
- chmod 755 ${BINDIR}/blood-elf
++cp /${ARCH_DIR}/bin/catm ${BINDIR}/catm
++cp /${ARCH_DIR}/bin/chmod ${BINDIR}/chmod
++cp /${ARCH_DIR}/bin/get_machine ${BINDIR}/get_machine
++cp /${ARCH_DIR}/bin/hex2 ${BINDIR}/hex2
++cp /${ARCH_DIR}/bin/match ${BINDIR}/match
++cp /${ARCH_DIR}/bin/M1 ${BINDIR}/M1
++cp /${ARCH_DIR}/bin/M2-Mesoplanet ${BINDIR}/M2-Mesoplanet
++cp /${ARCH_DIR}/bin/M2-Planet ${BINDIR}/M2-Planet
++cp /${ARCH_DIR}/bin/mkdir ${BINDIR}/mkdir
++cp /${ARCH_DIR}/bin/sha256sum ${BINDIR}/sha256sum
++cp /${ARCH_DIR}/bin/unbz2 ${BINDIR}/unbz2
++cp /${ARCH_DIR}/bin/ungz ${BINDIR}/ungz
++cp /${ARCH_DIR}/bin/untar ${BINDIR}/untar
++cp /${ARCH_DIR}/bin/unxz ${BINDIR}/unxz
++cp /${ARCH_DIR}/bin/cp ${BINDIR}/cp
++cp /${ARCH_DIR}/bin/replace ${BINDIR}/replace
++cp /${ARCH_DIR}/bin/rm ${BINDIR}/rm
++chmod 755 ${BINDIR}/blood-elf
 +chmod 755 ${BINDIR}/bake
- chmod 755 ${BINDIR}/catm
- chmod 755 ${BINDIR}/chmod
- chmod 755 ${BINDIR}/cp
-@@ -82,4 +84,4 @@ else
- fi
- ./script-generator /steps/manifest
- 
--kaem --file /steps/0.sh
++chmod 755 ${BINDIR}/catm
++chmod 755 ${BINDIR}/chmod
++chmod 755 ${BINDIR}/cp
++chmod 755 ${BINDIR}/get_machine
++chmod 755 ${BINDIR}/hex2
++chmod 755 ${BINDIR}/match
++chmod 755 ${BINDIR}/M1
++chmod 755 ${BINDIR}/M2-Mesoplanet
++chmod 755 ${BINDIR}/M2-Planet
++chmod 755 ${BINDIR}/mkdir
++chmod 755 ${BINDIR}/sha256sum
++chmod 755 ${BINDIR}/unbz2
++chmod 755 ${BINDIR}/ungz
++chmod 755 ${BINDIR}/untar
++chmod 755 ${BINDIR}/unxz
++chmod 755 ${BINDIR}/replace
++chmod 755 ${BINDIR}/rm
++export PATH ${BINDIR}
++export M2LIBC_PATH /M2libc
++export NYACC_PKG nyacc-1.00.2
++export MES_PKG mes-0.27.1
++export MES_PREFIX ${SRCDIR}/${MES_PKG}/build/${MES_PKG}
++export GUILE_LOAD_PATH ${MES_PREFIX}/mes/module:${MES_PREFIX}/module:${SRCDIR}/${MES_PKG}/build/${NYACC_PKG}/module
++
++: configurator setup
++M2-Mesoplanet --architecture ${ARCH} -o configurator configurator.c
++? UPDATE_CHECKSUMS True sha256sum -o configurator.${ARCH}.checksums configurator
++! UPDATE_CHECKSUMS True sha256sum -c configurator.${ARCH}.checksums
++./configurator /steps/configurator
++
++: script-generator configurator
++M2-Mesoplanet --architecture ${ARCH} -o script-generator script-generator.c
++? UPDATE_CHECKSUMS True sha256sum -o script-generator.${ARCH}.checksums script-generator
++! UPDATE_CHECKSUMS True sha256sum -c script-generator.${ARCH}.checksums
++./script-generator /steps/manifest
++
++: run script-generator
 +bake --file /steps/0.bake all
-diff --git a/steps/bzip2-1.0.8/patches/coreutils.patch b/steps/bzip2-1.0.8/patches/coreutils.patch
-index cf0863f..66571f8 100644
---- a/steps/bzip2-1.0.8/patches/coreutils.patch
-+++ b/steps/bzip2-1.0.8/patches/coreutils.patch
-@@ -22,7 +22,8 @@ diff -r -N -U3 Makefile Makefile
- @@ -46,11 +46,6 @@
-  libbz2.a: $(OBJS)
-  	rm -f libbz2.a
-- 	$(AR) cq libbz2.a $(OBJS)
-+-	$(AR) cq libbz2.a $(OBJS)
-++	tcc -ar cq libbz2.a $(OBJS)
- -	@if ( test -f $(RANLIB) -o -f /usr/bin/ranlib -o \
- -		-f /bin/ranlib -o -f /usr/ccs/bin/ranlib ) ; then \
- -		echo $(RANLIB) libbz2.a ; \
-diff --git a/steps/checksum-transcriber-1.0/pass1.bake b/steps/checksum-transcriber-1.0/pass1.bake
-new file mode 100644
-index 0000000..7098da2
---- /dev/null
-+++ b/steps/checksum-transcriber-1.0/pass1.bake
-@@ -0,0 +1,9 @@
-+: all build checksum
-+
-+: build
-+M2-Mesoplanet --architecture ${ARCH} -f src/checksum-transcriber.c -o ${BINDIR}/checksum-transcriber
-+
-+: checksum build
-+? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/checksum-transcriber
-+? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
-+! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
-diff --git a/steps/simple-patch-1.0/pass1.bake b/steps/simple-patch-1.0/pass1.bake
-new file mode 100644
-index 0000000..40b72f3
---- /dev/null
-+++ b/steps/simple-patch-1.0/pass1.bake
-@@ -0,0 +1,9 @@
-+: all build checksum
-+
-+: build
-+M2-Mesoplanet --architecture ${ARCH} -f src/simple-patch.c -o ${BINDIR}/simple-patch
-+
-+: checksum build
-+? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/simple-patch
-+? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
-+! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
+diff --git a/seed/seed.kaem b/seed/seed.kaem
+deleted file mode 100755
+index 5fd7449..0000000
+--- a/seed/seed.kaem
++++ /dev/null
+@@ -1,85 +0,0 @@
+-#!/bin/sh
+-
+-# SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+-# SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
+-# SPDX-FileCopyrightText: 2020-2022 Samuel Tyler <samuel@samuelt.me>
+-# SPDX-FileCopyrightText: 2022 Dor Askayo <dor.askayo@gmail.com>
+-#
+-# SPDX-License-Identifier: GPL-3.0-or-later
+-
+-set -ex
+-
+-mkdir -p ${PREFIX} ${BINDIR} ${LIBDIR} ${INCDIR} ${SRCDIR} ${TMPDIR} /dev
+-
+-# Temporarily change PATH
+-PATH=/${ARCH_DIR}/bin
+-
+-# Remove remaining dependencies on /bin (stage0-posix directory)
+-cp /${ARCH_DIR}/bin/blood-elf ${BINDIR}/blood-elf
+-cp /${ARCH_DIR}/bin/catm ${BINDIR}/catm
+-cp /${ARCH_DIR}/bin/chmod ${BINDIR}/chmod
+-cp /${ARCH_DIR}/bin/get_machine ${BINDIR}/get_machine
+-cp /${ARCH_DIR}/bin/hex2 ${BINDIR}/hex2
+-cp /${ARCH_DIR}/bin/kaem ${BINDIR}/kaem
+-cp /${ARCH_DIR}/bin/match ${BINDIR}/match
+-cp /${ARCH_DIR}/bin/M1 ${BINDIR}/M1
+-cp /${ARCH_DIR}/bin/M2-Mesoplanet ${BINDIR}/M2-Mesoplanet
+-cp /${ARCH_DIR}/bin/M2-Planet ${BINDIR}/M2-Planet
+-cp /${ARCH_DIR}/bin/mkdir ${BINDIR}/mkdir
+-cp /${ARCH_DIR}/bin/sha256sum ${BINDIR}/sha256sum
+-cp /${ARCH_DIR}/bin/unbz2 ${BINDIR}/unbz2
+-cp /${ARCH_DIR}/bin/ungz ${BINDIR}/ungz
+-cp /${ARCH_DIR}/bin/untar ${BINDIR}/untar
+-cp /${ARCH_DIR}/bin/unxz ${BINDIR}/unxz
+-cp /${ARCH_DIR}/bin/cp ${BINDIR}/cp
+-cp /${ARCH_DIR}/bin/replace ${BINDIR}/replace
+-cp /${ARCH_DIR}/bin/rm ${BINDIR}/rm
+-
+-chmod 755 ${BINDIR}/blood-elf
+-chmod 755 ${BINDIR}/catm
+-chmod 755 ${BINDIR}/chmod
+-chmod 755 ${BINDIR}/cp
+-chmod 755 ${BINDIR}/get_machine
+-chmod 755 ${BINDIR}/hex2
+-chmod 755 ${BINDIR}/kaem
+-chmod 755 ${BINDIR}/match
+-chmod 755 ${BINDIR}/M1
+-chmod 755 ${BINDIR}/M2-Mesoplanet
+-chmod 755 ${BINDIR}/M2-Planet
+-chmod 755 ${BINDIR}/mkdir
+-chmod 755 ${BINDIR}/sha256sum
+-chmod 755 ${BINDIR}/unbz2
+-chmod 755 ${BINDIR}/ungz
+-chmod 755 ${BINDIR}/untar
+-chmod 755 ${BINDIR}/unxz
+-chmod 755 ${BINDIR}/replace
+-chmod 755 ${BINDIR}/rm
+-
+-PATH=${BINDIR}
+-M2LIBC_PATH=/M2libc
+-
+-# mes envars
+-NYACC_PKG=nyacc-1.00.2
+-MES_PKG=mes-0.27.1
+-MES_PREFIX=${SRCDIR}/${MES_PKG}/build/${MES_PKG}
+-GUILE_LOAD_PATH=${MES_PREFIX}/mes/module:${MES_PREFIX}/module:${SRCDIR}/${MES_PKG}/build/${NYACC_PKG}/module
+-
+-M2-Mesoplanet --architecture ${ARCH} -f configurator.c -o configurator
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o configurator.${ARCH}.checksums configurator
+-else
+-    sha256sum -c configurator.${ARCH}.checksums
+-fi
+-./configurator /steps/configurator
+-
+-M2-Mesoplanet --architecture ${ARCH} -f script-generator.c -o script-generator
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o script-generator.${ARCH}.checksums script-generator
+-else
+-    sha256sum -c script-generator.${ARCH}.checksums
+-fi
+-./script-generator /steps/manifest
+-
+-kaem --file /steps/0.sh
+diff --git a/seed/stage0-posix b/seed/stage0-posix
+index 45d90f5..a8d1929 160000
+--- a/seed/stage0-posix
++++ b/seed/stage0-posix
+@@ -1 +1 @@
+-Subproject commit 45d90f5955b6907dc6cdea9ebafce558359edcd3
++Subproject commit a8d1929c613a97d8c1d40285a75b5c6b680d09b3
 diff --git a/steps/bash-2.05b/pass1.bake b/steps/bash-2.05b/pass1.bake
 new file mode 100644
 index 0000000..f659fcd
@@ -456,13 +682,44 @@ index 0000000..c1ecde4
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/bzip2
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/bzip2-1.0.8/patches/coreutils.patch b/steps/bzip2-1.0.8/patches/coreutils.patch
+index cf0863f..66571f8 100644
+--- a/steps/bzip2-1.0.8/patches/coreutils.patch
++++ b/steps/bzip2-1.0.8/patches/coreutils.patch
+@@ -22,7 +22,8 @@ diff -r -N -U3 Makefile Makefile
+ @@ -46,11 +46,6 @@
+  libbz2.a: $(OBJS)
+  	rm -f libbz2.a
+- 	$(AR) cq libbz2.a $(OBJS)
++-	$(AR) cq libbz2.a $(OBJS)
+++	tcc -ar cq libbz2.a $(OBJS)
+ -	@if ( test -f $(RANLIB) -o -f /usr/bin/ranlib -o \
+ -		-f /bin/ranlib -o -f /usr/ccs/bin/ranlib ) ; then \
+ -		echo $(RANLIB) libbz2.a ; \
+diff --git a/steps/checksum-transcriber-1.0/pass1.bake b/steps/checksum-transcriber-1.0/pass1.bake
+new file mode 100644
+index 0000000..1b40980
+--- /dev/null
++++ b/steps/checksum-transcriber-1.0/pass1.bake
+@@ -0,0 +1,9 @@
++: all build checksum
++
++: build
++M2-Mesoplanet --architecture ${ARCH} -o ${BINDIR}/checksum-transcriber src/checksum-transcriber.c
++
++: checksum build
++? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/checksum-transcriber
++? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
++! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
 diff --git a/steps/coreutils-5.0/pass1.bake b/steps/coreutils-5.0/pass1.bake
 new file mode 100644
-index 0000000..f87027c
+index 0000000..a8fd890
 --- /dev/null
 +++ b/steps/coreutils-5.0/pass1.bake
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,39 @@
 +: all build checksum
++
++= COREUTILS_BINS /usr/bin/install /usr/bin/basename /usr/bin/cat /usr/bin/chmod /usr/bin/cksum /usr/bin/cp /usr/bin/csplit /usr/bin/cut /usr/bin/dirname /usr/bin/echo /usr/bin/expand /usr/bin/expr /usr/bin/factor /usr/bin/false /usr/bin/fmt /usr/bin/fold /usr/bin/head /usr/bin/hostname /usr/bin/id /usr/bin/join /usr/bin/kill /usr/bin/link /usr/bin/ln /usr/bin/logname /usr/bin/mkfifo /usr/bin/mkdir /usr/bin/mknod /usr/bin/nl /usr/bin/od /usr/bin/paste /usr/bin/pathchk /usr/bin/pr /usr/bin/printf /usr/bin/ptx /usr/bin/pwd /usr/bin/readlink /usr/bin/rmdir /usr/bin/seq /usr/bin/sleep /usr/bin/sort /usr/bin/split /usr/bin/sum /usr/bin/tail /usr/bin/tee /usr/bin/tr /usr/bin/tsort /usr/bin/unexpand /usr/bin/uniq /usr/bin/unlink /usr/bin/wc /usr/bin/whoami /usr/bin/tac /usr/bin/test /usr/bin/touch /usr/bin/true /usr/bin/yes /usr/bin/ls /usr/bin/md5sum /usr/bin/mv /usr/bin/rm /usr/bin/sha1sum
 +
 +: build
 +checksum-transcriber sources
@@ -496,20 +753,41 @@ index 0000000..f87027c
 +rm -r src/
 +
 +: checksum build
-+? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/install /usr/bin/basename /usr/bin/cat /usr/bin/chmod /usr/bin/cksum /usr/bin/cp /usr/bin/csplit /usr/bin/cut /usr/bin/dirname /usr/bin/echo /usr/bin/expand /usr/bin/expr /usr/bin/factor /usr/bin/false /usr/bin/fmt /usr/bin/fold /usr/bin/head /usr/bin/hostname /usr/bin/id /usr/bin/join /usr/bin/kill /usr/bin/link /usr/bin/ln /usr/bin/logname /usr/bin/mkfifo /usr/bin/mkdir /usr/bin/mknod /usr/bin/nl /usr/bin/od /usr/bin/paste /usr/bin/pathchk /usr/bin/pr /usr/bin/printf /usr/bin/ptx /usr/bin/pwd /usr/bin/readlink /usr/bin/rmdir /usr/bin/seq /usr/bin/sleep /usr/bin/sort /usr/bin/split /usr/bin/sum /usr/bin/tail /usr/bin/tee /usr/bin/tr /usr/bin/tsort /usr/bin/unexpand /usr/bin/uniq /usr/bin/unlink /usr/bin/wc /usr/bin/whoami /usr/bin/tac /usr/bin/test /usr/bin/touch /usr/bin/true /usr/bin/yes /usr/bin/ls /usr/bin/md5sum /usr/bin/mv /usr/bin/rm /usr/bin/sha1sum
++? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums ${COREUTILS_BINS}
 +? UPDATE_CHECKSUMS True install ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/fiwix-1.5.0-lb1/pass1.bake b/steps/fiwix-1.5.0-lb1/pass1.bake
 new file mode 100644
-index 0000000..65efef4
+index 0000000..adb6d00
 --- /dev/null
 +++ b/steps/fiwix-1.5.0-lb1/pass1.bake
-@@ -0,0 +1,294 @@
+@@ -0,0 +1,56 @@
 +: all build checksum
 +
-+: build build.0 build.1 build.2
++= KINC -I/${SRCDIR}/${pkg}/build/${pkg}/include
++= KDEF -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc"
++= KCBASE -m32 -march=i386 -std=c89 ${KDEF}
++= KCFLAGS ${KCBASE} ${KINC} -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes
++= KASFLAGS ${KCBASE} -traditional ${KINC}
++= KERNEL_OBJS kernel/boot.o kernel/core386.o kernel/main.o kernel/init.o kernel/gdt.o kernel/idt.o kernel/syscalls.o kernel/pic.o kernel/pit.o kernel/irq.o kernel/traps.o kernel/cpu.o kernel/cmos.o kernel/timer.o kernel/sched.o kernel/sleep.o kernel/signal.o kernel/process.o kernel/multiboot.o kernel/kexec.o
++= KERNEL_SYSCALLS_OBJS kernel/syscalls/umount.o kernel/syscalls/getgid.o kernel/syscalls/getppid.o kernel/syscalls/fstatfs.o kernel/syscalls/getgroups.o kernel/syscalls/fsync.o kernel/syscalls/setreuid.o kernel/syscalls/newuname.o kernel/syscalls/fork.o kernel/syscalls/setitimer.o kernel/syscalls/fdatasync.o kernel/syscalls/chmod.o kernel/syscalls/mmap2.o kernel/syscalls/msgsnd.o kernel/syscalls/exit.o kernel/syscalls/readlink.o kernel/syscalls/socketcall.o kernel/syscalls/stat64.o kernel/syscalls/readv.o kernel/syscalls/sigaction.o kernel/syscalls/fstat.o kernel/syscalls/waitpid.o kernel/syscalls/setfsgid.o kernel/syscalls/chown.o kernel/syscalls/flock.o kernel/syscalls/uname.o kernel/syscalls/lseek.o kernel/syscalls/setsid.o kernel/syscalls/settimeofday.o kernel/syscalls/unlink.o kernel/syscalls/sigprocmask.o kernel/syscalls/ustat.o kernel/syscalls/open.o kernel/syscalls/sync.o kernel/syscalls/iopl.o kernel/syscalls/msgget.o kernel/syscalls/pipe.o kernel/syscalls/shmdt.o kernel/syscalls/getsid.o kernel/syscalls/setfsuid.o kernel/syscalls/signal.o kernel/syscalls/newfstat.o kernel/syscalls/mkdir.o kernel/syscalls/getcwd.o kernel/syscalls/link.o kernel/syscalls/msgctl.o kernel/syscalls/sethostname.o kernel/syscalls/semctl.o kernel/syscalls/sysinfo.o kernel/syscalls/setdomainname.o kernel/syscalls/getegid.o kernel/syscalls/personality.o kernel/syscalls/setregid.o kernel/syscalls/setgid.o kernel/syscalls/lstat.o kernel/syscalls/getuid.o kernel/syscalls/llseek.o kernel/syscalls/select.o kernel/syscalls/ftruncate.o kernel/syscalls/getpgid.o kernel/syscalls/brk.o kernel/syscalls/getrusage.o kernel/syscalls/sigsuspend.o kernel/syscalls/writev.o kernel/syscalls/times.o kernel/syscalls/ssetmask.o kernel/syscalls/stat.o kernel/syscalls/fchdir.o kernel/syscalls/chdir.o kernel/syscalls/setgroups.o kernel/syscalls/newstat.o kernel/syscalls/creat.o kernel/syscalls/getdents64.o kernel/syscalls/getpid.o kernel/syscalls/read.o kernel/syscalls/dup.o kernel/syscalls/utimes.o kernel/syscalls/semget.o kernel/syscalls/mount.o kernel/syscalls/rmdir.o kernel/syscalls/setrlimit.o kernel/syscalls/sgetmask.o kernel/syscalls/pause.o kernel/syscalls/utime.o kernel/syscalls/statfs.o kernel/syscalls/ioperm.o kernel/syscalls/ftime.o kernel/syscalls/truncate.o kernel/syscalls/old_mmap.o kernel/syscalls/olduname.o kernel/syscalls/kill.o kernel/syscalls/gettimeofday.o kernel/syscalls/fchmod.o kernel/syscalls/fcntl64.o kernel/syscalls/mprotect.o kernel/syscalls/getitimer.o kernel/syscalls/old_select.o kernel/syscalls/symlink.o kernel/syscalls/mknod.o kernel/syscalls/write.o kernel/syscalls/rename.o kernel/syscalls/shmat.o kernel/syscalls/ipc.o kernel/syscalls/lstat64.o kernel/syscalls/access.o kernel/syscalls/getrlimit.o kernel/syscalls/sigreturn.o kernel/syscalls/ioctl.o kernel/syscalls/umask.o kernel/syscalls/geteuid.o kernel/syscalls/munmap.o kernel/syscalls/alarm.o kernel/syscalls/nanosleep.o kernel/syscalls/close.o kernel/syscalls/chroot.o kernel/syscalls/ftruncate64.o kernel/syscalls/truncate64.o kernel/syscalls/msgrcv.o kernel/syscalls/umount2.o kernel/syscalls/time.o kernel/syscalls/stime.o kernel/syscalls/semop.o kernel/syscalls/newlstat.o kernel/syscalls/sigpending.o kernel/syscalls/reboot.o kernel/syscalls/setuid.o kernel/syscalls/wait4.o kernel/syscalls/chown32.o kernel/syscalls/fcntl.o kernel/syscalls/fstat64.o kernel/syscalls/shmctl.o kernel/syscalls/dup2.o kernel/syscalls/setpgid.o kernel/syscalls/getdents.o kernel/syscalls/getpgrp.o kernel/syscalls/fchown.o kernel/syscalls/execve.o kernel/syscalls/shmget.o kernel/syscalls/lchown.o
++= MM_OBJS mm/bios_map.o mm/buddy_low.o mm/memory.o mm/page.o mm/alloc.o mm/fault.o mm/mmap.o mm/swapper.o
++= FS_OBJS fs/filesystems.o fs/devices.o fs/buffer.o fs/fd.o fs/locks.o fs/super.o fs/inode.o fs/namei.o fs/elf.o fs/script.o
++= FS_MINIX_OBJS fs/minix/super.o fs/minix/bitmaps.o fs/minix/inode.o fs/minix/namei.o fs/minix/symlink.o fs/minix/dir.o fs/minix/file.o fs/minix/v1_inode.o fs/minix/v2_inode.o
++= FS_EXT2_OBJS fs/ext2/inode.o fs/ext2/super.o fs/ext2/namei.o fs/ext2/symlink.o fs/ext2/dir.o fs/ext2/file.o fs/ext2/bitmaps.o
++= FS_PIPEFS_OBJS fs/pipefs/super.o fs/pipefs/fifo.o fs/pipefs/pipe.o
++= FS_ISO9660_OBJS fs/iso9660/inode.o fs/iso9660/super.o fs/iso9660/namei.o fs/iso9660/dir.o fs/iso9660/file.o fs/iso9660/rrip.o fs/iso9660/symlink.o
++= FS_PROCFS_OBJS fs/procfs/super.o fs/procfs/inode.o fs/procfs/namei.o fs/procfs/dir.o fs/procfs/file.o fs/procfs/symlink.o fs/procfs/tree.o fs/procfs/data.o
++= DRIVERS_CHAR_OBJS drivers/char/console.o drivers/char/tty.o drivers/char/tty_queue.o drivers/char/vt.o drivers/char/defkeymap.o drivers/char/keyboard.o drivers/char/memdev.o drivers/char/serial.o drivers/char/lp.o drivers/char/fb.o drivers/char/sysrq.o
++= DRIVERS_BLOCK_OBJS drivers/block/dma.o drivers/block/floppy.o drivers/block/part.o drivers/block/ata.o drivers/block/ata_hd.o drivers/block/ata_pci.o drivers/block/atapi.o drivers/block/atapi_cd.o drivers/block/ramdisk.o
++= DRIVERS_PCI_OBJS drivers/pci/pci.o
++= DRIVERS_VIDEO_OBJS drivers/video/video.o drivers/video/vgacon.o drivers/video/fbcon.o drivers/video/fonts.o drivers/video/bga.o
++= LIB_OBJS lib/ctype.o lib/strings.o lib/printk.o
++= FIWIX_OBJS ${KERNEL_OBJS} ${KERNEL_SYSCALLS_OBJS} ${MM_OBJS} ${FS_OBJS} ${FS_MINIX_OBJS} ${FS_EXT2_OBJS} ${FS_PIPEFS_OBJS} ${FS_ISO9660_OBJS} ${FS_PROCFS_OBJS} ${DRIVERS_CHAR_OBJS} ${DRIVERS_BLOCK_OBJS} ${DRIVERS_PCI_OBJS} ${DRIVERS_VIDEO_OBJS} ${LIB_OBJS}
 +
-+: build.0
++: build /boot/fiwix
++
++: setup
 +checksum-transcriber sources
 +sha256sum -c sources.SHA256SUM
 +mkdir build
@@ -521,281 +799,22 @@ index 0000000..65efef4
 +cp ../../files/custom_limits.h include/fiwix
 +cp ../../files/custom_kernel.h include/fiwix
 +cp ../../files/custom_system.h include/fiwix
-+cd kernel
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -traditional -I/${SRCDIR}/${pkg}/build/${pkg}/include -c -o boot.o boot.S
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -traditional -I/${SRCDIR}/${pkg}/build/${pkg}/include -c -o core386.o core386.S
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o main.o main.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o init.o init.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o gdt.o gdt.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o idt.o idt.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o syscalls.o syscalls.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o pic.o pic.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o pit.o pit.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o irq.o irq.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o traps.o traps.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o cpu.o cpu.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o cmos.o cmos.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o timer.o timer.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sched.o sched.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sleep.o sleep.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o signal.o signal.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o process.o process.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o multiboot.o multiboot.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o kexec.o kexec.c
-+cd syscalls
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o umount.o umount.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getgid.o getgid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getppid.o getppid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fstatfs.o fstatfs.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getgroups.o getgroups.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fsync.o fsync.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setreuid.o setreuid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o newuname.o newuname.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fork.o fork.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setitimer.o setitimer.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fdatasync.o fdatasync.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o chmod.o chmod.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o mmap2.o mmap2.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o msgsnd.o msgsnd.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o exit.o exit.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o readlink.o readlink.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o socketcall.o socketcall.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o stat64.o stat64.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o readv.o readv.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sigaction.o sigaction.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fstat.o fstat.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o waitpid.o waitpid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setfsgid.o setfsgid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o chown.o chown.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o flock.o flock.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o uname.o uname.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o lseek.o lseek.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setsid.o setsid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o settimeofday.o settimeofday.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o unlink.o unlink.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sigprocmask.o sigprocmask.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ustat.o ustat.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o open.o open.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sync.o sync.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o iopl.o iopl.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o msgget.o msgget.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o pipe.o pipe.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o shmdt.o shmdt.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getsid.o getsid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setfsuid.o setfsuid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o signal.o signal.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o newfstat.o newfstat.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o mkdir.o mkdir.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getcwd.o getcwd.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o link.o link.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o msgctl.o msgctl.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sethostname.o sethostname.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o semctl.o semctl.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sysinfo.o sysinfo.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setdomainname.o setdomainname.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getegid.o getegid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o personality.o personality.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setregid.o setregid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setgid.o setgid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o lstat.o lstat.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getuid.o getuid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o llseek.o llseek.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o select.o select.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ftruncate.o ftruncate.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getpgid.o getpgid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o brk.o brk.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getrusage.o getrusage.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sigsuspend.o sigsuspend.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o writev.o writev.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o times.o times.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ssetmask.o ssetmask.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o stat.o stat.c
 +
-+: build.1
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fchdir.o fchdir.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o chdir.o chdir.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setgroups.o setgroups.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o newstat.o newstat.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o creat.o creat.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getdents64.o getdents64.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getpid.o getpid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o read.o read.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o dup.o dup.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o utimes.o utimes.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o semget.o semget.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o mount.o mount.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o rmdir.o rmdir.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setrlimit.o setrlimit.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sgetmask.o sgetmask.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o pause.o pause.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o utime.o utime.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o statfs.o statfs.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ioperm.o ioperm.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ftime.o ftime.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o truncate.o truncate.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o old_mmap.o old_mmap.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o olduname.o olduname.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o kill.o kill.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o gettimeofday.o gettimeofday.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fchmod.o fchmod.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fcntl64.o fcntl64.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o mprotect.o mprotect.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getitimer.o getitimer.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o old_select.o old_select.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o symlink.o symlink.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o mknod.o mknod.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o write.o write.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o rename.o rename.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o shmat.o shmat.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ipc.o ipc.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o lstat64.o lstat64.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o access.o access.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getrlimit.o getrlimit.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sigreturn.o sigreturn.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ioctl.o ioctl.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o umask.o umask.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o geteuid.o geteuid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o munmap.o munmap.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o alarm.o alarm.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o nanosleep.o nanosleep.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o close.o close.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o chroot.o chroot.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ftruncate64.o ftruncate64.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o truncate64.o truncate64.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o msgrcv.o msgrcv.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o umount2.o umount2.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o time.o time.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o stime.o stime.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o semop.o semop.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o newlstat.o newlstat.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sigpending.o sigpending.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o reboot.o reboot.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setuid.o setuid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o wait4.o wait4.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o chown32.o chown32.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fcntl.o fcntl.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fstat64.o fstat64.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o shmctl.o shmctl.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o dup2.o dup2.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o setpgid.o setpgid.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getdents.o getdents.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o getpgrp.o getpgrp.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fchown.o fchown.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o execve.o execve.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o shmget.o shmget.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o lchown.o lchown.c
-+cd ../..
-+cd mm
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o bios_map.o bios_map.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o buddy_low.o buddy_low.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o memory.o memory.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o page.o page.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o alloc.o alloc.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fault.o fault.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o mmap.o mmap.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o swapper.o swapper.c
-+cd ..
-+cd fs
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o filesystems.o filesystems.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o devices.o devices.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o buffer.o buffer.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fd.o fd.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o locks.o locks.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o super.o super.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o inode.o inode.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o namei.o namei.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o elf.o elf.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o script.o script.c
-+cd minix
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o super.o super.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o bitmaps.o bitmaps.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o inode.o inode.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o namei.o namei.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o symlink.o symlink.c
++: kernel/boot.o kernel/boot.S setup
++tcc ${KASFLAGS} -c -o $@ $<
 +
-+: build.2
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o dir.o dir.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o file.o file.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o v1_inode.o v1_inode.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o v2_inode.o v2_inode.c
-+cd ..
-+cd ext2
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o inode.o inode.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o super.o super.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o namei.o namei.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o symlink.o symlink.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o dir.o dir.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o file.o file.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o bitmaps.o bitmaps.c
-+cd ..
-+cd pipefs
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o super.o super.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fifo.o fifo.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o pipe.o pipe.c
-+cd ..
-+cd iso9660
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o inode.o inode.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o super.o super.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o namei.o namei.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o dir.o dir.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o file.o file.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o rrip.o rrip.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o symlink.o symlink.c
-+cd ..
-+cd procfs
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o super.o super.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o inode.o inode.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o namei.o namei.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o dir.o dir.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o file.o file.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o symlink.o symlink.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o tree.o tree.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o data.o data.c
-+cd ../..
-+cd drivers/char
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o console.o console.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o tty.o tty.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o tty_queue.o tty_queue.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o vt.o vt.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o defkeymap.o defkeymap.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o keyboard.o keyboard.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o memdev.o memdev.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o serial.o serial.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o lp.o lp.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fb.o fb.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o sysrq.o sysrq.c
-+cd ..
-+cd block
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o dma.o dma.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o floppy.o floppy.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o part.o part.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ata.o ata.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ata_hd.o ata_hd.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ata_pci.o ata_pci.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o atapi.o atapi.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o atapi_cd.o atapi_cd.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ramdisk.o ramdisk.c
-+cd ..
-+cd pci
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o pci.o pci.c
-+cd ..
-+cd video
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o video.o video.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o vgacon.o vgacon.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fbcon.o fbcon.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o fonts.o fonts.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o bga.o bga.c
-+cd ../..
-+cd lib
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o ctype.o ctype.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o strings.o strings.c
-+tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes -c -o printk.o printk.c
-+cd ..
++: kernel/core386.o kernel/core386.S setup
++tcc ${KASFLAGS} -c -o $@ $<
++
++: %.o %.c setup
++tcc ${KCFLAGS} -c -o $@ $<
++
++: /boot/fiwix ${FIWIX_OBJS}
 +mkdir /boot
-+tcc -m32 -Wl,-Ttext=0x80100000 -static -nostdlib -nostdinc kernel/boot.o kernel/core386.o kernel/main.o kernel/init.o kernel/gdt.o kernel/idt.o kernel/syscalls.o kernel/pic.o kernel/pit.o kernel/irq.o kernel/traps.o kernel/cpu.o kernel/cmos.o kernel/timer.o kernel/sched.o kernel/sleep.o kernel/signal.o kernel/process.o kernel/multiboot.o kernel/kexec.o kernel/syscalls/umount.o kernel/syscalls/getgid.o kernel/syscalls/getppid.o kernel/syscalls/fstatfs.o kernel/syscalls/getgroups.o kernel/syscalls/fsync.o kernel/syscalls/setreuid.o kernel/syscalls/newuname.o kernel/syscalls/fork.o kernel/syscalls/setitimer.o kernel/syscalls/fdatasync.o kernel/syscalls/chmod.o kernel/syscalls/mmap2.o kernel/syscalls/msgsnd.o kernel/syscalls/exit.o kernel/syscalls/readlink.o kernel/syscalls/socketcall.o kernel/syscalls/stat64.o kernel/syscalls/readv.o kernel/syscalls/sigaction.o kernel/syscalls/fstat.o kernel/syscalls/waitpid.o kernel/syscalls/setfsgid.o kernel/syscalls/chown.o kernel/syscalls/flock.o kernel/syscalls/uname.o kernel/syscalls/lseek.o kernel/syscalls/setsid.o kernel/syscalls/settimeofday.o kernel/syscalls/unlink.o kernel/syscalls/sigprocmask.o kernel/syscalls/ustat.o kernel/syscalls/open.o kernel/syscalls/sync.o kernel/syscalls/iopl.o kernel/syscalls/msgget.o kernel/syscalls/pipe.o kernel/syscalls/shmdt.o kernel/syscalls/getsid.o kernel/syscalls/setfsuid.o kernel/syscalls/signal.o kernel/syscalls/newfstat.o kernel/syscalls/mkdir.o kernel/syscalls/getcwd.o kernel/syscalls/link.o kernel/syscalls/msgctl.o kernel/syscalls/sethostname.o kernel/syscalls/semctl.o kernel/syscalls/sysinfo.o kernel/syscalls/setdomainname.o kernel/syscalls/getegid.o kernel/syscalls/personality.o kernel/syscalls/setregid.o kernel/syscalls/setgid.o kernel/syscalls/lstat.o kernel/syscalls/getuid.o kernel/syscalls/llseek.o kernel/syscalls/select.o kernel/syscalls/ftruncate.o kernel/syscalls/getpgid.o kernel/syscalls/brk.o kernel/syscalls/getrusage.o kernel/syscalls/sigsuspend.o kernel/syscalls/writev.o kernel/syscalls/times.o kernel/syscalls/ssetmask.o kernel/syscalls/stat.o kernel/syscalls/fchdir.o kernel/syscalls/chdir.o kernel/syscalls/setgroups.o kernel/syscalls/newstat.o kernel/syscalls/creat.o kernel/syscalls/getdents64.o kernel/syscalls/getpid.o kernel/syscalls/read.o kernel/syscalls/dup.o kernel/syscalls/utimes.o kernel/syscalls/semget.o kernel/syscalls/mount.o kernel/syscalls/rmdir.o kernel/syscalls/setrlimit.o kernel/syscalls/sgetmask.o kernel/syscalls/pause.o kernel/syscalls/utime.o kernel/syscalls/statfs.o kernel/syscalls/ioperm.o kernel/syscalls/ftime.o kernel/syscalls/truncate.o kernel/syscalls/old_mmap.o kernel/syscalls/olduname.o kernel/syscalls/kill.o kernel/syscalls/gettimeofday.o kernel/syscalls/fchmod.o kernel/syscalls/fcntl64.o kernel/syscalls/mprotect.o kernel/syscalls/getitimer.o kernel/syscalls/old_select.o kernel/syscalls/symlink.o kernel/syscalls/mknod.o kernel/syscalls/write.o kernel/syscalls/rename.o kernel/syscalls/shmat.o kernel/syscalls/ipc.o kernel/syscalls/lstat64.o kernel/syscalls/access.o kernel/syscalls/getrlimit.o kernel/syscalls/sigreturn.o kernel/syscalls/ioctl.o kernel/syscalls/umask.o kernel/syscalls/geteuid.o kernel/syscalls/munmap.o kernel/syscalls/alarm.o kernel/syscalls/nanosleep.o kernel/syscalls/close.o kernel/syscalls/chroot.o kernel/syscalls/ftruncate64.o kernel/syscalls/truncate64.o kernel/syscalls/msgrcv.o kernel/syscalls/umount2.o kernel/syscalls/time.o kernel/syscalls/stime.o kernel/syscalls/semop.o kernel/syscalls/newlstat.o kernel/syscalls/sigpending.o kernel/syscalls/reboot.o kernel/syscalls/setuid.o kernel/syscalls/wait4.o kernel/syscalls/chown32.o kernel/syscalls/fcntl.o kernel/syscalls/fstat64.o kernel/syscalls/shmctl.o kernel/syscalls/dup2.o kernel/syscalls/setpgid.o kernel/syscalls/getdents.o kernel/syscalls/getpgrp.o kernel/syscalls/fchown.o kernel/syscalls/execve.o kernel/syscalls/shmget.o kernel/syscalls/lchown.o mm/bios_map.o mm/buddy_low.o mm/memory.o mm/page.o mm/alloc.o mm/fault.o mm/mmap.o mm/swapper.o fs/filesystems.o fs/devices.o fs/buffer.o fs/fd.o fs/locks.o fs/super.o fs/inode.o fs/namei.o fs/elf.o fs/script.o fs/minix/super.o fs/minix/bitmaps.o fs/minix/inode.o fs/minix/namei.o fs/minix/symlink.o fs/minix/dir.o fs/minix/file.o fs/minix/v1_inode.o fs/minix/v2_inode.o fs/ext2/inode.o fs/ext2/super.o fs/ext2/namei.o fs/ext2/symlink.o fs/ext2/dir.o fs/ext2/file.o fs/ext2/bitmaps.o fs/pipefs/super.o fs/pipefs/fifo.o fs/pipefs/pipe.o fs/iso9660/inode.o fs/iso9660/super.o fs/iso9660/namei.o fs/iso9660/dir.o fs/iso9660/file.o fs/iso9660/rrip.o fs/iso9660/symlink.o fs/procfs/super.o fs/procfs/inode.o fs/procfs/namei.o fs/procfs/dir.o fs/procfs/file.o fs/procfs/symlink.o fs/procfs/tree.o fs/procfs/data.o drivers/char/console.o drivers/char/tty.o drivers/char/tty_queue.o drivers/char/vt.o drivers/char/defkeymap.o drivers/char/keyboard.o drivers/char/memdev.o drivers/char/serial.o drivers/char/lp.o drivers/char/fb.o drivers/char/sysrq.o drivers/block/dma.o drivers/block/floppy.o drivers/block/part.o drivers/block/ata.o drivers/block/ata_hd.o drivers/block/ata_pci.o drivers/block/atapi.o drivers/block/atapi_cd.o drivers/block/ramdisk.o drivers/pci/pci.o drivers/video/video.o drivers/video/vgacon.o drivers/video/fbcon.o drivers/video/fonts.o drivers/video/bga.o lib/ctype.o lib/strings.o lib/printk.o -o /boot/fiwix
-+cd ../..
++tcc -m32 -Wl,-Ttext=0x80100000 -static -nostdlib -nostdinc ${FIWIX_OBJS} -o $@
 +
 +: checksum build
++cd ../..
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /boot/fiwix
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
@@ -836,6 +855,32 @@ index 0000000..1a42af1
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/gzip
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/improve/reconfigure.bake b/steps/improve/reconfigure.bake
+new file mode 100644
+index 0000000..83457e8
+--- /dev/null
++++ b/steps/improve/reconfigure.bake
+@@ -0,0 +1,3 @@
++: all
++/configurator /steps/configurator
++/script-generator /steps/manifest
+diff --git a/steps/jump/fiwix.bake b/steps/jump/fiwix.bake
+new file mode 100644
+index 0000000..4d0a5f5
+--- /dev/null
++++ b/steps/jump/fiwix.bake
+@@ -0,0 +1,4 @@
++: all
++make_fiwix_initrd -s 1381376 /boot/fiwix.ext2
++? BARE_METAL True kexec-fiwix /boot/fiwix -i /boot/fiwix.ext2 -m /e820 -c fiwix console=/dev/tty1 root=/dev/ram0 initrd=fiwix.ext2 kexec_proto=linux kexec_size=199680 kexec_cmdline=init=/init consoleblank=0
++! BARE_METAL True kexec-fiwix /boot/fiwix -i /boot/fiwix.ext2 -m /e820 -c fiwix console=/dev/ttyS0 root=/dev/ram0 initrd=fiwix.ext2 kexec_proto=linux kexec_size=199680 kexec_cmdline=init=/init console=ttyS0
+diff --git a/steps/kexec-fiwix-1.0/kexec-fiwix-1.0.checksums b/steps/kexec-fiwix-1.0/kexec-fiwix-1.0.checksums
+index 30c5330..fa15907 100644
+--- a/steps/kexec-fiwix-1.0/kexec-fiwix-1.0.checksums
++++ b/steps/kexec-fiwix-1.0/kexec-fiwix-1.0.checksums
+@@ -1 +1 @@
+-68c2f1de52d4f42409cb6433029ec784186cabbc923487eb778943547a20b257  /usr/bin/kexec-fiwix
++812c1283acd56479ab5c4cc32cb97fac07f4250d6768e087453b4464f5debe61  /usr/bin/kexec-fiwix
 diff --git a/steps/kexec-fiwix-1.0/pass1.bake b/steps/kexec-fiwix-1.0/pass1.bake
 new file mode 100644
 index 0000000..8b2f802
@@ -853,15 +898,62 @@ index 0000000..8b2f802
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/kexec-fiwix
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/kexec-fiwix-1.0/src/kexec-fiwix.c b/steps/kexec-fiwix-1.0/src/kexec-fiwix.c
+index 4cd3de7..ff63b57 100644
+--- a/steps/kexec-fiwix-1.0/src/kexec-fiwix.c
++++ b/steps/kexec-fiwix-1.0/src/kexec-fiwix.c
+@@ -7,6 +7,26 @@
+ 
+ #define MULTIBOOT_MAGIC 0x2BADB002
+ 
++char *join_tail(int argc, char **argv, int start) {
++	int i;
++	size_t len = 0;
++	char *out;
++
++	for (i = start; i < argc; i++) {
++		len += strlen(argv[i]) + 1;
++	}
++
++	out = calloc(len + 1, sizeof(char));
++	for (i = start; i < argc; i++) {
++		if (i != start) {
++			strcat(out, " ");
++		}
++		strcat(out, argv[i]);
++	}
++
++	return out;
++}
++
+ multiboot_uint32_t get_memmap(char *filename, void *memmap_addr) {
+ 
+ 	if (!filename) {
+@@ -52,7 +72,8 @@ int main(int argc, char **argv) {
+ 	for (i = 1; i < argc; i++) {
+ 		if (!strcmp(argv[i], "-c")) {
+ 			i++;
+-			cmdline = argv[i];
++			cmdline = join_tail(argc, argv, i);
++			break;
+ 		} else if (!strcmp(argv[i], "-i")) {
+ 			i++;
+ 			initrd_filename = argv[i];
 diff --git a/steps/lwext4-1.0.0-lb1/pass1.bake b/steps/lwext4-1.0.0-lb1/pass1.bake
 new file mode 100644
-index 0000000..3a9feed
+index 0000000..7ad0ab7
 --- /dev/null
 +++ b/steps/lwext4-1.0.0-lb1/pass1.bake
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,42 @@
 +: all build checksum
 +
-+: build
++= LWEXT4_FLAGS -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include
++= LWEXT4_OBJS ext4.o ext4_balloc.o ext4_bcache.o ext4_bitmap.o ext4_block_group.o ext4_blockdev.o ext4_crc32.o ext4_debug.o ext4_dir.o ext4_dir_idx.o ext4_extent.o ext4_fs.o ext4_hash.o ext4_ialloc.o ext4_inode.o ext4_journal.o ext4_mbr.o ext4_mkfs.o ext4_super.o ext4_trans.o ext4_xattr.o
++= INITRD_OBJS ${LWEXT4_OBJS} ../blockdev/linux/file_dev.o make_fiwix_initrd.o
++
++: build ${BINDIR}/make_fiwix_initrd
++
++: setup
 +mkdir build
 +cd build
 +ungz --file ${DISTFILES}/${pkg}.tar.gz --output ${pkg}.tar
@@ -869,33 +961,26 @@ index 0000000..3a9feed
 +cd ${pkg}
 +mkdir -p build_generic/include/generated
 +catm build_generic/include/generated/ext4_config.h ../../config/ext4_config.h
++cp ../../files/make_fiwix_initrd.c src/make_fiwix_initrd.c
++
++: %.o %.c setup
++cd src
++tcc ${LWEXT4_FLAGS} -c -o $@ $<
++cd ..
++
++: make_fiwix_initrd.o make_fiwix_initrd.c setup
++cd src
++tcc ${LWEXT4_FLAGS} -DVERSION="1.0" -c -o make_fiwix_initrd.o make_fiwix_initrd.c
++cd ..
++
++: ../blockdev/linux/file_dev.o blockdev/linux/file_dev.c setup
 +cd blockdev/linux
-+tcc -m32 -march=i386 -std=c89 -I../../include -I../../build_generic/include -I../../../tcc/tcc-0.9.27/include -DVERSION="1.0" -c file_dev.c
-+cd ../../src
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_balloc.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_bcache.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_bitmap.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_block_group.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_blockdev.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_crc32.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_debug.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_dir.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_dir_idx.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_extent.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_fs.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_hash.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_ialloc.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_inode.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_journal.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_mbr.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_mkfs.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_super.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_trans.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -c ext4_xattr.c
-+cp ../../../files/make_fiwix_initrd.c make_fiwix_initrd.c
-+tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -DVERSION="1.0" -c make_fiwix_initrd.c
-+tcc -m32 -o ${BINDIR}/make_fiwix_initrd ext4.o ext4_balloc.o ext4_bcache.o ext4_bitmap.o ext4_block_group.o ext4_blockdev.o ext4_crc32.o ext4_debug.o ext4_dir.o ext4_dir_idx.o ext4_extent.o ext4_fs.o ext4_hash.o ext4_ialloc.o ext4_inode.o ext4_journal.o ext4_mbr.o ext4_mkfs.o ext4_super.o ext4_trans.o ext4_xattr.o ../blockdev/linux/file_dev.o make_fiwix_initrd.o
++tcc -m32 -march=i386 -std=c89 -I../../include -I../../build_generic/include -I../../../tcc/tcc-0.9.27/include -DVERSION="1.0" -c -o file_dev.o file_dev.c
++cd ../..
++
++: ${BINDIR}/make_fiwix_initrd ${INITRD_OBJS}
++cd src
++tcc -m32 -o $@ ${INITRD_OBJS}
 +cd ../../..
 +
 +: checksum build
@@ -904,13 +989,18 @@ index 0000000..3a9feed
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/make-3.82/pass1.bake b/steps/make-3.82/pass1.bake
 new file mode 100644
-index 0000000..522457d
+index 0000000..bf1a60b
 --- /dev/null
 +++ b/steps/make-3.82/pass1.bake
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,84 @@
 +: all build checksum
 +
-+: build
++= MAKE_CFLAGS -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART
++= MAKE_OBJS getopt.o getopt1.o ar.o arscan.o commands.o default.o dir.o expand.o file.o function.o implicit.o job.o main.o misc.o read.o remake.o rule.o signame.o strcache.o variable.o version.o vpath.o hash.o remote-stub.o getloadavg.o fnmatch.o glob.o
++
++: build ${BINDIR}/make
++
++: setup
 +checksum-transcriber sources
 +sha256sum -c sources.SHA256SUM
 +mkdir build
@@ -920,34 +1010,66 @@ index 0000000..522457d
 +rm ${pkg}.tar
 +cd ${pkg}
 +catm config.h
++
++: %.o %.c setup
++tcc -c ${MAKE_CFLAGS} $<
++
++: getopt.o getopt.c setup
 +tcc -c getopt.c
++
++: getopt1.o getopt1.c setup
 +tcc -c getopt1.c
-+tcc -c -I. -Iglob -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_STDINT_H ar.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_FCNTL_H arscan.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DFILE_TIMESTAMP_HI_RES=0 commands.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DSCCS_GET="/nullop" default.c
-+tcc -c -I. -Iglob -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_DIRENT_H dir.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART expand.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DFILE_TIMESTAMP_HI_RES=0 file.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -Dvfork=fork function.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART implicit.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_DUP2 -DHAVE_STRCHR -Dvfork=fork job.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DLOCALEDIR="/fake-locale" -DPACKAGE="fake-make" -DHAVE_MKTEMP -DHAVE_GETCWD main.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_STRERROR -DHAVE_VPRINTF -DHAVE_ANSI_COMPILER -DHAVE_STDARG_H misc.c
-+tcc -c -I. -Iglob -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DINCLUDEDIR="${PREFIX}/include" read.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DFILE_TIMESTAMP_HI_RES=0 -DHAVE_FCNTL_H -DLIBDIR="${PREFIX}/lib" remake.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART rule.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART signame.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART strcache.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART variable.c
++
++: ar.o ar.c setup
++tcc -c ${MAKE_CFLAGS} -Iglob ar.c
++
++: arscan.o arscan.c setup
++tcc -c ${MAKE_CFLAGS} -DHAVE_FCNTL_H arscan.c
++
++: commands.o commands.c setup
++tcc -c ${MAKE_CFLAGS} -DFILE_TIMESTAMP_HI_RES=0 commands.c
++
++: default.o default.c setup
++tcc -c ${MAKE_CFLAGS} -DSCCS_GET="/nullop" default.c
++
++: dir.o dir.c setup
++tcc -c ${MAKE_CFLAGS} -Iglob -DHAVE_DIRENT_H dir.c
++
++: file.o file.c setup
++tcc -c ${MAKE_CFLAGS} -DFILE_TIMESTAMP_HI_RES=0 file.c
++
++: function.o function.c setup
++tcc -c ${MAKE_CFLAGS} -Dvfork=fork function.c
++
++: job.o job.c setup
++tcc -c ${MAKE_CFLAGS} -DHAVE_DUP2 -DHAVE_STRCHR -Dvfork=fork job.c
++
++: main.o main.c setup
++tcc -c ${MAKE_CFLAGS} -DLOCALEDIR="/fake-locale" -DPACKAGE="fake-make" -DHAVE_MKTEMP -DHAVE_GETCWD main.c
++
++: misc.o misc.c setup
++tcc -c ${MAKE_CFLAGS} -DHAVE_STRERROR -DHAVE_VPRINTF -DHAVE_ANSI_COMPILER -DHAVE_STDARG_H misc.c
++
++: read.o read.c setup
++tcc -c ${MAKE_CFLAGS} -Iglob -DINCLUDEDIR="${PREFIX}/include" read.c
++
++: remake.o remake.c setup
++tcc -c ${MAKE_CFLAGS} -DFILE_TIMESTAMP_HI_RES=0 -DHAVE_FCNTL_H -DLIBDIR="${PREFIX}/lib" remake.c
++
++: version.o version.c setup
 +tcc -c -I. -DVERSION="3.82" version.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART vpath.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART hash.c
-+tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART remote-stub.c
++
++: getloadavg.o getloadavg.c setup
 +tcc -c -DHAVE_FCNTL_H getloadavg.c
++
++: fnmatch.o glob/fnmatch.c setup
 +tcc -c -Iglob -DSTDC_HEADERS glob/fnmatch.c
++
++: glob.o glob/glob.c setup
 +tcc -c -Iglob -DHAVE_STRDUP -DHAVE_DIRENT_H glob/glob.c
-+tcc -static -o ${BINDIR}/make getopt.o getopt1.o ar.o arscan.o commands.o default.o dir.o expand.o file.o function.o implicit.o job.o main.o misc.o read.o remake.o rule.o signame.o strcache.o variable.o version.o vpath.o hash.o remote-stub.o getloadavg.o fnmatch.o glob.o
++
++: ${BINDIR}/make ${MAKE_OBJS}
++tcc -static -o $@ ${MAKE_OBJS}
 +make --version
 +cd ../..
 +
@@ -957,11 +1079,19 @@ index 0000000..522457d
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/mes-0.27.1/pass1.bake b/steps/mes-0.27.1/pass1.bake
 new file mode 100644
-index 0000000..a0f4285
+index 0000000..6609040
 --- /dev/null
 +++ b/steps/mes-0.27.1/pass1.bake
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,183 @@
 +: all build checksum
++
++= NYACC_GENERATED module/nyacc/lang/c99/mach.d/c99-act.scm module/nyacc/lang/c99/mach.d/c99-tab.scm module/nyacc/lang/c99/mach.d/c99cx-act.scm module/nyacc/lang/c99/mach.d/c99cx-tab.scm module/nyacc/lang/c99/mach.d/c99x-act.scm module/nyacc/lang/c99/mach.d/c99x-tab.scm module/nyacc/lang/c99/mach.d/cpp-act.scm module/nyacc/lang/c99/mach.d/cpp-tab.scm
++= MESCC ${MES} -e main ${BINDIR}/mescc.scm -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH}
++= LIBC_MINI_FILES lib/mes/__init_io.c lib/mes/eputs.c lib/mes/oputs.c lib/mes/globals.c lib/stdlib/exit.c lib/linux/${MES_ARCH}-mes-mescc/_exit.c lib/linux/${MES_ARCH}-mes-mescc/_write.c lib/stdlib/puts.c lib/string/strlen.c
++= LIBC_FILES lib/ctype/isnumber.c lib/mes/abtol.c lib/mes/cast.c lib/mes/eputc.c lib/mes/fdgetc.c lib/mes/fdputc.c lib/mes/fdputs.c lib/mes/fdungetc.c lib/mes/itoa.c lib/mes/ltoa.c lib/mes/ltoab.c lib/mes/mes_open.c lib/mes/ntoab.c lib/mes/oputc.c lib/mes/ultoa.c lib/mes/utoa.c lib/ctype/isdigit.c lib/ctype/isspace.c lib/ctype/isxdigit.c lib/mes/assert_msg.c lib/posix/write.c lib/stdlib/atoi.c lib/linux/lseek.c lib/mes/__assert_fail.c lib/mes/__buffered_read.c lib/mes/__mes_debug.c lib/posix/execv.c lib/posix/getcwd.c lib/posix/getenv.c lib/posix/isatty.c lib/posix/open.c lib/posix/buffered-read.c lib/posix/setenv.c lib/posix/wait.c lib/dirent/closedir.c lib/dirent/opendir.c lib/stdio/fgetc.c lib/stdio/fputc.c lib/stdio/fputs.c lib/stdio/getc.c lib/stdio/getchar.c lib/stdio/putc.c lib/stdio/putchar.c lib/stdio/ungetc.c lib/stdlib/calloc.c lib/stdlib/free.c lib/stdlib/realloc.c lib/string/memchr.c lib/string/memcmp.c lib/string/memcpy.c lib/string/memmove.c lib/string/memset.c lib/string/strcmp.c lib/string/strcpy.c lib/string/strncmp.c lib/posix/raise.c lib/linux/access.c lib/linux/brk.c lib/linux/chdir.c lib/linux/chmod.c lib/linux/clock_gettime.c lib/linux/dup.c lib/linux/dup2.c lib/linux/execve.c lib/linux/fork.c lib/linux/fsync.c lib/linux/_getcwd.c lib/linux/gettimeofday.c lib/linux/ioctl3.c lib/linux/malloc.c lib/linux/_open3.c lib/linux/_read.c lib/linux/readdir.c lib/linux/rename.c lib/linux/time.c lib/linux/umask.c lib/linux/uname.c lib/linux/unlink.c lib/linux/utimensat.c lib/linux/wait4.c lib/linux/waitpid.c lib/linux/${MES_ARCH}-mes-mescc/syscall.c lib/linux/getpid.c lib/linux/kill.c lib/linux/pipe.c lib/linux/stat.c lib/linux/lstat.c lib/linux/mkdir.c lib/linux/rmdir.c lib/linux/link.c lib/linux/symlink.c lib/linux/close.c lib/linux/nanosleep.c lib/linux/fcntl.c lib/linux/fstat.c lib/linux/getdents.c
++= LIBC_TCC_FILES lib/ctype/islower.c lib/ctype/isupper.c lib/ctype/tolower.c lib/ctype/toupper.c lib/mes/abtod.c lib/mes/dtoab.c lib/mes/search-path.c lib/posix/execvp.c lib/stdio/fclose.c lib/stdio/fdopen.c lib/stdio/ferror.c lib/stdio/fflush.c lib/stdio/fopen.c lib/stdio/fprintf.c lib/stdio/fread.c lib/stdio/fseek.c lib/stdio/ftell.c lib/stdio/fwrite.c lib/stdio/printf.c lib/stdio/remove.c lib/stdio/snprintf.c lib/stdio/sprintf.c lib/stdio/sscanf.c lib/stdio/vfprintf.c lib/stdio/vprintf.c lib/stdio/vsnprintf.c lib/stdio/vsprintf.c lib/stdio/vsscanf.c lib/stdlib/abort.c lib/stdlib/qsort.c lib/stdlib/strtod.c lib/stdlib/strtof.c lib/stdlib/strtol.c lib/stdlib/strtold.c lib/stdlib/strtoll.c lib/stdlib/strtoul.c lib/stdlib/strtoull.c lib/string/memmem.c lib/string/strcat.c lib/string/strchr.c lib/string/strlwr.c lib/string/strncpy.c lib/string/strrchr.c lib/string/strstr.c lib/string/strupr.c lib/stub/sigaction.c lib/stub/ldexp.c lib/stub/mprotect.c lib/stub/localtime.c lib/stub/sigemptyset.c lib/${MES_ARCH}-mes-mescc/setjmp.c lib/linux/close.c lib/linux/rmdir.c lib/linux/stat.c
++= MES_M2_FILES include/mes/config.h include/mes/lib-mini.h include/mes/lib.h lib/linux/${MES_ARCH}-mes-m2/crt1.c lib/mes/__init_io.c lib/linux/${MES_ARCH}-mes-m2/_exit.c lib/linux/${MES_ARCH}-mes-m2/_write.c lib/mes/globals.c lib/m2/cast.c lib/stdlib/exit.c lib/mes/write.c include/linux/${MES_ARCH}/syscall.h lib/linux/${MES_ARCH}-mes-m2/syscall.c lib/stub/__raise.c lib/linux/brk.c lib/linux/malloc.c lib/string/memset.c lib/linux/read.c lib/mes/fdgetc.c lib/stdio/getchar.c lib/stdio/putchar.c lib/stub/__buffered_read.c include/errno.h include/fcntl.h lib/linux/_open3.c lib/linux/open.c lib/mes/mes_open.c lib/string/strlen.c lib/mes/eputs.c lib/mes/fdputc.c lib/mes/eputc.c include/time.h include/sys/time.h include/m2/types.h include/sys/types.h include/sys/utsname.h include/mes/mes.h include/mes/builtins.h include/mes/constants.h include/mes/symbols.h lib/mes/__assert_fail.c lib/mes/assert_msg.c lib/mes/fdputc.c lib/string/strncmp.c lib/posix/getenv.c lib/mes/fdputs.c lib/mes/ntoab.c lib/ctype/isdigit.c lib/ctype/isxdigit.c lib/ctype/isspace.c lib/ctype/isnumber.c lib/mes/abtol.c lib/stdlib/atoi.c lib/string/memcpy.c lib/stdlib/free.c lib/stdlib/realloc.c lib/string/strcpy.c lib/mes/itoa.c lib/mes/ltoa.c lib/mes/fdungetc.c lib/posix/setenv.c lib/linux/access.c include/linux/m2/kernel-stat.h include/sys/stat.h lib/linux/chmod.c lib/linux/ioctl3.c include/sys/ioctl.h lib/m2/isatty.c include/signal.h lib/linux/fork.c lib/m2/execve.c lib/m2/execv.c include/sys/resource.h lib/linux/wait4.c lib/linux/waitpid.c lib/linux/gettimeofday.c lib/linux/clock_gettime.c lib/m2/time.c lib/linux/_getcwd.c include/limits.h lib/m2/getcwd.c lib/linux/dup.c lib/linux/dup2.c lib/string/strcmp.c lib/string/memcmp.c lib/linux/uname.c lib/linux/unlink.c src/builtins.c src/core.c src/display.c src/eval-apply.c src/gc.c src/hash.c src/lib.c src/m2.c src/math.c src/mes.c src/module.c src/posix.c src/reader.c src/stack.c src/string.c src/struct.c src/symbol.c src/variable.c src/vector.c
++= MES_CHECKSUMS /usr/bin/mes-m2 /usr/bin/mescc.scm /usr/lib/${MES_ARCH}-mes/crt1.s /usr/lib/${MES_ARCH}-mes/crt1.o /usr/lib/${MES_ARCH}-mes/${MES_ARCH}.M1 /usr/lib/${MES_ARCH}-mes/libmescc.s /usr/lib/${MES_ARCH}-mes/libc+tcc.s /usr/lib/${MES_ARCH}-mes/libc.s /usr/lib/${MES_ARCH}-mes/libmescc.a /usr/lib/${MES_ARCH}-mes/libc+tcc.a /usr/lib/${MES_ARCH}-mes/libc.a /usr/lib/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-header.hex2 /usr/lib/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-footer-single-main.hex2
 +
 +: build build.0 build.1
 +
@@ -973,10 +1103,19 @@ index 0000000..a0f4285
 +export LIBDIR ${MES_PREFIX}/lib
 +? ARCH x86 export MES_ARCH x86
 +? ARCH x86 export ARCH_BITS 32
++? ARCH x86 export cc_cpu i386
++? ARCH x86 export stage0_cpu x86
++? ARCH x86 export blood_elf_flag --little-endian
 +? ARCH amd64 export MES_ARCH x86_64
 +? ARCH amd64 export ARCH_BITS 64
++? ARCH amd64 export cc_cpu x86_64
++? ARCH amd64 export stage0_cpu amd64
++? ARCH amd64 export blood_elf_flag --64
 +? ARCH riscv64 export MES_ARCH riscv64
 +? ARCH riscv64 export ARCH_BITS 64
++? ARCH riscv64 export cc_cpu riscv64
++? ARCH riscv64 export stage0_cpu riscv64
++? ARCH riscv64 export blood_elf_flag --64
 +checksum-transcriber sources
 +sha256sum -c sources.SHA256SUM
 +mkdir build
@@ -989,7 +1128,7 @@ index 0000000..a0f4285
 +replace --file ${mes_run} --output ${mes_run} --match-on 0x1000000 --replace-with 0x8048000
 +rm ${NYACC_PKG}.tar ${MES_PKG}.tar
 +cp ../files/config.h ${MES_PREFIX}/include/mes
-+simple-patch ${MES_PREFIX}/lib/linux/wait4.c ../simple-patches/wait4.before ../simple-patches/wait4.after
++simple-patch -Np0 -i ../patches/wait4.patch
 +cd ${MES_PREFIX}
 +mkdir include/arch
 +cp include/linux/${MES_ARCH}/kernel-stat.h include/arch/kernel-stat.h
@@ -998,11 +1137,17 @@ index 0000000..a0f4285
 +rm mes/module/mes/psyntax.pp mes/module/mes/psyntax.pp.header
 +cp mes/module/srfi/srfi-9-struct.mes mes/module/srfi/srfi-9.mes
 +cp mes/module/srfi/srfi-9/gnu-struct.mes mes/module/srfi/srfi-9/gnu.mes
-+kaem --verbose --strict --file kaem.${MES_ARCH}
++mkdir -p m2
++M2-Planet --debug --architecture ${stage0_cpu} -D __${cc_cpu}__=1 -D __linux__=1 ${MES_M2_FILES} -o m2/mes.M1
++blood-elf ${blood_elf_flag} --little-endian m2/mes.M1 -o m2/mes.blood-elf-M1
++M1 --architecture ${stage0_cpu} --little-endian lib/m2/${MES_ARCH}/${MES_ARCH}_defs.M1 lib/${MES_ARCH}-mes/${MES_ARCH}.M1 lib/linux/${MES_ARCH}-mes-m2/crt1.M1 m2/mes.M1 m2/mes.blood-elf-M1 -o m2/mes.hex2
++mkdir -p bin
++hex2 --architecture ${stage0_cpu} --little-endian --base-address 0x8048000 lib/m2/${MES_ARCH}/ELF-${MES_ARCH}.hex2 m2/mes.hex2 -o bin/mes-m2
++cp bin/mes-m2 bin/mes
 +cp bin/mes-m2 ${BINDIR}/mes-m2
 +chmod 755 ${BINDIR}/mes-m2
 +cd ../${NYACC_PKG}
-+rm module/nyacc/lang/c99/mach.d/c99-act.scm module/nyacc/lang/c99/mach.d/c99-tab.scm module/nyacc/lang/c99/mach.d/c99cx-act.scm module/nyacc/lang/c99/mach.d/c99cx-tab.scm module/nyacc/lang/c99/mach.d/c99x-act.scm module/nyacc/lang/c99/mach.d/c99x-tab.scm module/nyacc/lang/c99/mach.d/cpp-act.scm module/nyacc/lang/c99/mach.d/cpp-tab.scm
++rm ${NYACC_GENERATED}
 +${MES} -L module gen-cpp-files.scm
 +export MES_ARENA 32000000
 +${MES} -L module gen-c99-files.scm
@@ -1017,21 +1162,21 @@ index 0000000..a0f4285
 +export mescc_scm ${BINDIR}/mescc.scm
 +cp ${mescc_in} ${mescc_scm}
 +chmod 755 ${mescc_scm}
-+${MES} -e main ${BINDIR}/mescc.scm -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -c lib/linux/${MES_ARCH}-mes-mescc/crt1.c -o lib/${MES_ARCH}-mes/crt1.o
-+catm libc-mini.c lib/mes/__init_io.c lib/mes/eputs.c lib/mes/oputs.c lib/mes/globals.c lib/stdlib/exit.c lib/linux/${MES_ARCH}-mes-mescc/_exit.c lib/linux/${MES_ARCH}-mes-mescc/_write.c lib/stdlib/puts.c lib/string/strlen.c
-+${MES} -e main ${BINDIR}/mescc.scm -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -c libc-mini.c
++${MESCC} -c lib/linux/${MES_ARCH}-mes-mescc/crt1.c -o lib/${MES_ARCH}-mes/crt1.o
++catm libc-mini.c ${LIBC_MINI_FILES}
++${MESCC} -c libc-mini.c
 +cp libc-mini.o ${LIBDIR}/${MES_ARCH}-mes/libc-mini.a
 +cp libc-mini.s ${LIBDIR}/${MES_ARCH}-mes/libc-mini.s
 +catm libmescc.c lib/mes/globals.c lib/linux/${MES_ARCH}-mes-mescc/syscall-internal.c
-+${MES} -e main ${BINDIR}/mescc.scm -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -c libmescc.c
++${MESCC} -c libmescc.c
 +cp libmescc.o ${LIBDIR}/${MES_ARCH}-mes/libmescc.a
 +cp libmescc.s ${LIBDIR}/${MES_ARCH}-mes/libmescc.s
-+catm libc.c lib/ctype/isnumber.c lib/mes/abtol.c lib/mes/cast.c lib/mes/eputc.c lib/mes/fdgetc.c lib/mes/fdputc.c lib/mes/fdputs.c lib/mes/fdungetc.c lib/mes/itoa.c lib/mes/ltoa.c lib/mes/ltoab.c lib/mes/mes_open.c lib/mes/ntoab.c lib/mes/oputc.c lib/mes/ultoa.c lib/mes/utoa.c lib/ctype/isdigit.c lib/ctype/isspace.c lib/ctype/isxdigit.c lib/mes/assert_msg.c lib/posix/write.c lib/stdlib/atoi.c lib/linux/lseek.c lib/mes/__assert_fail.c lib/mes/__buffered_read.c lib/mes/__mes_debug.c lib/posix/execv.c lib/posix/getcwd.c lib/posix/getenv.c lib/posix/isatty.c lib/posix/open.c lib/posix/buffered-read.c lib/posix/setenv.c lib/posix/wait.c lib/dirent/closedir.c lib/dirent/opendir.c lib/stdio/fgetc.c lib/stdio/fputc.c lib/stdio/fputs.c lib/stdio/getc.c lib/stdio/getchar.c lib/stdio/putc.c lib/stdio/putchar.c lib/stdio/ungetc.c lib/stdlib/calloc.c lib/stdlib/free.c lib/stdlib/realloc.c lib/string/memchr.c lib/string/memcmp.c lib/string/memcpy.c lib/string/memmove.c lib/string/memset.c lib/string/strcmp.c lib/string/strcpy.c lib/string/strncmp.c lib/posix/raise.c lib/linux/access.c lib/linux/brk.c lib/linux/chdir.c lib/linux/chmod.c lib/linux/clock_gettime.c lib/linux/dup.c lib/linux/dup2.c lib/linux/execve.c lib/linux/fork.c lib/linux/fsync.c lib/linux/_getcwd.c lib/linux/gettimeofday.c lib/linux/ioctl3.c lib/linux/malloc.c lib/linux/_open3.c lib/linux/_read.c lib/linux/readdir.c lib/linux/rename.c lib/linux/time.c lib/linux/umask.c lib/linux/uname.c lib/linux/unlink.c lib/linux/utimensat.c lib/linux/wait4.c lib/linux/waitpid.c lib/linux/${MES_ARCH}-mes-mescc/syscall.c lib/linux/getpid.c lib/linux/kill.c lib/linux/pipe.c lib/linux/stat.c lib/linux/lstat.c lib/linux/mkdir.c lib/linux/rmdir.c lib/linux/link.c lib/linux/symlink.c lib/linux/close.c lib/linux/nanosleep.c lib/linux/fcntl.c lib/linux/fstat.c lib/linux/getdents.c
-+${MES} -e main ${BINDIR}/mescc.scm -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -c libc.c
++catm libc.c ${LIBC_FILES}
++${MESCC} -c libc.c
 +catm ${LIBDIR}/${MES_ARCH}-mes/libc.a ${LIBDIR}/${MES_ARCH}-mes/libc-mini.a libc.o
 +catm ${LIBDIR}/${MES_ARCH}-mes/libc.s ${LIBDIR}/${MES_ARCH}-mes/libc-mini.s libc.s
-+catm libc+tcc.c lib/ctype/islower.c lib/ctype/isupper.c lib/ctype/tolower.c lib/ctype/toupper.c lib/mes/abtod.c lib/mes/dtoab.c lib/mes/search-path.c lib/posix/execvp.c lib/stdio/fclose.c lib/stdio/fdopen.c lib/stdio/ferror.c lib/stdio/fflush.c lib/stdio/fopen.c lib/stdio/fprintf.c lib/stdio/fread.c lib/stdio/fseek.c lib/stdio/ftell.c lib/stdio/fwrite.c lib/stdio/printf.c lib/stdio/remove.c lib/stdio/snprintf.c lib/stdio/sprintf.c lib/stdio/sscanf.c lib/stdio/vfprintf.c lib/stdio/vprintf.c lib/stdio/vsnprintf.c lib/stdio/vsprintf.c lib/stdio/vsscanf.c lib/stdlib/abort.c lib/stdlib/qsort.c lib/stdlib/strtod.c lib/stdlib/strtof.c lib/stdlib/strtol.c lib/stdlib/strtold.c lib/stdlib/strtoll.c lib/stdlib/strtoul.c lib/stdlib/strtoull.c lib/string/memmem.c lib/string/strcat.c lib/string/strchr.c lib/string/strlwr.c lib/string/strncpy.c lib/string/strrchr.c lib/string/strstr.c lib/string/strupr.c lib/stub/sigaction.c lib/stub/ldexp.c lib/stub/mprotect.c lib/stub/localtime.c lib/stub/sigemptyset.c lib/${MES_ARCH}-mes-mescc/setjmp.c lib/linux/close.c lib/linux/rmdir.c lib/linux/stat.c
-+${MES} -e main ${BINDIR}/mescc.scm -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -c libc+tcc.c
++catm libc+tcc.c ${LIBC_TCC_FILES}
++${MESCC} -c libc+tcc.c
 +catm ${LIBDIR}/${MES_ARCH}-mes/libc+tcc.a ${LIBDIR}/${MES_ARCH}-mes/libc.a libc+tcc.o
 +catm ${LIBDIR}/${MES_ARCH}-mes/libc+tcc.s ${LIBDIR}/${MES_ARCH}-mes/libc.s libc+tcc.s
 +mkdir ${PREFIX}/lib/linux ${INCDIR}/mes ${INCDIR}/sys ${INCDIR}/linux ${INCDIR}/arch
@@ -1118,9 +1263,59 @@ index 0000000..a0f4285
 +cd ../..
 +
 +: checksum build
-+? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/mes-m2 /usr/bin/mescc.scm /usr/lib/${MES_ARCH}-mes/crt1.s /usr/lib/${MES_ARCH}-mes/crt1.o /usr/lib/${MES_ARCH}-mes/${MES_ARCH}.M1 /usr/lib/${MES_ARCH}-mes/libmescc.s /usr/lib/${MES_ARCH}-mes/libc+tcc.s /usr/lib/${MES_ARCH}-mes/libc.s /usr/lib/${MES_ARCH}-mes/libmescc.a /usr/lib/${MES_ARCH}-mes/libc+tcc.a /usr/lib/${MES_ARCH}-mes/libc.a /usr/lib/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-header.hex2 /usr/lib/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-footer-single-main.hex2
++? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums ${MES_CHECKSUMS}
 +? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
+diff --git a/steps/mes-0.27.1/pass1.kaem b/steps/mes-0.27.1/pass1.kaem
+index c833f7c..d36a0b9 100755
+--- a/steps/mes-0.27.1/pass1.kaem
++++ b/steps/mes-0.27.1/pass1.kaem
+@@ -46,8 +46,7 @@ rm ${NYACC_PKG}.tar ${MES_PKG}.tar
+ cp ../files/config.h ${MES_PREFIX}/include/mes
+ 
+ # This patch was upstreamed after mes 0.27.1
+-simple-patch ${MES_PREFIX}/lib/linux/wait4.c \
+-    ../simple-patches/wait4.before ../simple-patches/wait4.after
++simple-patch -Np0 -i ../patches/wait4.patch
+ 
+ cd ${MES_PREFIX}
+ mkdir include/arch
+diff --git a/steps/mes-0.27.1/patches/wait4.patch b/steps/mes-0.27.1/patches/wait4.patch
+new file mode 100644
+index 0000000..17e99d3
+--- /dev/null
++++ b/steps/mes-0.27.1/patches/wait4.patch
+@@ -0,0 +1,11 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: GPL-3.0-or-later
++
++--- mes-0.27.1/lib/linux/wait4.c
+++++ mes-0.27.1/lib/linux/wait4.c
++@@ -1,3 +1,4 @@
++   long long_status_ptr = cast_voidp_to_long (status_ptr);
++   long long_options = options;
++   long long_rusage = cast_voidp_to_long (rusage);
+++  *long_status_ptr = 0;
+diff --git a/steps/mes-0.27.1/simple-patches/wait4.after b/steps/mes-0.27.1/simple-patches/wait4.after
+deleted file mode 100644
+index 6b1d845..0000000
+--- a/steps/mes-0.27.1/simple-patches/wait4.after
++++ /dev/null
+@@ -1,4 +0,0 @@
+-  long long_status_ptr = cast_voidp_to_long (status_ptr);
+-  long long_options = options;
+-  long long_rusage = cast_voidp_to_long (rusage);
+-  *long_status_ptr = 0;
+diff --git a/steps/mes-0.27.1/simple-patches/wait4.before b/steps/mes-0.27.1/simple-patches/wait4.before
+deleted file mode 100644
+index fe36af7..0000000
+--- a/steps/mes-0.27.1/simple-patches/wait4.before
++++ /dev/null
+@@ -1,3 +0,0 @@
+-  long long_status_ptr = cast_voidp_to_long (status_ptr);
+-  long long_options = options;
+-  long long_rusage = cast_voidp_to_long (rusage);
 diff --git a/steps/oyacc-6.6/pass1.bake b/steps/oyacc-6.6/pass1.bake
 new file mode 100644
 index 0000000..75aec5c
@@ -1209,6 +1404,435 @@ index 0000000..d31d786
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/sed
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/simple-patch-1.0/pass1.bake b/steps/simple-patch-1.0/pass1.bake
+new file mode 100644
+index 0000000..505148c
+--- /dev/null
++++ b/steps/simple-patch-1.0/pass1.bake
+@@ -0,0 +1,9 @@
++: all build checksum
++
++: build
++M2-Mesoplanet --architecture ${ARCH} -o ${BINDIR}/simple-patch src/simple-patch.c
++
++: checksum build
++? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/simple-patch
++? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
++! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
+diff --git a/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums b/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums
+index f339112..1108e86 100644
+--- a/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums
++++ b/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums
+@@ -1 +1 @@
+-f07472c09834572a3162f0978e8e69523f285f3048310f9d43e54ca7bef1d7e5  /usr/bin/simple-patch
++59efc3ec48cd7bc2ca5d5e80b3ac48a629abd2b84a7808ae284b9a4b931fafe9  /usr/bin/simple-patch
+diff --git a/steps/simple-patch-1.0/simple-patch-1.0.riscv64.checksums b/steps/simple-patch-1.0/simple-patch-1.0.riscv64.checksums
+index f809f45..1991e8e 100644
+--- a/steps/simple-patch-1.0/simple-patch-1.0.riscv64.checksums
++++ b/steps/simple-patch-1.0/simple-patch-1.0.riscv64.checksums
+@@ -1 +1 @@
+-dc72b76c8835b1a08b1ecaa2ab8e9179c290805dd2c8bf3636004f375948c238  /usr/bin/simple-patch
++69ebc57948328a35bd1b711491c28f81b9e7769de49d5bdb0d4ecb0263c15d2d  /usr/bin/simple-patch
+diff --git a/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums b/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums
+index de5f92d..291fcba 100644
+--- a/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums
++++ b/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums
+@@ -1 +1 @@
+-887c9270655ceb8a07b7b244d893ba9d0377d66bacd85b4cf9ceb28e5884000f  /usr/bin/simple-patch
++370f170025e3c13659202c8b7ba876efb63b27b7747ef781f1176e071dba4a9d  /usr/bin/simple-patch
+diff --git a/steps/simple-patch-1.0/src/simple-patch.c b/steps/simple-patch-1.0/src/simple-patch.c
+index ed6faea..0f930b7 100644
+--- a/steps/simple-patch-1.0/src/simple-patch.c
++++ b/steps/simple-patch-1.0/src/simple-patch.c
+@@ -13,51 +13,59 @@ This program is written in a subset of C called M2, which is from the
+ stage0-posix bootstrap project.
+ 
+ Example usage:
+-./simple-patch file_to_patch before_pattern_file after_pattern_file
++./simple-patch -p1 -i patch_file
+ 
+ */
+ 
+ // function prototypes
+ void read_file_or_die(char *file_name, char **buffer, int *file_size);
+-void patch_buffer_or_die(char *patch_file_before_buffer, int patch_file_before_size,
+-                 char *before_pattern_buffer, int before_pattern_size,
+-                 char *after_pattern_buffer, int after_pattern_size,
+-                 char *patch_file_after_buffer);
++void write_file_or_die(char *file_name, char *buffer, int file_size);
++void patch_unified_or_die(char *patch_buffer, int patch_size, int strip);
++void apply_hunk_or_die(char **file_buffer, int *file_size, int *offset,
++                 char *before_buffer, int before_size,
++                 char *after_buffer, int after_size);
+ void writestr_fd(int fd, char *str);
++void usage(void);
+ int memsame(char *search_buffer, int search_size,
+             char *pattern_buffer, int pattern_size);
++int starts_with(char *buffer, int size, char *pattern);
++int line_size(char *pos, char *end);
++int next_line_starts_with(char *line, int size, char *end, char *pattern);
++char *copy_patch_path(char *line, int size, int strip);
++int parse_strip(char *arg);
+ 
+ 
+ int main(int argc, char **argv) {
+-    char *patch_file_before_buffer;
+-    int patch_file_before_size;
++    int strip;
++    char *patch_name;
++    char *patch_buffer;
++    int patch_size;
++    int i;
+ 
+-    char *before_pattern_buffer;
+-    int before_pattern_size;
++    strip = 0;
++    patch_name = NULL;
++    i = 1;
++    while(i < argc) {
++        if(strcmp(argv[i], "-i") == 0) {
++            i = i + 1;
++            if(i >= argc) usage();
++            patch_name = argv[i];
++        } else if(strcmp(argv[i], "-N") == 0) {
++            /* Already-applied patch detection is not needed for bootstrap use. */
++        } else if(starts_with(argv[i], strlen(argv[i]), "-p")) {
++            strip = parse_strip(argv[i] + 2);
++        } else if(starts_with(argv[i], strlen(argv[i]), "-Np")) {
++            strip = parse_strip(argv[i] + 3);
++        } else {
++            patch_name = argv[i];
++        }
++        i = i + 1;
++    }
+ 
+-    char *after_pattern_buffer;
+-    int after_pattern_size;
++    if(patch_name == NULL) usage();
+ 
+-    int patch_file_after_size;
+-    char *patch_file_after_buffer;
+-
+-    int patch_file_fd;
+-
+-    read_file_or_die(argv[1], &patch_file_before_buffer, &patch_file_before_size);
+-    read_file_or_die(argv[2], &before_pattern_buffer, &before_pattern_size);
+-    read_file_or_die(argv[3], &after_pattern_buffer, &after_pattern_size);
+-
+-    patch_file_after_size = patch_file_before_size - before_pattern_size + after_pattern_size;
+-    patch_file_after_buffer = calloc(patch_file_after_size, sizeof(char));
+-
+-    patch_buffer_or_die(patch_file_before_buffer, patch_file_before_size,
+-                 before_pattern_buffer, before_pattern_size,
+-                 after_pattern_buffer, after_pattern_size,
+-                 patch_file_after_buffer);
+-    
+-    patch_file_fd = open(argv[1], O_WRONLY | O_CREAT | O_TRUNC, 0);
+-    write(patch_file_fd, patch_file_after_buffer, patch_file_after_size);
+-    close(patch_file_fd);
++    read_file_or_die(patch_name, &patch_buffer, &patch_size);
++    patch_unified_or_die(patch_buffer, patch_size, strip);
+ 
+     return EXIT_SUCCESS;
+ }
+@@ -79,7 +87,7 @@ void read_file_or_die(char *file_name, char **buffer, int *file_size) {
+     // go back to beginning of file
+     lseek(file_fd, 0, SEEK_SET);
+     // alloc a buffer to read the entire file
+-    *buffer = calloc(*file_size, sizeof(char));
++    *buffer = calloc(*file_size + 1, sizeof(char));
+ 
+     // read the entire patch file
+     num_bytes_read = read(file_fd, *buffer, *file_size);
+@@ -92,31 +100,172 @@ void read_file_or_die(char *file_name, char **buffer, int *file_size) {
+     close(file_fd);
+ }
+ 
+-void patch_buffer_or_die(char *patch_file_before_buffer, int patch_file_before_size,
+-                 char *before_pattern_buffer, int before_pattern_size,
+-                 char *after_pattern_buffer, int after_pattern_size,
+-                 char *patch_file_after_buffer) {
++void write_file_or_die(char *file_name, char *buffer, int file_size) {
++    int file_fd;
++    int num_bytes_written;
+ 
+-    char *pos = patch_file_before_buffer;
+-    int prefix_len = 0;
++    file_fd = open(file_name, O_WRONLY | O_CREAT | O_TRUNC, 0);
++    if (file_fd == -1) {
++        writestr_fd(2, "Could not write file: ");
++        writestr_fd(2, file_name);
++        writestr_fd(2, "\n");
++        exit(1);
++    }
++    num_bytes_written = write(file_fd, buffer, file_size);
++    if (num_bytes_written != file_size) {
++        writestr_fd(2, "Could not write file: ");
++        writestr_fd(2, file_name);
++        writestr_fd(2, "\n");
++        exit(1);
++    }
++    close(file_fd);
++}
+ 
+-    // look for the pattern at every offset
+-    while (prefix_len < patch_file_before_size) {
+-        // if we find the pattern, replace it and return
+-        if (memsame(pos, patch_file_before_size - prefix_len, before_pattern_buffer, before_pattern_size)) {
+-           memcpy(patch_file_after_buffer, patch_file_before_buffer, prefix_len);
+-           memcpy(patch_file_after_buffer + prefix_len, after_pattern_buffer, after_pattern_size);
+-           memcpy(patch_file_after_buffer + prefix_len + after_pattern_size, 
+-                  patch_file_before_buffer + prefix_len + before_pattern_size, 
+-                  patch_file_before_size - (prefix_len + before_pattern_size));
+-           return;
++void patch_unified_or_die(char *patch_buffer, int patch_size, int strip) {
++    char *pos;
++    char *end;
++    int size;
++    char *file_name;
++    char *file_buffer;
++    int file_size;
++    int file_offset;
++    int file_dirty;
++    char *before_buffer;
++    char *after_buffer;
++    int before_size;
++    int after_size;
++    char prefix;
++    int content_size;
++
++    pos = patch_buffer;
++    end = patch_buffer + patch_size;
++    file_name = NULL;
++    file_buffer = NULL;
++    file_size = 0;
++    file_offset = 0;
++    file_dirty = FALSE;
++
++    while(pos < end) {
++        size = line_size(pos, end);
++
++        if(starts_with(pos, size, "--- ")) {
++            if(file_dirty) {
++                write_file_or_die(file_name, file_buffer, file_size);
++                file_dirty = FALSE;
++            }
++
++            pos = pos + size;
++            if(pos >= end) {
++                writestr_fd(2, "Missing +++ line\n");
++                exit(1);
++            }
++            size = line_size(pos, end);
++            if(!starts_with(pos, size, "+++ ")) {
++                writestr_fd(2, "Missing +++ line\n");
++                exit(1);
++            }
++            file_name = copy_patch_path(pos + 4, size - 4, strip);
++            read_file_or_die(file_name, &file_buffer, &file_size);
++            file_offset = 0;
++            pos = pos + size;
++        } else if(starts_with(pos, size, "@@ ")) {
++            if(file_name == NULL) {
++                writestr_fd(2, "Patch hunk has no file header\n");
++                exit(1);
++            }
++
++            pos = pos + size;
++            before_buffer = calloc(patch_size + 1, sizeof(char));
++            after_buffer = calloc(patch_size + 1, sizeof(char));
++            before_size = 0;
++            after_size = 0;
++
++            while(pos < end) {
++                size = line_size(pos, end);
++                if(starts_with(pos, size, "@@ ")) {
++                    break;
++                }
++                if(starts_with(pos, size, "diff ")) {
++                    break;
++                }
++                if(starts_with(pos, size, "--- ") &&
++                   next_line_starts_with(pos, size, end, "+++ ")) {
++                    break;
++                }
++                if(starts_with(pos, size, "\\ No newline")) {
++                    pos = pos + size;
++                    continue;
++                }
++
++                prefix = pos[0];
++                content_size = size - 1;
++                if(prefix == ' ') {
++                    memcpy(before_buffer + before_size, pos + 1, content_size);
++                    memcpy(after_buffer + after_size, pos + 1, content_size);
++                    before_size = before_size + content_size;
++                    after_size = after_size + content_size;
++                } else if(prefix == '-') {
++                    memcpy(before_buffer + before_size, pos + 1, content_size);
++                    before_size = before_size + content_size;
++                } else if(prefix == '+') {
++                    memcpy(after_buffer + after_size, pos + 1, content_size);
++                    after_size = after_size + content_size;
++                } else {
++                    writestr_fd(2, "Unsupported patch hunk line\n");
++                    exit(1);
++                }
++                pos = pos + size;
++            }
++
++            apply_hunk_or_die(&file_buffer, &file_size, &file_offset,
++                         before_buffer, before_size,
++                         after_buffer, after_size);
++            file_dirty = TRUE;
++        } else {
++            pos = pos + size;
+         }
+-        pos = pos + 1;
+-        prefix_len = prefix_len + 1;
+     }
+ 
+-    /* if we don't find the pattern, something is wrong, so exit with error */
+-    exit(1);
++    if(file_dirty) {
++        write_file_or_die(file_name, file_buffer, file_size);
++    }
++}
++
++void apply_hunk_or_die(char **file_buffer, int *file_size, int *offset,
++                 char *before_buffer, int before_size,
++                 char *after_buffer, int after_size) {
++    int pos;
++    int new_size;
++    char *new_buffer;
++
++    pos = *offset;
++    if(before_size == 0) {
++        pos = *offset;
++    } else {
++        while(pos < *file_size) {
++            if(memsame(*file_buffer + pos, *file_size - pos,
++                       before_buffer, before_size)) {
++                break;
++            }
++            pos = pos + 1;
++        }
++        if(pos >= *file_size) {
++            writestr_fd(2, "Patch hunk did not match\n");
++            exit(1);
++        }
++    }
++
++    new_size = *file_size - before_size + after_size;
++    new_buffer = calloc(new_size + 1, sizeof(char));
++    memcpy(new_buffer, *file_buffer, pos);
++    memcpy(new_buffer + pos, after_buffer, after_size);
++    memcpy(new_buffer + pos + after_size,
++           *file_buffer + pos + before_size,
++           *file_size - pos - before_size);
++
++    *file_buffer = new_buffer;
++    *file_size = new_size;
++    *offset = pos + after_size;
+ }
+ 
+ /*
+@@ -126,6 +275,11 @@ void writestr_fd(int fd, char *str) {
+     write(fd, str, strlen(str));
+ }
+ 
++void usage(void) {
++    writestr_fd(2, "Usage: simple-patch [-pN] [-N] -i patch\n");
++    exit(1);
++}
++
+ /*
+     Is the pattern located at the start of the search buffer
+     (and not exceeding the length of the search buffer)?
+@@ -146,3 +300,83 @@ int memsame(char *search_buffer, int search_size,
+     }
+     return TRUE;
+ }
++
++int starts_with(char *buffer, int size, char *pattern) {
++    return memsame(buffer, size, pattern, strlen(pattern));
++}
++
++int line_size(char *pos, char *end) {
++    int size;
++
++    size = 0;
++    while(pos + size < end) {
++        size = size + 1;
++        if(pos[size - 1] == '\n') {
++            return size;
++        }
++    }
++    return size;
++}
++
++int next_line_starts_with(char *line, int size, char *end, char *pattern) {
++    char *next;
++    int next_size;
++
++    next = line + size;
++    if(next >= end) {
++        return FALSE;
++    }
++    next_size = line_size(next, end);
++    return starts_with(next, next_size, pattern);
++}
++
++char *copy_patch_path(char *line, int size, int strip) {
++    int start;
++    int stop;
++    int components;
++    int out_size;
++    char *path;
++
++    start = 0;
++    while(start < size &&
++          (line[start] == ' ' || line[start] == '\t')) {
++        start = start + 1;
++    }
++
++    if(starts_with(line + start, size - start, "/dev/null")) {
++        writestr_fd(2, "Creating or deleting files is not supported\n");
++        exit(1);
++    }
++
++    components = 0;
++    while(start < size && components < strip) {
++        if(line[start] == '/') {
++            components = components + 1;
++        }
++        start = start + 1;
++    }
++
++    stop = start;
++    while(stop < size &&
++          line[stop] != ' ' &&
++          line[stop] != '\t' &&
++          line[stop] != '\n') {
++        stop = stop + 1;
++    }
++
++    out_size = stop - start;
++    if(out_size <= 0) {
++        writestr_fd(2, "Empty patch path\n");
++        exit(1);
++    }
++    path = calloc(out_size + 1, sizeof(char));
++    memcpy(path, line + start, out_size);
++    return path;
++}
++
++int parse_strip(char *arg) {
++    if(arg[0] == 0) {
++        return 0;
++    }
++    return atoi(arg);
++}
 diff --git a/steps/tar-1.12/pass1.bake b/steps/tar-1.12/pass1.bake
 new file mode 100644
 index 0000000..6ef461b
@@ -1242,11 +1866,14 @@ index 0000000..6ef461b
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/tcc-0.9.26/pass1.bake b/steps/tcc-0.9.26/pass1.bake
 new file mode 100644
-index 0000000..707d148
+index 0000000..57afb8d
 --- /dev/null
 +++ b/steps/tcc-0.9.26/pass1.bake
-@@ -0,0 +1,120 @@
+@@ -0,0 +1,127 @@
 +: all build checksum
++
++= UNIFIED_LIBC_FILES ctype/isalnum.c ctype/isalpha.c ctype/isascii.c ctype/iscntrl.c ctype/isdigit.c ctype/isgraph.c ctype/islower.c ctype/isnumber.c ctype/isprint.c ctype/ispunct.c ctype/isspace.c ctype/isupper.c ctype/isxdigit.c ctype/tolower.c ctype/toupper.c dirent/closedir.c dirent/__getdirentries.c dirent/opendir.c linux/readdir.c linux/access.c linux/brk.c linux/chdir.c linux/chmod.c linux/clock_gettime.c linux/close.c linux/dup2.c linux/dup.c linux/execve.c linux/fcntl.c linux/fork.c linux/fsync.c linux/fstat.c linux/_getcwd.c linux/getdents.c linux/getegid.c linux/geteuid.c linux/getgid.c linux/getpid.c linux/getppid.c linux/getrusage.c linux/gettimeofday.c linux/getuid.c linux/ioctl.c linux/ioctl3.c linux/kill.c linux/link.c linux/lseek.c linux/lstat.c linux/malloc.c linux/mkdir.c linux/mknod.c linux/nanosleep.c linux/_open3.c linux/pipe.c linux/_read.c linux/readlink.c linux/rename.c linux/rmdir.c linux/setgid.c linux/settimer.c linux/setuid.c linux/signal.c linux/sigprogmask.c linux/symlink.c linux/stat.c linux/time.c linux/unlink.c linux/waitpid.c linux/wait4.c linux/${MES_ARCH}-mes-gcc/_exit.c linux/${MES_ARCH}-mes-gcc/syscall.c linux/${MES_ARCH}-mes-gcc/_write.c math/ceil.c math/fabs.c math/floor.c mes/abtod.c mes/abtol.c mes/__assert_fail.c mes/assert_msg.c mes/__buffered_read.c mes/__init_io.c mes/cast.c mes/dtoab.c mes/eputc.c mes/eputs.c mes/fdgetc.c mes/fdgets.c mes/fdputc.c mes/fdputs.c mes/fdungetc.c mes/globals.c mes/itoa.c mes/ltoab.c mes/ltoa.c mes/__mes_debug.c mes/mes_open.c mes/ntoab.c mes/oputc.c mes/oputs.c mes/search-path.c mes/ultoa.c mes/utoa.c posix/alarm.c posix/buffered-read.c posix/execl.c posix/execlp.c posix/execv.c posix/execvp.c posix/getcwd.c posix/getenv.c posix/isatty.c posix/mktemp.c posix/open.c posix/pathconf.c posix/raise.c posix/sbrk.c posix/setenv.c posix/sleep.c posix/unsetenv.c posix/wait.c posix/write.c stdio/clearerr.c stdio/fclose.c stdio/fdopen.c stdio/feof.c stdio/ferror.c stdio/fflush.c stdio/fgetc.c stdio/fgets.c stdio/fileno.c stdio/fopen.c stdio/fprintf.c stdio/fputc.c stdio/fputs.c stdio/fread.c stdio/freopen.c stdio/fscanf.c stdio/fseek.c stdio/ftell.c stdio/fwrite.c stdio/getc.c stdio/getchar.c stdio/perror.c stdio/printf.c stdio/putc.c stdio/putchar.c stdio/remove.c stdio/snprintf.c stdio/sprintf.c stdio/sscanf.c stdio/ungetc.c stdio/vfprintf.c stdio/vfscanf.c stdio/vprintf.c stdio/vsnprintf.c stdio/vsprintf.c stdio/vsscanf.c stdlib/abort.c stdlib/abs.c stdlib/alloca.c stdlib/atexit.c stdlib/atof.c stdlib/atoi.c stdlib/atol.c stdlib/calloc.c stdlib/__exit.c stdlib/exit.c stdlib/free.c stdlib/mbstowcs.c stdlib/puts.c stdlib/qsort.c stdlib/realloc.c stdlib/strtod.c stdlib/strtof.c stdlib/strtol.c stdlib/strtold.c stdlib/strtoll.c stdlib/strtoul.c stdlib/strtoull.c string/bcmp.c string/bcopy.c string/bzero.c string/index.c string/memchr.c string/memcmp.c string/memcpy.c string/memmem.c string/memmove.c string/memset.c string/rindex.c string/strcat.c string/strchr.c string/strcmp.c string/strcpy.c string/strcspn.c string/strdup.c string/strerror.c string/strlen.c string/strlwr.c string/strncat.c string/strncmp.c string/strncpy.c string/strpbrk.c string/strrchr.c string/strspn.c string/strstr.c string/strupr.c stub/atan2.c stub/bsearch.c stub/chown.c stub/__cleanup.c stub/cos.c stub/ctime.c stub/exp.c stub/fpurge.c stub/freadahead.c stub/frexp.c stub/getgrgid.c stub/getgrnam.c stub/getlogin.c stub/getpgid.c stub/getpgrp.c stub/getpwnam.c stub/getpwuid.c stub/gmtime.c stub/ldexp.c stub/localtime.c stub/log.c stub/mktime.c stub/modf.c stub/mprotect.c stub/pclose.c stub/popen.c stub/pow.c stub/putenv.c stub/rand.c stub/realpath.c stub/rewind.c stub/setbuf.c stub/setgrent.c stub/setlocale.c stub/setvbuf.c stub/sigaction.c stub/sigaddset.c stub/sigblock.c stub/sigdelset.c stub/sigemptyset.c stub/sigsetmask.c stub/sin.c stub/sys_siglist.c stub/system.c stub/sqrt.c stub/strftime.c stub/times.c stub/ttyname.c stub/umask.c stub/utime.c ${MES_ARCH}-mes-gcc/setjmp.c
++= TCC_CHECKSUMS /usr/bin/tcc-mes /usr/bin/tcc-boot0 /usr/bin/tcc-boot1 /usr/bin/tcc /usr/lib/mes/libc.a /usr/lib/mes/libgetopt.a /usr/lib/mes/crt1.o /usr/lib/mes/crti.o /usr/lib/mes/crtn.o /usr/lib/mes/tcc/libtcc1.a
 +
 +: build build.0 build.1
 +
@@ -1266,8 +1893,8 @@ index 0000000..707d148
 +ungz --file ${DISTFILES}/${TCC_TAR}.tar.gz --output ${TCC_TAR}.tar
 +ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
 +untar --non-strict --file ${TCC_TAR}.tar
-+simple-patch ${TCC_PKG}/tcctools.c ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
-+simple-patch ${TCC_PKG}/tcctools.c ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
++simple-patch -Np0 -i ../patches/remove-fileopen.patch
++simple-patch -Np0 -i ../patches/addback-fileopen.patch
 +untar --non-strict --file ${MES_PKG}.tar
 +catm ${MES_PKG}/include/mes/config.h
 +catm ${TCC_PKG}/config.h
@@ -1281,16 +1908,20 @@ index 0000000..707d148
 +? ARCH riscv64 export MES_ARCH riscv64
 +? ARCH riscv64 export TCC_TARGET_ARCH RISCV64
 +? ARCH riscv64 export HAVE_LONG_LONG 1
-+${MES} --no-auto-compile -e main ${BINDIR}/mescc.scm -- -S -o tcc.s -I ${INCDIR} -D BOOTSTRAP=1 -D HAVE_LONG_LONG=${HAVE_LONG_LONG} -I . -D TCC_TARGET_${TCC_TARGET_ARCH}=1 -D inline= -D CONFIG_TCCDIR="${LIBDIR}/tcc" -D CONFIG_SYSROOT="/" -D CONFIG_TCC_CRTPREFIX="${LIBDIR}" -D CONFIG_TCC_ELFINTERP="/mes/loader" -D CONFIG_TCC_SYSINCLUDEPATHS="${PREFIX}/include/mes" -D TCC_LIBGCC="${LIBDIR}/libc.a" -D CONFIG_TCC_LIBTCC1_MES=0 -D CONFIG_TCCBOOT=1 -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_VERSION="0.9.26" -D ONE_SOURCE=1 tcc.c
++export MESCC ${MES} --no-auto-compile -e main ${BINDIR}/mescc.scm --
++export TCC_MES_FLAGS -I ${INCDIR} -D BOOTSTRAP=1 -D HAVE_LONG_LONG=${HAVE_LONG_LONG} -I . -D TCC_TARGET_${TCC_TARGET_ARCH}=1 -D inline= -D CONFIG_TCCDIR="${LIBDIR}/tcc" -D CONFIG_SYSROOT="/" -D CONFIG_TCC_CRTPREFIX="${LIBDIR}" -D CONFIG_TCC_ELFINTERP="/mes/loader" -D CONFIG_TCC_SYSINCLUDEPATHS="${PREFIX}/include/mes" -D TCC_LIBGCC="${LIBDIR}/libc.a" -D CONFIG_TCC_LIBTCC1_MES=0 -D CONFIG_TCCBOOT=1 -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_VERSION="0.9.26" -D ONE_SOURCE=1
++export MES_GCC_FLAGS -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH}
++export TCC_BOOT_FLAGS -g -v -static -D BOOTSTRAP=1 -D HAVE_FLOAT=1 -D HAVE_BITFIELD=1 -D HAVE_LONG_LONG=1 -D HAVE_SETJMP=1 -I . -I ${PREFIX}/include/mes -D TCC_TARGET_${TCC_TARGET_ARCH}=1 -D CONFIG_TCCDIR="${LIBDIR}/tcc" -D CONFIG_TCC_CRTPREFIX="${LIBDIR}" -D CONFIG_TCC_ELFINTERP="/mes/loader" -D CONFIG_TCC_LIBPATHS="${LIBDIR}:${LIBDIR}/tcc" -D CONFIG_TCC_SYSINCLUDEPATHS="${PREFIX}/include/mes" -D TCC_LIBGCC="${LIBDIR}/libc.a" -D TCC_LIBTCC1="libtcc1.a" -D CONFIG_TCCBOOT=1 -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_VERSION="0.9.26" -D ONE_SOURCE=1
++${MESCC} -S -o tcc.s ${TCC_MES_FLAGS} tcc.c
 +${MES} --no-auto-compile -e main ${BINDIR}/mescc.scm -- --base-address 0x08048000 -o tcc-mes -L ${LIBDIR} tcc.s -l c+tcc
 +cp tcc-mes ${BINDIR}/
 +chmod 755 ${BINDIR}/tcc-mes
 +tcc-mes -version
 +cd ../${MES_PKG}
 +cd lib
-+catm ../unified-libc.c ctype/isalnum.c ctype/isalpha.c ctype/isascii.c ctype/iscntrl.c ctype/isdigit.c ctype/isgraph.c ctype/islower.c ctype/isnumber.c ctype/isprint.c ctype/ispunct.c ctype/isspace.c ctype/isupper.c ctype/isxdigit.c ctype/tolower.c ctype/toupper.c dirent/closedir.c dirent/__getdirentries.c dirent/opendir.c linux/readdir.c linux/access.c linux/brk.c linux/chdir.c linux/chmod.c linux/clock_gettime.c linux/close.c linux/dup2.c linux/dup.c linux/execve.c linux/fcntl.c linux/fork.c linux/fsync.c linux/fstat.c linux/_getcwd.c linux/getdents.c linux/getegid.c linux/geteuid.c linux/getgid.c linux/getpid.c linux/getppid.c linux/getrusage.c linux/gettimeofday.c linux/getuid.c linux/ioctl.c linux/ioctl3.c linux/kill.c linux/link.c linux/lseek.c linux/lstat.c linux/malloc.c linux/mkdir.c linux/mknod.c linux/nanosleep.c linux/_open3.c linux/pipe.c linux/_read.c linux/readlink.c linux/rename.c linux/rmdir.c linux/setgid.c linux/settimer.c linux/setuid.c linux/signal.c linux/sigprogmask.c linux/symlink.c linux/stat.c linux/time.c linux/unlink.c linux/waitpid.c linux/wait4.c linux/${MES_ARCH}-mes-gcc/_exit.c linux/${MES_ARCH}-mes-gcc/syscall.c linux/${MES_ARCH}-mes-gcc/_write.c math/ceil.c math/fabs.c math/floor.c mes/abtod.c mes/abtol.c mes/__assert_fail.c mes/assert_msg.c mes/__buffered_read.c mes/__init_io.c mes/cast.c mes/dtoab.c mes/eputc.c mes/eputs.c mes/fdgetc.c mes/fdgets.c mes/fdputc.c mes/fdputs.c mes/fdungetc.c mes/globals.c mes/itoa.c mes/ltoab.c mes/ltoa.c mes/__mes_debug.c mes/mes_open.c mes/ntoab.c mes/oputc.c mes/oputs.c mes/search-path.c mes/ultoa.c mes/utoa.c posix/alarm.c posix/buffered-read.c posix/execl.c posix/execlp.c posix/execv.c posix/execvp.c posix/getcwd.c posix/getenv.c posix/isatty.c posix/mktemp.c posix/open.c posix/pathconf.c posix/raise.c posix/sbrk.c posix/setenv.c posix/sleep.c posix/unsetenv.c posix/wait.c posix/write.c stdio/clearerr.c stdio/fclose.c stdio/fdopen.c stdio/feof.c stdio/ferror.c stdio/fflush.c stdio/fgetc.c stdio/fgets.c stdio/fileno.c stdio/fopen.c stdio/fprintf.c stdio/fputc.c stdio/fputs.c stdio/fread.c stdio/freopen.c stdio/fscanf.c stdio/fseek.c stdio/ftell.c stdio/fwrite.c stdio/getc.c stdio/getchar.c stdio/perror.c stdio/printf.c stdio/putc.c stdio/putchar.c stdio/remove.c stdio/snprintf.c stdio/sprintf.c stdio/sscanf.c stdio/ungetc.c stdio/vfprintf.c stdio/vfscanf.c stdio/vprintf.c stdio/vsnprintf.c stdio/vsprintf.c stdio/vsscanf.c stdlib/abort.c stdlib/abs.c stdlib/alloca.c stdlib/atexit.c stdlib/atof.c stdlib/atoi.c stdlib/atol.c stdlib/calloc.c stdlib/__exit.c stdlib/exit.c stdlib/free.c stdlib/mbstowcs.c stdlib/puts.c stdlib/qsort.c stdlib/realloc.c stdlib/strtod.c stdlib/strtof.c stdlib/strtol.c stdlib/strtold.c stdlib/strtoll.c stdlib/strtoul.c stdlib/strtoull.c string/bcmp.c string/bcopy.c string/bzero.c string/index.c string/memchr.c string/memcmp.c string/memcpy.c string/memmem.c string/memmove.c string/memset.c string/rindex.c string/strcat.c string/strchr.c string/strcmp.c string/strcpy.c string/strcspn.c string/strdup.c string/strerror.c string/strlen.c string/strlwr.c string/strncat.c string/strncmp.c string/strncpy.c string/strpbrk.c string/strrchr.c string/strspn.c string/strstr.c string/strupr.c stub/atan2.c stub/bsearch.c stub/chown.c stub/__cleanup.c stub/cos.c stub/ctime.c stub/exp.c stub/fpurge.c stub/freadahead.c stub/frexp.c stub/getgrgid.c stub/getgrnam.c stub/getlogin.c stub/getpgid.c stub/getpgrp.c stub/getpwnam.c stub/getpwuid.c stub/gmtime.c stub/ldexp.c stub/localtime.c stub/log.c stub/mktime.c stub/modf.c stub/mprotect.c stub/pclose.c stub/popen.c stub/pow.c stub/putenv.c stub/rand.c stub/realpath.c stub/rewind.c stub/setbuf.c stub/setgrent.c stub/setlocale.c stub/setvbuf.c stub/sigaction.c stub/sigaddset.c stub/sigblock.c stub/sigdelset.c stub/sigemptyset.c stub/sigsetmask.c stub/sin.c stub/sys_siglist.c stub/system.c stub/sqrt.c stub/strftime.c stub/times.c stub/ttyname.c stub/umask.c stub/utime.c ${MES_ARCH}-mes-gcc/setjmp.c
++catm ../unified-libc.c ${UNIFIED_LIBC_FILES}
 +cd ..
-+tcc-mes -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crt1.o lib/linux/${MES_ARCH}-mes-gcc/crt1.c
++tcc-mes -c ${MES_GCC_FLAGS} -o ${LIBDIR}/crt1.o lib/linux/${MES_ARCH}-mes-gcc/crt1.c
 +catm ${LIBDIR}/crtn.o
 +catm ${LIBDIR}/crti.o
 +? ARCH x86 tcc-mes -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crtn.o lib/linux/${MES_ARCH}-mes-gcc/crtn.c
@@ -1305,7 +1936,7 @@ index 0000000..707d148
 +tcc-mes -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} lib/posix/getopt.c
 +tcc-mes -ar cr ${LIBDIR}/libgetopt.a getopt.o
 +cd ../${TCC_PKG}
-+tcc-mes -g -v -static -o tcc-boot0 -D BOOTSTRAP=1 -D HAVE_FLOAT=1 -D HAVE_BITFIELD=1 -D HAVE_LONG_LONG=1 -D HAVE_SETJMP=1 -I . -I ${PREFIX}/include/mes -D TCC_TARGET_${TCC_TARGET_ARCH}=1 -D CONFIG_TCCDIR="${LIBDIR}/tcc" -D CONFIG_TCC_CRTPREFIX="${LIBDIR}" -D CONFIG_TCC_ELFINTERP="/mes/loader" -D CONFIG_TCC_LIBPATHS="${LIBDIR}:${LIBDIR}/tcc" -D CONFIG_TCC_SYSINCLUDEPATHS="${PREFIX}/include/mes" -D TCC_LIBGCC="${LIBDIR}/libc.a" -D TCC_LIBTCC1="libtcc1.a" -D CONFIG_TCCBOOT=1 -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_VERSION="0.9.26" -D ONE_SOURCE=1 -L . -L ${LIBDIR} tcc.c
++tcc-mes -o tcc-boot0 ${TCC_BOOT_FLAGS} -L . -L ${LIBDIR} tcc.c
 +cp tcc-boot0 ${BINDIR}/
 +chmod 755 ${BINDIR}/tcc-boot0
 +cd ../${MES_PKG}
@@ -1320,7 +1951,7 @@ index 0000000..707d148
 +tcc-boot0 -ar cr ${LIBDIR}/libc.a unified-libc.o
 +cd ../${TCC_PKG}
 +tcc-boot0 -version
-+tcc-boot0 -g -v -static -o tcc-boot1 -D BOOTSTRAP=1 -D HAVE_FLOAT=1 -D HAVE_BITFIELD=1 -D HAVE_LONG_LONG=1 -D HAVE_SETJMP=1 -I . -I ${PREFIX}/include/mes -D TCC_TARGET_${TCC_TARGET_ARCH}=1 -D CONFIG_TCCDIR="${LIBDIR}/tcc" -D CONFIG_TCC_CRTPREFIX="${LIBDIR}" -D CONFIG_TCC_ELFINTERP="/mes/loader" -D CONFIG_TCC_LIBPATHS="${LIBDIR}:${LIBDIR}/tcc" -D CONFIG_TCC_SYSINCLUDEPATHS="${PREFIX}/include/mes" -D TCC_LIBGCC="${LIBDIR}/libc.a" -D TCC_LIBTCC1="libtcc1.a" -D CONFIG_TCCBOOT=1 -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_VERSION="0.9.26" -D ONE_SOURCE=1 -L . tcc.c
++tcc-boot0 -o tcc-boot1 ${TCC_BOOT_FLAGS} -L . tcc.c
 +cp tcc-boot1 ${BINDIR}
 +chmod 755 ${BINDIR}/tcc-boot1
 +cd ../${MES_PKG}
@@ -1335,7 +1966,7 @@ index 0000000..707d148
 +tcc-boot1 -ar cr ${LIBDIR}/libc.a unified-libc.o
 +cd ../${TCC_PKG}
 +tcc-boot1 -version
-+tcc-boot1 -g -v -static -o tcc-boot2 -D BOOTSTRAP=1 -D HAVE_BITFIELD=1 -D HAVE_FLOAT=1 -D HAVE_LONG_LONG=1 -D HAVE_SETJMP=1 -I . -I ${PREFIX}/include/mes -D TCC_TARGET_${TCC_TARGET_ARCH}=1 -D CONFIG_TCCDIR="${LIBDIR}/tcc" -D CONFIG_TCC_CRTPREFIX="${LIBDIR}" -D CONFIG_TCC_ELFINTERP="/mes/loader" -D CONFIG_TCC_LIBPATHS="${LIBDIR}:${LIBDIR}/tcc" -D CONFIG_TCC_SYSINCLUDEPATHS="${PREFIX}/include/mes" -D TCC_LIBGCC="${LIBDIR}/libc.a" -D TCC_LIBTCC1="libtcc1.a" -D CONFIG_TCCBOOT=1 -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_VERSION="0.9.26" -D ONE_SOURCE=1 -L . tcc.c
++tcc-boot1 -o tcc-boot2 ${TCC_BOOT_FLAGS} -L . tcc.c
 +cp tcc-boot2 ${BINDIR}
 +chmod 755 ${BINDIR}/tcc-boot2
 +cd ../${MES_PKG}
@@ -1363,16 +1994,120 @@ index 0000000..707d148
 +cd ../..
 +
 +: checksum build
-+? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/tcc-mes /usr/bin/tcc-boot0 /usr/bin/tcc-boot1 /usr/bin/tcc /usr/lib/mes/libc.a /usr/lib/mes/libgetopt.a /usr/lib/mes/crt1.o /usr/lib/mes/crti.o /usr/lib/mes/crtn.o /usr/lib/mes/tcc/libtcc1.a
++? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums ${TCC_CHECKSUMS}
 +? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
+diff --git a/steps/tcc-0.9.26/pass1.kaem b/steps/tcc-0.9.26/pass1.kaem
+index 3a5b669..b49a6b4 100755
+--- a/steps/tcc-0.9.26/pass1.kaem
++++ b/steps/tcc-0.9.26/pass1.kaem
+@@ -28,10 +28,8 @@ cd build
+ ungz --file ${DISTFILES}/${TCC_TAR}.tar.gz --output ${TCC_TAR}.tar
+ ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
+ untar --non-strict --file ${TCC_TAR}.tar
+-simple-patch ${TCC_PKG}/tcctools.c \
+-    ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
+-simple-patch ${TCC_PKG}/tcctools.c \
+-    ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
++simple-patch -Np0 -i ../patches/remove-fileopen.patch
++simple-patch -Np0 -i ../patches/addback-fileopen.patch
+ 
+ untar --non-strict --file ${MES_PKG}.tar
+ 
+diff --git a/steps/tcc-0.9.26/patches/addback-fileopen.patch b/steps/tcc-0.9.26/patches/addback-fileopen.patch
+new file mode 100644
+index 0000000..76f17bc
+--- /dev/null
++++ b/steps/tcc-0.9.26/patches/addback-fileopen.patch
+@@ -0,0 +1,14 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.26-1147-gee75a10c/tcctools.c
+++++ tcc-0.9.26-1147-gee75a10c/tcctools.c
++@@ -1 +1,8 @@
+++    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+++    {
+++        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+++        goto the_end;
+++    }
+++
++     // write header
+diff --git a/steps/tcc-0.9.26/patches/remove-fileopen.patch b/steps/tcc-0.9.26/patches/remove-fileopen.patch
+new file mode 100644
+index 0000000..5d951ee
+--- /dev/null
++++ b/steps/tcc-0.9.26/patches/remove-fileopen.patch
+@@ -0,0 +1,15 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.26-1147-gee75a10c/tcctools.c
+++++ tcc-0.9.26-1147-gee75a10c/tcctools.c
++@@ -1,10 +1,2 @@
++     if (ret == 1)
++         return ar_usage(ret);
++-
++-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
++-    {
++-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
++-        goto the_end;
++-    }
+diff --git a/steps/tcc-0.9.26/simple-patches/addback-fileopen.after b/steps/tcc-0.9.26/simple-patches/addback-fileopen.after
+deleted file mode 100644
+index 0e981f0..0000000
+--- a/steps/tcc-0.9.26/simple-patches/addback-fileopen.after
++++ /dev/null
+@@ -1,7 +0,0 @@
+-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+-    {
+-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+-        goto the_end;
+-    }
+-
+-    // write header
+diff --git a/steps/tcc-0.9.26/simple-patches/addback-fileopen.before b/steps/tcc-0.9.26/simple-patches/addback-fileopen.before
+deleted file mode 100644
+index 116b347..0000000
+--- a/steps/tcc-0.9.26/simple-patches/addback-fileopen.before
++++ /dev/null
+@@ -1 +0,0 @@
+-    // write header
+diff --git a/steps/tcc-0.9.26/simple-patches/remove-fileopen.after b/steps/tcc-0.9.26/simple-patches/remove-fileopen.after
+deleted file mode 100644
+index 44fb725..0000000
+--- a/steps/tcc-0.9.26/simple-patches/remove-fileopen.after
++++ /dev/null
+@@ -1,2 +0,0 @@
+-    if (ret == 1)
+-        return ar_usage(ret);
+diff --git a/steps/tcc-0.9.26/simple-patches/remove-fileopen.before b/steps/tcc-0.9.26/simple-patches/remove-fileopen.before
+deleted file mode 100644
+index 4641e1b..0000000
+--- a/steps/tcc-0.9.26/simple-patches/remove-fileopen.before
++++ /dev/null
+@@ -1,8 +0,0 @@
+-    if (ret == 1)
+-        return ar_usage(ret);
+-
+-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+-    {
+-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+-        goto the_end;
+-    }
 diff --git a/steps/tcc-0.9.27/pass1.bake b/steps/tcc-0.9.27/pass1.bake
 new file mode 100644
-index 0000000..863b193
+index 0000000..5662833
 --- /dev/null
 +++ b/steps/tcc-0.9.27/pass1.bake
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,41 @@
 +: all build checksum
++
++= TCC27_FLAGS -v -static -D TCC_TARGET_I386=1 -D CONFIG_TCCDIR="${LIBDIR}/tcc" -D CONFIG_TCC_CRTPREFIX="${LIBDIR}" -D CONFIG_TCC_ELFINTERP="/mes/loader" -D CONFIG_TCC_LIBPATHS="${LIBDIR}:${LIBDIR}/tcc" -D CONFIG_TCC_SYSINCLUDEPATHS="${PREFIX}/include/mes" -D TCC_LIBGCC="${LIBDIR}/libc.a" -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_VERSION="0.9.27" -D ONE_SOURCE=1
++= MES_TCC_FLAGS -D HAVE_CONFIG_H=1 -I include -I include/linux/x86
++= UNIFIED_LIBC_FILES ctype/isalnum.c ctype/isalpha.c ctype/isascii.c ctype/iscntrl.c ctype/isdigit.c ctype/isgraph.c ctype/islower.c ctype/isnumber.c ctype/isprint.c ctype/ispunct.c ctype/isspace.c ctype/isupper.c ctype/isxdigit.c ctype/tolower.c ctype/toupper.c dirent/closedir.c dirent/__getdirentries.c dirent/opendir.c linux/readdir.c linux/access.c linux/brk.c linux/chdir.c linux/chmod.c linux/clock_gettime.c linux/close.c linux/dup2.c linux/dup.c linux/execve.c linux/fcntl.c linux/fork.c linux/fsync.c linux/fstat.c linux/_getcwd.c linux/getdents.c linux/getegid.c linux/geteuid.c linux/getgid.c linux/getpid.c linux/getppid.c linux/getrusage.c linux/gettimeofday.c linux/getuid.c linux/ioctl.c linux/ioctl3.c linux/kill.c linux/link.c linux/lseek.c linux/lstat.c linux/malloc.c linux/mkdir.c linux/mknod.c linux/nanosleep.c linux/_open3.c linux/pipe.c linux/_read.c linux/readlink.c linux/rename.c linux/rmdir.c linux/setgid.c linux/settimer.c linux/setuid.c linux/signal.c linux/sigprogmask.c linux/symlink.c linux/stat.c linux/time.c linux/unlink.c linux/waitpid.c linux/x86-mes-gcc/_exit.c linux/x86-mes-gcc/syscall.c linux/x86-mes-gcc/_write.c math/ceil.c math/fabs.c math/floor.c mes/abtod.c mes/abtol.c mes/__assert_fail.c mes/assert_msg.c mes/__buffered_read.c mes/__init_io.c mes/cast.c mes/dtoab.c mes/eputc.c mes/eputs.c mes/fdgetc.c mes/fdgets.c mes/fdputc.c mes/fdputs.c mes/fdungetc.c mes/globals.c mes/itoa.c mes/ltoab.c mes/ltoa.c mes/__mes_debug.c mes/mes_open.c mes/ntoab.c mes/oputc.c mes/oputs.c mes/search-path.c mes/ultoa.c mes/utoa.c posix/alarm.c posix/buffered-read.c posix/execl.c posix/execlp.c posix/execv.c posix/execvp.c posix/getcwd.c posix/getenv.c posix/isatty.c posix/mktemp.c posix/open.c posix/pathconf.c posix/raise.c posix/sbrk.c posix/setenv.c posix/sleep.c posix/unsetenv.c posix/wait.c posix/write.c stdio/clearerr.c stdio/fclose.c stdio/fdopen.c stdio/feof.c stdio/ferror.c stdio/fflush.c stdio/fgetc.c stdio/fgets.c stdio/fileno.c stdio/fopen.c stdio/fprintf.c stdio/fputc.c stdio/fputs.c stdio/fread.c stdio/freopen.c stdio/fscanf.c stdio/fseek.c stdio/ftell.c stdio/fwrite.c stdio/getc.c stdio/getchar.c stdio/perror.c stdio/printf.c stdio/putc.c stdio/putchar.c stdio/remove.c stdio/snprintf.c stdio/sprintf.c stdio/sscanf.c stdio/ungetc.c stdio/vfprintf.c stdio/vfscanf.c stdio/vprintf.c stdio/vsnprintf.c stdio/vsprintf.c stdio/vsscanf.c stdlib/abort.c stdlib/abs.c stdlib/alloca.c stdlib/atexit.c stdlib/atof.c stdlib/atoi.c stdlib/atol.c stdlib/calloc.c stdlib/__exit.c stdlib/exit.c stdlib/free.c stdlib/mbstowcs.c stdlib/puts.c stdlib/qsort.c stdlib/realloc.c stdlib/strtod.c stdlib/strtof.c stdlib/strtol.c stdlib/strtold.c stdlib/strtoll.c stdlib/strtoul.c stdlib/strtoull.c string/bcmp.c string/bcopy.c string/bzero.c string/index.c string/memchr.c string/memcmp.c string/memcpy.c string/memmem.c string/memmove.c string/memset.c string/rindex.c string/strcat.c string/strchr.c string/strcmp.c string/strcpy.c string/strcspn.c string/strdup.c string/strerror.c string/strlen.c string/strlwr.c string/strncat.c string/strncmp.c string/strncpy.c string/strpbrk.c string/strrchr.c string/strspn.c string/strstr.c string/strupr.c stub/atan2.c stub/bsearch.c stub/chown.c stub/__cleanup.c stub/cos.c stub/ctime.c stub/exp.c stub/fpurge.c stub/freadahead.c stub/frexp.c stub/getgrgid.c stub/getgrnam.c stub/getlogin.c stub/getpgid.c stub/getpgrp.c stub/getpwnam.c stub/getpwuid.c stub/gmtime.c stub/ldexp.c stub/localtime.c stub/log.c stub/mktime.c stub/modf.c stub/mprotect.c stub/pclose.c stub/popen.c stub/pow.c stub/putenv.c stub/rand.c stub/realpath.c stub/rewind.c stub/setbuf.c stub/setgrent.c stub/setlocale.c stub/setvbuf.c stub/sigaction.c stub/sigaddset.c stub/sigblock.c stub/sigdelset.c stub/sigemptyset.c stub/sigsetmask.c stub/sin.c stub/sys_siglist.c stub/system.c stub/sqrt.c stub/strftime.c stub/times.c stub/ttyname.c stub/umask.c stub/utime.c x86-mes-gcc/setjmp.c
 +
 +: build
 +checksum-transcriber sources
@@ -1382,25 +2117,25 @@ index 0000000..863b193
 +unbz2 --file ${DISTFILES}/${pkg}.tar.bz2 --output ${pkg}.tar
 +ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
 +untar --file ${pkg}.tar
-+simple-patch tcc-0.9.27/tcctools.c ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
-+simple-patch tcc-0.9.27/tcctools.c ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
-+simple-patch tcc-0.9.27/tccelf.c ../simple-patches/fiwix-paddr.before ../simple-patches/fiwix-paddr.after
-+simple-patch tcc-0.9.27/tccelf.c ../simple-patches/check-reloc-null.before ../simple-patches/check-reloc-null.after
++simple-patch -Np0 -i ../patches/remove-fileopen.patch
++simple-patch -Np0 -i ../patches/addback-fileopen.patch
++simple-patch -Np0 -i ../patches/fiwix-paddr.patch
++simple-patch -Np0 -i ../patches/check-reloc-null.patch
 +untar --non-strict --file ${MES_PKG}.tar
 +cd ${pkg}
 +catm config.h
-+tcc-0.9.26 -v -static -o ${BINDIR}/tcc -D TCC_TARGET_I386=1 -D CONFIG_TCCDIR="${LIBDIR}/tcc" -D CONFIG_TCC_CRTPREFIX="${LIBDIR}" -D CONFIG_TCC_ELFINTERP="/mes/loader" -D CONFIG_TCC_LIBPATHS="${LIBDIR}:${LIBDIR}/tcc" -D CONFIG_TCC_SYSINCLUDEPATHS="${PREFIX}/include/mes" -D TCC_LIBGCC="${LIBDIR}/libc.a" -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_VERSION="0.9.27" -D ONE_SOURCE=1 tcc.c
++tcc-0.9.26 -o ${BINDIR}/tcc ${TCC27_FLAGS} tcc.c
 +cd ../${MES_PKG}
 +cd lib
-+catm ../unified-libc.c ctype/isalnum.c ctype/isalpha.c ctype/isascii.c ctype/iscntrl.c ctype/isdigit.c ctype/isgraph.c ctype/islower.c ctype/isnumber.c ctype/isprint.c ctype/ispunct.c ctype/isspace.c ctype/isupper.c ctype/isxdigit.c ctype/tolower.c ctype/toupper.c dirent/closedir.c dirent/__getdirentries.c dirent/opendir.c linux/readdir.c linux/access.c linux/brk.c linux/chdir.c linux/chmod.c linux/clock_gettime.c linux/close.c linux/dup2.c linux/dup.c linux/execve.c linux/fcntl.c linux/fork.c linux/fsync.c linux/fstat.c linux/_getcwd.c linux/getdents.c linux/getegid.c linux/geteuid.c linux/getgid.c linux/getpid.c linux/getppid.c linux/getrusage.c linux/gettimeofday.c linux/getuid.c linux/ioctl.c linux/ioctl3.c linux/kill.c linux/link.c linux/lseek.c linux/lstat.c linux/malloc.c linux/mkdir.c linux/mknod.c linux/nanosleep.c linux/_open3.c linux/pipe.c linux/_read.c linux/readlink.c linux/rename.c linux/rmdir.c linux/setgid.c linux/settimer.c linux/setuid.c linux/signal.c linux/sigprogmask.c linux/symlink.c linux/stat.c linux/time.c linux/unlink.c linux/waitpid.c linux/x86-mes-gcc/_exit.c linux/x86-mes-gcc/syscall.c linux/x86-mes-gcc/_write.c math/ceil.c math/fabs.c math/floor.c mes/abtod.c mes/abtol.c mes/__assert_fail.c mes/assert_msg.c mes/__buffered_read.c mes/__init_io.c mes/cast.c mes/dtoab.c mes/eputc.c mes/eputs.c mes/fdgetc.c mes/fdgets.c mes/fdputc.c mes/fdputs.c mes/fdungetc.c mes/globals.c mes/itoa.c mes/ltoab.c mes/ltoa.c mes/__mes_debug.c mes/mes_open.c mes/ntoab.c mes/oputc.c mes/oputs.c mes/search-path.c mes/ultoa.c mes/utoa.c posix/alarm.c posix/buffered-read.c posix/execl.c posix/execlp.c posix/execv.c posix/execvp.c posix/getcwd.c posix/getenv.c posix/isatty.c posix/mktemp.c posix/open.c posix/pathconf.c posix/raise.c posix/sbrk.c posix/setenv.c posix/sleep.c posix/unsetenv.c posix/wait.c posix/write.c stdio/clearerr.c stdio/fclose.c stdio/fdopen.c stdio/feof.c stdio/ferror.c stdio/fflush.c stdio/fgetc.c stdio/fgets.c stdio/fileno.c stdio/fopen.c stdio/fprintf.c stdio/fputc.c stdio/fputs.c stdio/fread.c stdio/freopen.c stdio/fscanf.c stdio/fseek.c stdio/ftell.c stdio/fwrite.c stdio/getc.c stdio/getchar.c stdio/perror.c stdio/printf.c stdio/putc.c stdio/putchar.c stdio/remove.c stdio/snprintf.c stdio/sprintf.c stdio/sscanf.c stdio/ungetc.c stdio/vfprintf.c stdio/vfscanf.c stdio/vprintf.c stdio/vsnprintf.c stdio/vsprintf.c stdio/vsscanf.c stdlib/abort.c stdlib/abs.c stdlib/alloca.c stdlib/atexit.c stdlib/atof.c stdlib/atoi.c stdlib/atol.c stdlib/calloc.c stdlib/__exit.c stdlib/exit.c stdlib/free.c stdlib/mbstowcs.c stdlib/puts.c stdlib/qsort.c stdlib/realloc.c stdlib/strtod.c stdlib/strtof.c stdlib/strtol.c stdlib/strtold.c stdlib/strtoll.c stdlib/strtoul.c stdlib/strtoull.c string/bcmp.c string/bcopy.c string/bzero.c string/index.c string/memchr.c string/memcmp.c string/memcpy.c string/memmem.c string/memmove.c string/memset.c string/rindex.c string/strcat.c string/strchr.c string/strcmp.c string/strcpy.c string/strcspn.c string/strdup.c string/strerror.c string/strlen.c string/strlwr.c string/strncat.c string/strncmp.c string/strncpy.c string/strpbrk.c string/strrchr.c string/strspn.c string/strstr.c string/strupr.c stub/atan2.c stub/bsearch.c stub/chown.c stub/__cleanup.c stub/cos.c stub/ctime.c stub/exp.c stub/fpurge.c stub/freadahead.c stub/frexp.c stub/getgrgid.c stub/getgrnam.c stub/getlogin.c stub/getpgid.c stub/getpgrp.c stub/getpwnam.c stub/getpwuid.c stub/gmtime.c stub/ldexp.c stub/localtime.c stub/log.c stub/mktime.c stub/modf.c stub/mprotect.c stub/pclose.c stub/popen.c stub/pow.c stub/putenv.c stub/rand.c stub/realpath.c stub/rewind.c stub/setbuf.c stub/setgrent.c stub/setlocale.c stub/setvbuf.c stub/sigaction.c stub/sigaddset.c stub/sigblock.c stub/sigdelset.c stub/sigemptyset.c stub/sigsetmask.c stub/sin.c stub/sys_siglist.c stub/system.c stub/sqrt.c stub/strftime.c stub/times.c stub/ttyname.c stub/umask.c stub/utime.c x86-mes-gcc/setjmp.c
++catm ../unified-libc.c ${UNIFIED_LIBC_FILES}
 +cd ..
-+tcc -c -D HAVE_CONFIG_H=1 -I include -I include/linux/x86 -o ${LIBDIR}/crt1.o lib/linux/x86-mes-gcc/crt1.c
-+tcc -c -D HAVE_CONFIG_H=1 -I include -I include/linux/x86 -o ${LIBDIR}/crtn.o lib/linux/x86-mes-gcc/crtn.c
-+tcc -c -D HAVE_CONFIG_H=1 -I include -I include/linux/x86 -o ${LIBDIR}/crti.o lib/linux/x86-mes-gcc/crti.c
-+tcc -c -D HAVE_CONFIG_H=1 -D HAVE_LONG_LONG_STUB=1 -I include -I include/linux/x86 lib/libtcc1.c
++tcc -c ${MES_TCC_FLAGS} -o ${LIBDIR}/crt1.o lib/linux/x86-mes-gcc/crt1.c
++tcc -c ${MES_TCC_FLAGS} -o ${LIBDIR}/crtn.o lib/linux/x86-mes-gcc/crtn.c
++tcc -c ${MES_TCC_FLAGS} -o ${LIBDIR}/crti.o lib/linux/x86-mes-gcc/crti.c
++tcc -c ${MES_TCC_FLAGS} -D HAVE_LONG_LONG_STUB=1 lib/libtcc1.c
 +tcc -c -D TCC_TARGET_I386=1 ../${pkg}/lib/libtcc1.c
 +tcc -ar cr ${LIBDIR}/tcc/libtcc1.a libtcc1.o
-+tcc -c -D HAVE_CONFIG_H=1 -I include -I include/linux/x86 -o unified-libc.o unified-libc.c
++tcc -c ${MES_TCC_FLAGS} -o unified-libc.o unified-libc.c
 +tcc -ar cr ${LIBDIR}/libc.a unified-libc.o
 +cd ../..
 +tcc -version
@@ -1409,3 +2144,183 @@ index 0000000..863b193
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/tcc
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/tcc-0.9.27/pass1.kaem b/steps/tcc-0.9.27/pass1.kaem
+index 29258c6..5e07fe9 100755
+--- a/steps/tcc-0.9.27/pass1.kaem
++++ b/steps/tcc-0.9.27/pass1.kaem
+@@ -17,15 +17,11 @@ cd build
+ unbz2 --file ${DISTFILES}/${pkg}.tar.bz2 --output ${pkg}.tar
+ ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
+ untar --file ${pkg}.tar
+-simple-patch tcc-0.9.27/tcctools.c \
+-    ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
+-simple-patch tcc-0.9.27/tcctools.c \
+-    ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
+-simple-patch tcc-0.9.27/tccelf.c \
+-    ../simple-patches/fiwix-paddr.before ../simple-patches/fiwix-paddr.after
++simple-patch -Np0 -i ../patches/remove-fileopen.patch
++simple-patch -Np0 -i ../patches/addback-fileopen.patch
++simple-patch -Np0 -i ../patches/fiwix-paddr.patch
+ # Fix SIGSEGV while building lwext4
+-simple-patch tcc-0.9.27/tccelf.c \
+-    ../simple-patches/check-reloc-null.before ../simple-patches/check-reloc-null.after
++simple-patch -Np0 -i ../patches/check-reloc-null.patch
+ untar --non-strict --file ${MES_PKG}.tar
+ cd ${pkg}
+ 
+diff --git a/steps/tcc-0.9.27/patches/addback-fileopen.patch b/steps/tcc-0.9.27/patches/addback-fileopen.patch
+new file mode 100644
+index 0000000..ceaf521
+--- /dev/null
++++ b/steps/tcc-0.9.27/patches/addback-fileopen.patch
+@@ -0,0 +1,14 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.27/tcctools.c
+++++ tcc-0.9.27/tcctools.c
++@@ -1 +1,8 @@
+++    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+++    {
+++        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+++        goto the_end;
+++    }
+++
++     // write header
+diff --git a/steps/tcc-0.9.27/patches/check-reloc-null.patch b/steps/tcc-0.9.27/patches/check-reloc-null.patch
+new file mode 100644
+index 0000000..989c29e
+--- /dev/null
++++ b/steps/tcc-0.9.27/patches/check-reloc-null.patch
+@@ -0,0 +1,13 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.27/tccelf.c
+++++ tcc-0.9.27/tccelf.c
++@@ -1,4 +1,6 @@
++ static void fill_local_got_entries(TCCState *s1)
++ {
++     ElfW_Rel *rel;
+++    if (!s1->got->reloc)
+++	return;
++     for_each_elem(s1->got->reloc, 0, rel, ElfW_Rel) {
+diff --git a/steps/tcc-0.9.27/patches/fiwix-paddr.patch b/steps/tcc-0.9.27/patches/fiwix-paddr.patch
+new file mode 100644
+index 0000000..7c6a956
+--- /dev/null
++++ b/steps/tcc-0.9.27/patches/fiwix-paddr.patch
+@@ -0,0 +1,10 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.27/tccelf.c
+++++ tcc-0.9.27/tccelf.c
++@@ -1 +1,3 @@
++                         ph->p_paddr = ph->p_vaddr;
+++                        if (s1->text_addr == 0x80100000)
+++                            ph->p_paddr = ph->p_paddr - 0x80000000;
+diff --git a/steps/tcc-0.9.27/patches/remove-fileopen.patch b/steps/tcc-0.9.27/patches/remove-fileopen.patch
+new file mode 100644
+index 0000000..a8fbc5a
+--- /dev/null
++++ b/steps/tcc-0.9.27/patches/remove-fileopen.patch
+@@ -0,0 +1,15 @@
++SPDX-FileCopyrightText: 2026 Ben Siraphob <bensiraphob@gmail.com>
++
++SPDX-License-Identifier: LGPL-2.0-or-later
++
++--- tcc-0.9.27/tcctools.c
+++++ tcc-0.9.27/tcctools.c
++@@ -1,10 +1,2 @@
++     if (ret == 1)
++         return ar_usage(ret);
++-
++-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
++-    {
++-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
++-        goto the_end;
++-    }
+diff --git a/steps/tcc-0.9.27/simple-patches/addback-fileopen.after b/steps/tcc-0.9.27/simple-patches/addback-fileopen.after
+deleted file mode 100644
+index 0e981f0..0000000
+--- a/steps/tcc-0.9.27/simple-patches/addback-fileopen.after
++++ /dev/null
+@@ -1,7 +0,0 @@
+-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+-    {
+-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+-        goto the_end;
+-    }
+-
+-    // write header
+diff --git a/steps/tcc-0.9.27/simple-patches/addback-fileopen.before b/steps/tcc-0.9.27/simple-patches/addback-fileopen.before
+deleted file mode 100644
+index 116b347..0000000
+--- a/steps/tcc-0.9.27/simple-patches/addback-fileopen.before
++++ /dev/null
+@@ -1 +0,0 @@
+-    // write header
+diff --git a/steps/tcc-0.9.27/simple-patches/check-reloc-null.after b/steps/tcc-0.9.27/simple-patches/check-reloc-null.after
+deleted file mode 100644
+index 86d63cf..0000000
+--- a/steps/tcc-0.9.27/simple-patches/check-reloc-null.after
++++ /dev/null
+@@ -1,6 +0,0 @@
+-static void fill_local_got_entries(TCCState *s1)
+-{
+-    ElfW_Rel *rel;
+-    if (!s1->got->reloc)
+-	return;
+-    for_each_elem(s1->got->reloc, 0, rel, ElfW_Rel) {
+diff --git a/steps/tcc-0.9.27/simple-patches/check-reloc-null.before b/steps/tcc-0.9.27/simple-patches/check-reloc-null.before
+deleted file mode 100644
+index af9bb3f..0000000
+--- a/steps/tcc-0.9.27/simple-patches/check-reloc-null.before
++++ /dev/null
+@@ -1,4 +0,0 @@
+-static void fill_local_got_entries(TCCState *s1)
+-{
+-    ElfW_Rel *rel;
+-    for_each_elem(s1->got->reloc, 0, rel, ElfW_Rel) {
+diff --git a/steps/tcc-0.9.27/simple-patches/fiwix-paddr.after b/steps/tcc-0.9.27/simple-patches/fiwix-paddr.after
+deleted file mode 100644
+index 10d2090..0000000
+--- a/steps/tcc-0.9.27/simple-patches/fiwix-paddr.after
++++ /dev/null
+@@ -1,3 +0,0 @@
+-                        ph->p_paddr = ph->p_vaddr;
+-                        if (s1->text_addr == 0x80100000)
+-                            ph->p_paddr = ph->p_paddr - 0x80000000;
+diff --git a/steps/tcc-0.9.27/simple-patches/fiwix-paddr.before b/steps/tcc-0.9.27/simple-patches/fiwix-paddr.before
+deleted file mode 100644
+index 316b48f..0000000
+--- a/steps/tcc-0.9.27/simple-patches/fiwix-paddr.before
++++ /dev/null
+@@ -1 +0,0 @@
+-                        ph->p_paddr = ph->p_vaddr;
+diff --git a/steps/tcc-0.9.27/simple-patches/remove-fileopen.after b/steps/tcc-0.9.27/simple-patches/remove-fileopen.after
+deleted file mode 100644
+index 44fb725..0000000
+--- a/steps/tcc-0.9.27/simple-patches/remove-fileopen.after
++++ /dev/null
+@@ -1,2 +0,0 @@
+-    if (ret == 1)
+-        return ar_usage(ret);
+diff --git a/steps/tcc-0.9.27/simple-patches/remove-fileopen.before b/steps/tcc-0.9.27/simple-patches/remove-fileopen.before
+deleted file mode 100644
+index 4641e1b..0000000
+--- a/steps/tcc-0.9.27/simple-patches/remove-fileopen.before
++++ /dev/null
+@@ -1,8 +0,0 @@
+-    if (ret == 1)
+-        return ar_usage(ret);
+-
+-    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
+-    {
+-        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
+-        goto the_end;
+-    }

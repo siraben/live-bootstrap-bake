@@ -68,7 +68,7 @@ TMPDIR=/tmp
 PATH=/usr/bin:/x86/bin
 """)
 
-seed = target / "seed.kaem"
+seed = target / "seed.bake"
 seed.write_text(seed.read_text().replace(
     "bake --file /steps/0.bake all",
     "bake --file /steps/0.bake bash-2.05b-pass1",

@@ -57,12 +57,13 @@ applying the patch stack.
 : adds the x86 stage0 bake bootstrap recipe.
 
 `patches/0004-stage0-posix-bootstrap-bake.patch`
-: wires `bake` into the x86 stage0 seed answers and required submodule
-  revisions.
+: wires `bake` into the x86 stage0 seed answers, hands the x86 full-tool
+  rebuild from kaem to bake, and records required submodule revisions.
 
 `patches/0005-live-bootstrap-use-bake.patch`
-: teaches `script-generator` to emit bake scripts before bash and adds
-  `pass1.bake` recipes for all kaem-era packages.
+: teaches `script-generator` to emit bake scripts before bash, replaces the
+  seed handoff with `seed.bake`, and adds `pass1.bake` recipes for all
+  kaem-era packages.
 
 For the currently covered package wrappers, the recipe layer goes from 2037
-lines of `pass1.kaem` to 956 lines of `pass1.bake`.
+lines of `pass1.kaem` to 790 lines of `pass1.bake`.

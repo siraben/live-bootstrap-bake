@@ -14,18 +14,15 @@ index fd1dee8..13dda27 100644
 +${TOOLS}/bake --file mescc-tools-extra.bake all
 diff --git a/mescc-tools-extra.bake b/mescc-tools-extra.bake
 new file mode 100644
-index 0000000..a37205c
+index 0000000..e97e82e
 --- /dev/null
 +++ b/mescc-tools-extra.bake
-@@ -0,0 +1,8 @@
+@@ -0,0 +1,5 @@
 +: all sha256sum match mkdir untar ungz unbz2 unxz catm cp chmod rm replace wrap
-+
-+: env
++: sha256sum match mkdir untar ungz unbz2 unxz catm cp chmod rm replace wrap :
 +export M2LIBC_PATH ${M2LIBC}
 +export PATH ${TOOLS}
-+
-+: sha256sum match mkdir untar ungz unbz2 unxz catm cp chmod rm replace wrap : env
-+${TOOLS}/M2-Mesoplanet --operating-system ${OPERATING_SYSTEM} --architecture ${ARCH} -f $@.c -o ${BINDIR}/$@
++${TOOLS}/M2-Mesoplanet --operating-system ${OPERATING_SYSTEM} --architecture ${ARCH} -o ${BINDIR}/$@ $@.c
 diff --git a/mescc-tools-extra.kaem b/mescc-tools-extra.kaem
 deleted file mode 100755
 index bf70680..0000000
@@ -75,3 +72,16 @@ index bf70680..0000000
 -CC rm.c -o ${BINDIR}/rm${EXE_SUFFIX}
 -CC replace.c -o ${BINDIR}/replace${EXE_SUFFIX}
 -CC wrap.c -o ${BINDIR}/wrap${EXE_SUFFIX}
+diff --git a/mkdir.c b/mkdir.c
+index 149dd4d..db67d46 100644
+--- a/mkdir.c
++++ b/mkdir.c
+@@ -57,7 +57,7 @@ void create_dir(char *pathname, int mode)
+ 		/* On failure, try creating parent directory. */
+ 		p = strrchr(pathname, '/');
+ 
+-		if(p != NULL)
++		if((p != NULL) && (p != pathname))
+ 		{
+ 			p[0] = '\0';
+ 			create_dir(pathname, mode);
