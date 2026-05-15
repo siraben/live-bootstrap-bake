@@ -12,7 +12,8 @@ rm -r ../src/
 cd ${pkg}
 cp ../../mk/main.mk Makefile
 touch config.h
-simple-patch -Np1 -i ../../patches/meslibc.patch -i ../../patches/tcc.patch
+patch -Np1 -i ../../patches/meslibc.patch
+patch -Np1 -i ../../patches/tcc.patch
 make
 make install
 cd ../..
