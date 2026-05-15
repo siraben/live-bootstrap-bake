@@ -1,5 +1,7 @@
 : all build checksum
 
+= PATCHES mes-libc.patch tinycc.patch missing-defines.patch locale.patch dev-tty.patch
+
 : build
 checksum-transcriber sources
 sha256sum -c sources.SHA256SUM
@@ -17,11 +19,7 @@ touch config.h
 touch include/version.h
 touch include/pipesize.h
 rm y.tab.c y.tab.h parser-built
-patch -Np1 -i ../../patches/mes-libc.patch
-patch -Np1 -i ../../patches/tinycc.patch
-patch -Np1 -i ../../patches/missing-defines.patch
-patch -Np1 -i ../../patches/locale.patch
-patch -Np1 -i ../../patches/dev-tty.patch
+each PATCHES patch -Np1 -i ../../patches/$%
 make mkbuiltins
 cd builtins
 make libbuiltins.a

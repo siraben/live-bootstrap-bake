@@ -1,46 +1,12 @@
 : all run
 
+= SEED_TOOLS blood-elf bake catm chmod get_machine hex2 match M1 M2-Mesoplanet M2-Planet mkdir sha256sum unbz2 ungz untar unxz cp replace rm
+
 : setup
 export PATH /${ARCH_DIR}/bin
 mkdir --parents ${PREFIX} ${BINDIR} ${LIBDIR} ${INCDIR} ${SRCDIR} ${TMPDIR} /dev
-cp /${ARCH_DIR}/bin/blood-elf ${BINDIR}/blood-elf
-cp /${ARCH_DIR}/bin/bake ${BINDIR}/bake
-cp /${ARCH_DIR}/bin/catm ${BINDIR}/catm
-cp /${ARCH_DIR}/bin/chmod ${BINDIR}/chmod
-cp /${ARCH_DIR}/bin/get_machine ${BINDIR}/get_machine
-cp /${ARCH_DIR}/bin/hex2 ${BINDIR}/hex2
-cp /${ARCH_DIR}/bin/match ${BINDIR}/match
-cp /${ARCH_DIR}/bin/M1 ${BINDIR}/M1
-cp /${ARCH_DIR}/bin/M2-Mesoplanet ${BINDIR}/M2-Mesoplanet
-cp /${ARCH_DIR}/bin/M2-Planet ${BINDIR}/M2-Planet
-cp /${ARCH_DIR}/bin/mkdir ${BINDIR}/mkdir
-cp /${ARCH_DIR}/bin/sha256sum ${BINDIR}/sha256sum
-cp /${ARCH_DIR}/bin/unbz2 ${BINDIR}/unbz2
-cp /${ARCH_DIR}/bin/ungz ${BINDIR}/ungz
-cp /${ARCH_DIR}/bin/untar ${BINDIR}/untar
-cp /${ARCH_DIR}/bin/unxz ${BINDIR}/unxz
-cp /${ARCH_DIR}/bin/cp ${BINDIR}/cp
-cp /${ARCH_DIR}/bin/replace ${BINDIR}/replace
-cp /${ARCH_DIR}/bin/rm ${BINDIR}/rm
-chmod 755 ${BINDIR}/blood-elf
-chmod 755 ${BINDIR}/bake
-chmod 755 ${BINDIR}/catm
-chmod 755 ${BINDIR}/chmod
-chmod 755 ${BINDIR}/cp
-chmod 755 ${BINDIR}/get_machine
-chmod 755 ${BINDIR}/hex2
-chmod 755 ${BINDIR}/match
-chmod 755 ${BINDIR}/M1
-chmod 755 ${BINDIR}/M2-Mesoplanet
-chmod 755 ${BINDIR}/M2-Planet
-chmod 755 ${BINDIR}/mkdir
-chmod 755 ${BINDIR}/sha256sum
-chmod 755 ${BINDIR}/unbz2
-chmod 755 ${BINDIR}/ungz
-chmod 755 ${BINDIR}/untar
-chmod 755 ${BINDIR}/unxz
-chmod 755 ${BINDIR}/replace
-chmod 755 ${BINDIR}/rm
+each SEED_TOOLS cp /${ARCH_DIR}/bin/$% ${BINDIR}/$%
+each SEED_TOOLS chmod 755 ${BINDIR}/$%
 export PATH ${BINDIR}
 export M2LIBC_PATH /M2libc
 export NYACC_PKG nyacc-1.00.2

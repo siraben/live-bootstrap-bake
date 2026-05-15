@@ -7,6 +7,9 @@
 = LIBC_TCC_FILES lib/ctype/islower.c lib/ctype/isupper.c lib/ctype/tolower.c lib/ctype/toupper.c lib/mes/abtod.c lib/mes/dtoab.c lib/mes/search-path.c lib/posix/execvp.c lib/stdio/fclose.c lib/stdio/fdopen.c lib/stdio/ferror.c lib/stdio/fflush.c lib/stdio/fopen.c lib/stdio/fprintf.c lib/stdio/fread.c lib/stdio/fseek.c lib/stdio/ftell.c lib/stdio/fwrite.c lib/stdio/printf.c lib/stdio/remove.c lib/stdio/snprintf.c lib/stdio/sprintf.c lib/stdio/sscanf.c lib/stdio/vfprintf.c lib/stdio/vprintf.c lib/stdio/vsnprintf.c lib/stdio/vsprintf.c lib/stdio/vsscanf.c lib/stdlib/abort.c lib/stdlib/qsort.c lib/stdlib/strtod.c lib/stdlib/strtof.c lib/stdlib/strtol.c lib/stdlib/strtold.c lib/stdlib/strtoll.c lib/stdlib/strtoul.c lib/stdlib/strtoull.c lib/string/memmem.c lib/string/strcat.c lib/string/strchr.c lib/string/strlwr.c lib/string/strncpy.c lib/string/strrchr.c lib/string/strstr.c lib/string/strupr.c lib/stub/sigaction.c lib/stub/ldexp.c lib/stub/mprotect.c lib/stub/localtime.c lib/stub/sigemptyset.c lib/${MES_ARCH}-mes-mescc/setjmp.c lib/linux/close.c lib/linux/rmdir.c lib/linux/stat.c
 = MES_M2_FILES include/mes/config.h include/mes/lib-mini.h include/mes/lib.h lib/linux/${MES_ARCH}-mes-m2/crt1.c lib/mes/__init_io.c lib/linux/${MES_ARCH}-mes-m2/_exit.c lib/linux/${MES_ARCH}-mes-m2/_write.c lib/mes/globals.c lib/m2/cast.c lib/stdlib/exit.c lib/mes/write.c include/linux/${MES_ARCH}/syscall.h lib/linux/${MES_ARCH}-mes-m2/syscall.c lib/stub/__raise.c lib/linux/brk.c lib/linux/malloc.c lib/string/memset.c lib/linux/read.c lib/mes/fdgetc.c lib/stdio/getchar.c lib/stdio/putchar.c lib/stub/__buffered_read.c include/errno.h include/fcntl.h lib/linux/_open3.c lib/linux/open.c lib/mes/mes_open.c lib/string/strlen.c lib/mes/eputs.c lib/mes/fdputc.c lib/mes/eputc.c include/time.h include/sys/time.h include/m2/types.h include/sys/types.h include/sys/utsname.h include/mes/mes.h include/mes/builtins.h include/mes/constants.h include/mes/symbols.h lib/mes/__assert_fail.c lib/mes/assert_msg.c lib/mes/fdputc.c lib/string/strncmp.c lib/posix/getenv.c lib/mes/fdputs.c lib/mes/ntoab.c lib/ctype/isdigit.c lib/ctype/isxdigit.c lib/ctype/isspace.c lib/ctype/isnumber.c lib/mes/abtol.c lib/stdlib/atoi.c lib/string/memcpy.c lib/stdlib/free.c lib/stdlib/realloc.c lib/string/strcpy.c lib/mes/itoa.c lib/mes/ltoa.c lib/mes/fdungetc.c lib/posix/setenv.c lib/linux/access.c include/linux/m2/kernel-stat.h include/sys/stat.h lib/linux/chmod.c lib/linux/ioctl3.c include/sys/ioctl.h lib/m2/isatty.c include/signal.h lib/linux/fork.c lib/m2/execve.c lib/m2/execv.c include/sys/resource.h lib/linux/wait4.c lib/linux/waitpid.c lib/linux/gettimeofday.c lib/linux/clock_gettime.c lib/m2/time.c lib/linux/_getcwd.c include/limits.h lib/m2/getcwd.c lib/linux/dup.c lib/linux/dup2.c lib/string/strcmp.c lib/string/memcmp.c lib/linux/uname.c lib/linux/unlink.c src/builtins.c src/core.c src/display.c src/eval-apply.c src/gc.c src/hash.c src/lib.c src/m2.c src/math.c src/mes.c src/module.c src/posix.c src/reader.c src/stack.c src/string.c src/struct.c src/symbol.c src/variable.c src/vector.c
 = MES_CHECKSUMS /usr/bin/mes-m2 /usr/bin/mescc.scm /usr/lib/${MES_ARCH}-mes/crt1.s /usr/lib/${MES_ARCH}-mes/crt1.o /usr/lib/${MES_ARCH}-mes/${MES_ARCH}.M1 /usr/lib/${MES_ARCH}-mes/libmescc.s /usr/lib/${MES_ARCH}-mes/libc+tcc.s /usr/lib/${MES_ARCH}-mes/libc.s /usr/lib/${MES_ARCH}-mes/libmescc.a /usr/lib/${MES_ARCH}-mes/libc+tcc.a /usr/lib/${MES_ARCH}-mes/libc.a /usr/lib/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-header.hex2 /usr/lib/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-footer-single-main.hex2
+= MES_LIB_INSTALL libc.a libc+tcc.a libmescc.a libc.s libc+tcc.s libmescc.s ${MES_ARCH}.M1 crt1.o crt1.s
+= MES_LINUX_LIB_INSTALL elf${ARCH_BITS}-footer-single-main.hex2 elf${ARCH_BITS}-header.hex2
+= MES_HEADERS alloca.h argz.h ar.h assert.h ctype.h dirent.h dirstream.h dlfcn.h endian.h errno.h fcntl.h features.h float.h getopt.h grp.h inttypes.h libgen.h limits.h locale.h math.h memory.h pwd.h setjmp.h signal.h stdarg.h stdbool.h stddef.h stdint.h stdio.h stdlib.h stdnoreturn.h string.h strings.h termio.h time.h unistd.h arch/kernel-stat.h arch/signal.h arch/syscall.h linux/syscall.h linux/${MES_ARCH}/syscall.h mes/builtins.h mes/cc.h mes/constants.h mes/lib.h mes/lib-cc.h mes/lib-mini.h mes/mes.h mes/symbols.h sys/cdefs.h sys/dir.h sys/file.h sys/ioctl.h sys/mman.h sys/param.h sys/resource.h sys/select.h sys/stat.h sys/timeb.h sys/time.h sys/times.h sys/types.h sys/ucontext.h sys/user.h sys/wait.h
 
 : build build.0 build.1
 
@@ -96,85 +99,12 @@ catm ${LIBDIR}/${MES_ARCH}-mes/libc+tcc.a ${LIBDIR}/${MES_ARCH}-mes/libc.a libc+
 catm ${LIBDIR}/${MES_ARCH}-mes/libc+tcc.s ${LIBDIR}/${MES_ARCH}-mes/libc.s libc+tcc.s
 mkdir ${PREFIX}/lib/linux ${INCDIR}/mes ${INCDIR}/sys ${INCDIR}/linux ${INCDIR}/arch
 mkdir ${PREFIX}/lib/${MES_ARCH}-mes ${PREFIX}/lib/linux/${MES_ARCH}-mes ${INCDIR}/linux/${MES_ARCH}
-cp ${LIBDIR}/${MES_ARCH}-mes/libc.a ${PREFIX}/lib/${MES_ARCH}-mes/
-cp ${LIBDIR}/${MES_ARCH}-mes/libc+tcc.a ${PREFIX}/lib/${MES_ARCH}-mes/
-cp ${LIBDIR}/${MES_ARCH}-mes/libmescc.a ${PREFIX}/lib/${MES_ARCH}-mes/
-cp ${LIBDIR}/${MES_ARCH}-mes/libc.s ${PREFIX}/lib/${MES_ARCH}-mes/
-cp ${LIBDIR}/${MES_ARCH}-mes/libc+tcc.s ${PREFIX}/lib/${MES_ARCH}-mes/
-cp ${LIBDIR}/${MES_ARCH}-mes/libmescc.s ${PREFIX}/lib/${MES_ARCH}-mes/
-cp ${LIBDIR}/${MES_ARCH}-mes/${MES_ARCH}.M1 ${PREFIX}/lib/${MES_ARCH}-mes/
-cp ${LIBDIR}/${MES_ARCH}-mes/crt1.o ${PREFIX}/lib/${MES_ARCH}-mes/
-cp ${LIBDIR}/${MES_ARCH}-mes/crt1.s ${PREFIX}/lib/${MES_ARCH}-mes/
-cp ${LIBDIR}/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-footer-single-main.hex2 ${PREFIX}/lib/linux/${MES_ARCH}-mes/
-cp ${LIBDIR}/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-header.hex2 ${PREFIX}/lib/linux/${MES_ARCH}-mes/
-cp include/alloca.h ${INCDIR}/alloca.h
-cp include/argz.h ${INCDIR}/argz.h
-cp include/ar.h ${INCDIR}/ar.h
-cp include/assert.h ${INCDIR}/assert.h
-cp include/ctype.h ${INCDIR}/ctype.h
-cp include/dirent.h ${INCDIR}/dirent.h
-cp include/dirstream.h ${INCDIR}/dirstream.h
-cp include/dlfcn.h ${INCDIR}/dlfcn.h
-cp include/endian.h ${INCDIR}/endian.h
-cp include/errno.h ${INCDIR}/errno.h
-cp include/fcntl.h ${INCDIR}/fcntl.h
-cp include/features.h ${INCDIR}/features.h
-cp include/float.h ${INCDIR}/float.h
-cp include/getopt.h ${INCDIR}/getopt.h
-cp include/grp.h ${INCDIR}/grp.h
-cp include/inttypes.h ${INCDIR}/inttypes.h
-cp include/libgen.h ${INCDIR}/libgen.h
-cp include/limits.h ${INCDIR}/limits.h
-cp include/locale.h ${INCDIR}/locale.h
+each MES_LIB_INSTALL cp ${LIBDIR}/${MES_ARCH}-mes/$% ${PREFIX}/lib/${MES_ARCH}-mes/
+each MES_LINUX_LIB_INSTALL cp ${LIBDIR}/linux/${MES_ARCH}-mes/$% ${PREFIX}/lib/linux/${MES_ARCH}-mes/
+each MES_HEADERS cp include/$% ${INCDIR}/$%
 
 : build.1
-cp include/math.h ${INCDIR}/math.h
-cp include/memory.h ${INCDIR}/memory.h
-cp include/pwd.h ${INCDIR}/pwd.h
-cp include/setjmp.h ${INCDIR}/setjmp.h
-cp include/signal.h ${INCDIR}/signal.h
-cp include/stdarg.h ${INCDIR}/stdarg.h
-cp include/linux/${MES_ARCH}/signal.h ${INCDIR}/arch/signal.h
-cp include/stdbool.h ${INCDIR}/stdbool.h
-cp include/stddef.h ${INCDIR}/stddef.h
-cp include/stdint.h ${INCDIR}/stdint.h
-cp include/stdio.h ${INCDIR}/stdio.h
-cp include/stdlib.h ${INCDIR}/stdlib.h
-cp include/stdnoreturn.h ${INCDIR}/stdnoreturn.h
-cp include/string.h ${INCDIR}/string.h
-cp include/strings.h ${INCDIR}/strings.h
-cp include/termio.h ${INCDIR}/termio.h
-cp include/time.h ${INCDIR}/time.h
-cp include/unistd.h ${INCDIR}/unistd.h
-cp include/arch/kernel-stat.h ${INCDIR}/arch/kernel-stat.h
-cp include/arch/syscall.h ${INCDIR}/arch/syscall.h
-cp include/linux/syscall.h ${INCDIR}/linux/syscall.h
-cp include/linux/${MES_ARCH}/syscall.h ${INCDIR}/linux/${MES_ARCH}/syscall.h
-cp include/mes/builtins.h ${INCDIR}/mes/builtins.h
-cp include/mes/cc.h ${INCDIR}/mes/cc.h
 catm ${INCDIR}/mes/config.h
-cp include/mes/constants.h ${INCDIR}/mes/constants.h
-cp include/mes/lib.h ${INCDIR}/mes/lib.h
-cp include/mes/lib-cc.h ${INCDIR}/mes/lib-cc.h
-cp include/mes/lib-mini.h ${INCDIR}/mes/lib-mini.h
-cp include/mes/mes.h ${INCDIR}/mes/mes.h
-cp include/mes/symbols.h ${INCDIR}/mes/symbols.h
-cp include/sys/cdefs.h ${INCDIR}/sys/cdefs.h
-cp include/sys/dir.h ${INCDIR}/sys/dir.h
-cp include/sys/file.h ${INCDIR}/sys/file.h
-cp include/sys/ioctl.h ${INCDIR}/sys/ioctl.h
-cp include/sys/mman.h ${INCDIR}/sys/mman.h
-cp include/sys/param.h ${INCDIR}/sys/param.h
-cp include/sys/resource.h ${INCDIR}/sys/resource.h
-cp include/sys/select.h ${INCDIR}/sys/select.h
-cp include/sys/stat.h ${INCDIR}/sys/stat.h
-cp include/sys/timeb.h ${INCDIR}/sys/timeb.h
-cp include/sys/time.h ${INCDIR}/sys/time.h
-cp include/sys/times.h ${INCDIR}/sys/times.h
-cp include/sys/types.h ${INCDIR}/sys/types.h
-cp include/sys/ucontext.h ${INCDIR}/sys/ucontext.h
-cp include/sys/user.h ${INCDIR}/sys/user.h
-cp include/sys/wait.h ${INCDIR}/sys/wait.h
 cd ../..
 
 : checksum build

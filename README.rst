@@ -52,19 +52,19 @@ Current materialized result:
 ===========================  =====  =======  =====
 Area                         Added  Deleted  Delta
 ===========================  =====  =======  =====
-live-bootstrap seed/steps     1456     2246   -790
-stage0-posix wrapper           129      227    -98
+live-bootstrap seed/steps     1371     2284   -913
+stage0-posix wrapper           141      239    -98
 stage0-posix/x86                12      262   -250
 stage0-posix/AMD64              12      262   -250
 stage0-posix/AArch64            12      262   -250
 stage0-posix/riscv32            10      264   -254
 stage0-posix/riscv64            10      260   -250
 stage0-posix/armv7l              1        1      0
-mescc-tools                    954     2478  -1524
+mescc-tools                   1014     2478  -1464
 mescc-tools-extra                8       61    -53
 ===========================  =====  =======  =====
 
-Materialized total: ``2604`` added, ``6323`` deleted, net ``-3719`` LOC.
+Materialized total: ``2591`` added, ``6373`` deleted, net ``-3782`` LOC.
 
 Without using Python:
 
