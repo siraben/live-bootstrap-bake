@@ -31,6 +31,72 @@ index 34e3737..e345bbb 100644
  precedence = "aggregate"
  SPDX-FileCopyrightText = "none"
  SPDX-License-Identifier = "MIT"
+diff --git a/lib/generator.py b/lib/generator.py
+index 9b1f8bc..6fa7f62 100755
+--- a/lib/generator.py
++++ b/lib/generator.py
+@@ -82,8 +82,10 @@ class Generator():
+                 shutil.rmtree(os.path.join(self.target_dir, 'steps'))
+             if os.path.exists(self.external_dir):
+                 shutil.rmtree(self.external_dir)
+-            shutil.copy2(os.path.join(self.git_dir, 'seed', 'preseeded.kaem'),
+-                         os.path.join(self.target_dir, 'kaem.x86'))
++            with open(os.path.join(self.target_dir, 'build.bake'), "w", encoding="utf-8") as out:
++                out.write(": all\n")
++                out.write("/script-generator /steps/manifest\n")
++                out.write("/usr/bin/bake --file /preseed-jump.bake all\n")
+         else:
+             self.stage0_posix(kernel_bootstrap)
+             self.seed()
+diff --git a/rootfs.py b/rootfs.py
+index 7cbb4bc..3c893e8 100755
+--- a/rootfs.py
++++ b/rootfs.py
+@@ -245,9 +245,14 @@ print(shutil.which('chroot'))
+ 
+         generator.prepare(target, using_kernel=False)
+ 
+-        arch = stage0_arch_map.get(args.arch, args.arch)
+-        init = os.path.join(os.sep, 'bootstrap-seeds', 'POSIX', arch, 'kaem-optional-seed')
+-        run_as_root('env', '-i', 'PATH=/bin', chroot_binary, generator.target_dir, init,
++        init_args = []
++        if args.early_preseed:
++            init = os.path.join(os.sep, 'usr', 'bin', 'bake')
++            init_args = ['--file', os.path.join(os.sep, 'build.bake'), 'all']
++        else:
++            arch = stage0_arch_map.get(args.arch, args.arch)
++            init = os.path.join(os.sep, 'bootstrap-seeds', 'POSIX', arch, 'kaem-optional-seed')
++        run_as_root('env', '-i', 'PATH=/bin', chroot_binary, generator.target_dir, init, *init_args,
+                     cleanup=cleanup)
+ 
+     elif args.bwrap:
+@@ -255,10 +260,16 @@ print(shutil.which('chroot'))
+         if not args.internal_ci or args.internal_ci == "pass1":
+             generator.prepare(target, using_kernel=False)
+ 
+-            arch = stage0_arch_map.get(args.arch, args.arch)
+-            init = os.path.join(os.sep, 'bootstrap-seeds', 'POSIX', arch, 'kaem-optional-seed')
++            if args.early_preseed:
++                init = os.path.join(os.sep, 'usr', 'bin', 'bake')
++                init_args = ['--file', os.path.join(os.sep, 'build.bake'), 'all']
++            else:
++                arch = stage0_arch_map.get(args.arch, args.arch)
++                init = os.path.join(os.sep, 'bootstrap-seeds', 'POSIX', arch, 'kaem-optional-seed')
++                init_args = []
+         else:
+             generator.reuse(target)
++            init_args = []
+ 
+         run('env', '-i', 'bwrap', '--unshare-user',
+                                   '--uid', '0',
+@@ -278,6 +289,7 @@ print(shutil.which('chroot'))
+                                   '--bind', '/sys', '/sys',
+                                   '--tmpfs', '/tmp',
+                                   init,
++                                  *init_args,
+             cleanup=cleanup)
+ 
+     elif args.bare_metal:
 diff --git a/seed/after.bake b/seed/after.bake
 new file mode 100644
 index 0000000..4e33058
@@ -62,15 +128,19 @@ index 348ec23..0000000
 -catm seed-full.kaem /steps/bootstrap.cfg /steps/env seed.kaem
 -kaem --file seed-full.kaem
 diff --git a/seed/preseeded.kaem b/seed/preseeded.kaem
-index 0d92eaa..784061d 100755
+deleted file mode 100755
+index 0d92eaa..0000000
 --- a/seed/preseeded.kaem
-+++ b/seed/preseeded.kaem
-@@ -5,4 +5,4 @@
- # SPDX-License-Identifier: GPL-3.0-or-later
- 
- /script-generator /steps/manifest
++++ /dev/null
+@@ -1,8 +0,0 @@
+-#!/bin/sh
+-#
+-# SPDX-FileCopyrightText: 2023 Samuel Tyler <samuel@samuelt.me>
+-#
+-# SPDX-License-Identifier: GPL-3.0-or-later
+-
+-/script-generator /steps/manifest
 -/usr/bin/kaem --file /preseed-jump.kaem
-+/usr/bin/bake --file /preseed-jump.bake all
 diff --git a/seed/script-generator.amd64.checksums b/seed/script-generator.amd64.checksums
 index 66da31c..5abc933 100644
 --- a/seed/script-generator.amd64.checksums
@@ -600,13 +670,6 @@ index 5fd7449..0000000
 -./script-generator /steps/manifest
 -
 -kaem --file /steps/0.sh
-diff --git a/seed/stage0-posix b/seed/stage0-posix
-index 45d90f5..a8d1929 160000
---- a/seed/stage0-posix
-+++ b/seed/stage0-posix
-@@ -1 +1 @@
--Subproject commit 45d90f5955b6907dc6cdea9ebafce558359edcd3
-+Subproject commit a8d1929c613a97d8c1d40285a75b5c6b680d09b3
 diff --git a/steps/bash-2.05b/pass1.bake b/steps/bash-2.05b/pass1.bake
 new file mode 100644
 index 0000000..f659fcd

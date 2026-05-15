@@ -1,6 +1,6 @@
 # live-bootstrap bake repro
 
-This repository is a standalone repro for replacing the kaem-era
+This repository is a standalone repro for replacing the pre-bash
 `live-bootstrap` package wrappers with `bake` recipes.
 
 The patches are kept under `patches/` and apply to exact upstream base
@@ -18,13 +18,13 @@ revisions:
 
 ```sh
 ./scripts/prepare.sh
-./scripts/run-kaem-era.sh
+./scripts/run-bake.sh
 ```
 
 Both scripts re-enter `nix develop` automatically when needed. The validation
 script generates a temporary live-bootstrap target, sets `BUILD_FIWIX=True`, and
 runs the build in `bwrap` up to `bash-2.05b-pass1`. That covers every tracked
-`steps/*/pass1.kaem` wrapper in the kaem-era part of the build.
+`steps/*/pass1.kaem` wrapper in the pre-bash part of the build.
 
 The important bootstrap property is that `bake` is not built by the host
 compiler. It is built by the stage0 path:
@@ -38,7 +38,7 @@ The expected successful tail is a checksum line for `/usr/bin/bash`.
 For a fast harness check without launching the bootstrap, run:
 
 ```sh
-GENERATE_ONLY=1 ./scripts/run-kaem-era.sh
+GENERATE_ONLY=1 ./scripts/run-bake.sh
 ```
 
 ## Patch Layout
@@ -63,7 +63,7 @@ applying the patch stack.
 `patches/0005-live-bootstrap-use-bake.patch`
 : teaches `script-generator` to emit bake scripts before bash, replaces the
   seed handoff with `seed.bake`, and adds `pass1.bake` recipes for all
-  kaem-era packages.
+  pre-bash packages.
 
 For the currently covered package wrappers, the recipe layer goes from 2037
 lines of `pass1.kaem` to 790 lines of `pass1.bake`.

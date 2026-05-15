@@ -9,7 +9,7 @@ fi
 
 WORKDIR=${WORKDIR:-"$ROOT/work"}
 LIVE="$WORKDIR/live-bootstrap"
-TARGET=${TARGET:-"$ROOT/target-bake-kaem"}
+TARGET=${TARGET:-"$ROOT/target-bake"}
 
 if [ ! -d "$LIVE/.git" ]; then
 	"$ROOT/scripts/prepare.sh"
