@@ -60,11 +60,11 @@ stage0-posix/AArch64            12      262   -250
 stage0-posix/riscv32            10      264   -254
 stage0-posix/riscv64            10      260   -250
 stage0-posix/armv7l              1        1      0
-mescc-tools                   1014     2478  -1464
+mescc-tools                    998     2478  -1480
 mescc-tools-extra                8       61    -53
 ===========================  =====  =======  =====
 
-Materialized total: ``2591`` added, ``6373`` deleted, net ``-3782`` LOC.
+Materialized total: ``2575`` added, ``6373`` deleted, net ``-3798`` LOC.
 
 Without using Python:
 
