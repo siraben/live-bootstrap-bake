@@ -41,6 +41,48 @@ For a fast harness check without launching the bootstrap, run:
 GENERATE_ONLY=1 ./scripts/run-bake.sh
 ```
 
+## LOC Audit
+
+The LOC audit should count source that is materialized into the bootstrap root,
+not generated build output. For the full branch this means counting the
+top-level `seed`/`steps` changes and each checked-out `stage0-posix` submodule
+as source, while ignoring parent gitlink rows.
+
+The useful validation boundary is the pre-bash build: minimal kaem still runs
+the seed scripts that build `bake`, then `bake` runs through
+`bash-2.05b-pass1` and hands off to `bash /steps/1.sh`. Later packages are
+useful as broader regression coverage, but they are not needed to measure the
+kaem-to-bake replacement.
+
+The full materialized branch audit currently gives:
+
+| area | added | deleted | delta |
+| --- | ---: | ---: | ---: |
+| live-bootstrap seed/steps | 1456 | 2246 | -790 |
+| stage0-posix wrapper | 129 | 227 | -98 |
+| stage0-posix/x86 | 12 | 262 | -250 |
+| stage0-posix/AMD64 | 12 | 262 | -250 |
+| stage0-posix/AArch64 | 12 | 262 | -250 |
+| stage0-posix/riscv32 | 10 | 264 | -254 |
+| stage0-posix/riscv64 | 10 | 260 | -250 |
+| stage0-posix/armv7l | 1 | 1 | 0 |
+| mescc-tools | 954 | 2478 | -1524 |
+| mescc-tools-extra | 8 | 61 | -53 |
+| total | 2604 | 6323 | -3719 |
+
+The largest reductions are from deleting the full kaem implementation and the
+old simple-patch before/after data. The main costs are `bake.c`, the `.bake`
+recipes, and the standard patch reader.
+
+For this standalone repro checkout, after `./scripts/prepare.sh`:
+
+```sh
+python3 scripts/loc-audit.py
+```
+
+prints a numstat table for the prepared `work/live-bootstrap` tree and patched
+submodules.
+
 ## Patch Layout
 
 The `bake-files/` directory also contains the `.bake` files directly, mirrored
