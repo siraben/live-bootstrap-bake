@@ -10,8 +10,7 @@ gzip -d -f ../src/${pkg}.tar.gz
 tar xf ../src/${pkg}.tar
 rm -r ../src
 cd ${pkg}
-patch -Np1 -i ../../patches/mes-libc.patch
-patch -Np1 -i ../../patches/coreutils.patch
+simple-patch -Np1 -i ../../patches/mes-libc.patch -i ../../patches/coreutils.patch
 make CC=tcc LDFLAGS=-static bzip2
 cp bzip2 ${PREFIX}/bin/bzip2
 cp bzip2 ${PREFIX}/bin/bunzip2

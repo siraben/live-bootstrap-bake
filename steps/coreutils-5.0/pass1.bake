@@ -19,15 +19,7 @@ cp lib/search_.h lib/search.h
 catm config.h
 rm src/false.c
 rm src/dircolors.h
-patch -Np1 -i ../../patches/modechange.patch
-patch -Np1 -i ../../patches/mbstate.patch
-patch -Np1 -i ../../patches/ls-strcmp.patch
-patch -Np1 -i ../../patches/touch-getdate.patch
-patch -Np1 -i ../../patches/touch-dereference.patch
-patch -Np1 -i ../../patches/tac-uint64.patch
-patch -Np1 -i ../../patches/expr-strcmp.patch
-patch -Np1 -i ../../patches/sort-locale.patch
-patch -Np1 -i ../../patches/uniq-fopen.patch
+simple-patch -Np1 -i ../../patches/modechange.patch -i ../../patches/mbstate.patch -i ../../patches/ls-strcmp.patch -i ../../patches/touch-getdate.patch -i ../../patches/touch-dereference.patch -i ../../patches/tac-uint64.patch -i ../../patches/expr-strcmp.patch -i ../../patches/sort-locale.patch -i ../../patches/uniq-fopen.patch
 make -f Makefile PREFIX=${PREFIX}
 make -f Makefile PREFIX=${PREFIX} install
 cd ../..

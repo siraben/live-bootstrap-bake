@@ -26,6 +26,7 @@ void apply_hunk_or_die(char **file_buffer, int *file_size, int *offset,
                  char *after_buffer, int after_size);
 void writestr_fd(int fd, char *str);
 void usage(void);
+void apply_patch_file(char *patch_name, int strip);
 int memsame(char *search_buffer, int search_size,
             char *pattern_buffer, int pattern_size);
 int starts_with(char *buffer, int size, char *pattern);
@@ -37,37 +38,54 @@ int parse_strip(char *arg);
 
 int main(int argc, char **argv) {
     int strip;
-    char *patch_name;
-    char *patch_buffer;
-    int patch_size;
+    int input_count;
     int i;
 
     strip = 0;
-    patch_name = NULL;
     i = 1;
     while(i < argc) {
         if(strcmp(argv[i], "-i") == 0) {
             i = i + 1;
             if(i >= argc) usage();
-            patch_name = argv[i];
         } else if(strcmp(argv[i], "-N") == 0) {
             /* Already-applied patch detection is not needed for bootstrap use. */
         } else if(starts_with(argv[i], strlen(argv[i]), "-p")) {
             strip = parse_strip(argv[i] + 2);
         } else if(starts_with(argv[i], strlen(argv[i]), "-Np")) {
             strip = parse_strip(argv[i] + 3);
-        } else {
-            patch_name = argv[i];
         }
         i = i + 1;
     }
 
-    if(patch_name == NULL) usage();
+    input_count = 0;
+    i = 1;
+    while(i < argc) {
+        if(strcmp(argv[i], "-i") == 0) {
+            i = i + 1;
+            if(i >= argc) usage();
+            apply_patch_file(argv[i], strip);
+            input_count = input_count + 1;
+        } else if(strcmp(argv[i], "-N") == 0) {
+            /* Already-applied patch detection is not needed for bootstrap use. */
+        } else if(starts_with(argv[i], strlen(argv[i]), "-p")) {
+        } else if(starts_with(argv[i], strlen(argv[i]), "-Np")) {
+        } else {
+            apply_patch_file(argv[i], strip);
+            input_count = input_count + 1;
+        }
+        i = i + 1;
+    }
 
-    read_file_or_die(patch_name, &patch_buffer, &patch_size);
-    patch_unified_or_die(patch_buffer, patch_size, strip);
+    if(input_count == 0) usage();
 
     return EXIT_SUCCESS;
+}
+
+void apply_patch_file(char *patch_name, int strip) {
+    char *patch_buffer;
+    int patch_size;
+    read_file_or_die(patch_name, &patch_buffer, &patch_size);
+    patch_unified_or_die(patch_buffer, patch_size, strip);
 }
 
 
@@ -276,7 +294,7 @@ void writestr_fd(int fd, char *str) {
 }
 
 void usage(void) {
-    writestr_fd(2, "Usage: simple-patch [-pN] [-N] -i patch\n");
+    writestr_fd(2, "Usage: simple-patch [-pN] [-N] -i patch [-i patch...]\n");
     exit(1);
 }
 

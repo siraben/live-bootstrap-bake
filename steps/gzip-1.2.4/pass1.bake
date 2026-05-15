@@ -12,8 +12,7 @@ cd ${pkg}
 cp ../../mk/main.mk Makefile
 catm gzip.c.new ../../files/stat_override.c gzip.c
 cp gzip.c.new gzip.c
-patch -Np1 -i ../../patches/removecrc.patch
-patch -Np1 -i ../../patches/makecrc-write-to-file.patch
+simple-patch -Np1 -i ../../patches/removecrc.patch -i ../../patches/makecrc-write-to-file.patch
 tcc -static -o makecrc sample/makecrc.c
 ./makecrc
 catm util.c.new util.c crc.c
