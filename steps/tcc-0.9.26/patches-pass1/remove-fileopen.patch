@@ -4,12 +4,18 @@ SPDX-License-Identifier: LGPL-2.0-or-later
 
 --- tcc-0.9.26-1147-gee75a10c/tcctools.c
 +++ tcc-0.9.26-1147-gee75a10c/tcctools.c
-@@ -1,10 +1,2 @@
+@@ -130,14 +130,8 @@
      if (ret == 1)
          return ar_usage(ret);
--
+ 
 -    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
 -    {
 -        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
 -        goto the_end;
 -    }
+-
+     sprintf(tfile, "%s.tmp", argv[i_lib]);
+     if ((fo = fopen(tfile, "wb+")) == NULL)
+     {
+         fprintf(stderr, "tcc: ar: can't create temporary file %s\n", tfile);
+         goto the_end;

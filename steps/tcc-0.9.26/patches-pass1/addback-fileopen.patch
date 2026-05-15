@@ -4,7 +4,11 @@ SPDX-License-Identifier: LGPL-2.0-or-later
 
 --- tcc-0.9.26-1147-gee75a10c/tcctools.c
 +++ tcc-0.9.26-1147-gee75a10c/tcctools.c
-@@ -1 +1,8 @@
+@@ -248,8 +248,14 @@
+     hofs = 8 + sizeof(arhdr) + strpos + (funccnt+1) * sizeof(int);
+     fpos = 0;
+     if ((hofs & 1)) // align
+         hofs++, fpos = 1;
 +    if ((fh = fopen(argv[i_lib], "wb")) == NULL)
 +    {
 +        fprintf(stderr, "tcc: ar: can't open file %s \n", argv[i_lib]);
@@ -12,3 +16,6 @@ SPDX-License-Identifier: LGPL-2.0-or-later
 +    }
 +
      // write header
+     fwrite("!<arch>\n", 8, 1, fh);
+     sprintf(stmp, "%-10d", (int)(strpos + (funccnt+1) * sizeof(int)));
+     memcpy(&arhdr.ar_size, stmp, 10);

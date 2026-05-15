@@ -12,8 +12,8 @@ cd build
 unbz2 --file ${DISTFILES}/${pkg}.tar.bz2 --output ${pkg}.tar
 ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
 untar --file ${pkg}.tar
-simple-patch -Np0 -i ../patches/remove-fileopen.patch
-simple-patch -Np0 -i ../patches/addback-fileopen.patch
+simple-patch -Np0 -i ../patches-pass1/remove-fileopen.patch
+simple-patch -Np0 -i ../patches-pass1/addback-fileopen.patch
 simple-patch -Np0 -i ../patches/fiwix-paddr.patch
 simple-patch -Np0 -i ../patches/check-reloc-null.patch
 untar --non-strict --file ${MES_PKG}.tar
