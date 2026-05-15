@@ -152,7 +152,7 @@ bootstrapping. However, there are a number of non-auditable files used
 in many of their packages. Here is a list of file types that we deem
 unsuitable for bootstrapping.
 
-1. Binaries (apart from seed hex0, kaem, builder-hex0).
+1. Binaries (apart from seed hex0, minimal kaem seed, builder-hex0).
 2. Any pre-generated configure scripts, or Makefile.in’s from autotools.
 3. Pre-generated bison/flex parsers (identifiable through a ``.y``
    file).
@@ -173,9 +173,9 @@ This is capable of executing the entirety of ``stage0-posix``, (see
 ``seed/stage0-posix``), which produces a variety of useful utilities and a basic
 C language, ``M2-Planet``.
 
-``stage0-posix`` runs a file called ``after.kaem``. This is a shell script that
+``stage0-posix`` runs a file called ``after.bake``. This is a bake script that
 builds and runs a small program called ``script-generator``. This program reads
-``steps/manifest`` and converts it into a series of shell scripts that can be
+``steps/manifest`` and converts it into a series of bake and shell scripts that can be
 executed in sequence to complete the bootstrap.
 
 From this point forward, ``steps/manifest`` is effectively self documenting.

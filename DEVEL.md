@@ -16,7 +16,7 @@ and that a full build completes.
 
 ```
 seed
-├── seed.kaem
+├── seed.bake
 ├── script-generator.c
 ├── ...
 └── stage0-posix
@@ -29,7 +29,7 @@ steps
 ├── improve
 │   └── x.sh
 ├── somepackage-version
-│   ├── pass1.kaem
+│   ├── pass1.bake
 │   ├── pass2.sh
 │   ├── files
 │   ├── mk
@@ -44,12 +44,12 @@ Each package to be built is named `package-version`.
 Each subsequent build of a package is the nth pass. Scripts are named
 accordingly; eg, the first build would be called `pass1.sh`, the second would be
 `pass2.sh`, etc.
-Scripts run in kaem era should be denoted as such in their filename;
-`pass1.kaem`, for example. Pass numbers do not reset after kaem, ie, you cannot
-have both `pass1.kaem` and `pass1.sh`.
+Scripts run in the bake era should be denoted as such in their filename;
+`pass1.bake`, for example. Pass numbers do not reset after bake, ie, you cannot
+have both `pass1.bake` and `pass1.sh`.
 
 In this folder, there are other folders/files. `*.checksums` are
-required for early packages that are build with kaem, others are optional.
+required for early packages that are built with bake, others are optional.
 
 Permissible folders/files:
 

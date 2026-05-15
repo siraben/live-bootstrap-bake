@@ -82,7 +82,7 @@ class Generator():
                 shutil.rmtree(os.path.join(self.target_dir, 'steps'))
             if os.path.exists(self.external_dir):
                 shutil.rmtree(self.external_dir)
-            shutil.copy2(os.path.join(self.git_dir, 'seed', 'preseeded.kaem'),
+            shutil.copy2(os.path.join(self.git_dir, 'seed', 'preseeded.boot'),
                          os.path.join(self.target_dir, 'kaem.x86'))
         else:
             self.stage0_posix(kernel_bootstrap)

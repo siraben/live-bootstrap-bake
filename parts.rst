@@ -160,7 +160,7 @@ and ``unbz2`` utilities to deal with compressed archives, as well as
 live-bootstrap seed
 ===================
 
-``stage0-posix`` executes a file ``after.kaem``, which creates a kaem script to
+``stage0-posix`` executes a file ``after.bake``, which creates a bake script to
 continue the bootstrap. This is responsible for cleaning up the mess in
 ``/x86/bin`` and moving it to the permanent ``/usr/bin``, and setting a few
 environment variables.
@@ -169,8 +169,8 @@ script-generator
 ================
 
 ``script-generator`` is a program that translates live-bootstrap's
-domain-specific manifest language into shell scripts that can be run to complete
-the bootstrap. The translator is implemented in ``M2-Planet``.
+domain-specific manifest language into bake and shell scripts that can be run to
+complete the bootstrap. The translator is implemented in ``M2-Planet``.
 
 The language is fairly simple; each line has the format
 ``<directive>: <arguments> <predicate>``. A predicate only runs the line if a
