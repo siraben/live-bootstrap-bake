@@ -27,6 +27,45 @@ This uses a variety of userland tools to prepare the bootstrap.
 (*Currently, there is no way to perform the bootstrap without external
 preparations! This is a currently unsolved problem.*)
 
+Bake LOC audit
+--------------
+
+This branch replaces the pre-bash kaem package wrappers with ``bake`` recipes
+and teaches the early patch utility to consume standard unified patches. The
+LOC audit counts source that is materialized into the bootstrap root, not
+generated build output. Since ``stage0-posix`` and its architecture/tool
+directories are git submodules, parent gitlink rows are ignored and each
+checked-out source repository is counted separately.
+
+The useful validation boundary is the pre-bash build: minimal kaem still runs
+the seed scripts that build ``bake`` itself, then ``bake`` runs through
+``bash-2.05b-pass1`` and hands off to ``bash /steps/1.sh``. Later packages are
+useful regression coverage, but they are not needed to measure the
+kaem-to-bake replacement.
+
+Run the audit with::
+
+  python3 tools/loc_audit.py
+
+Current materialized result:
+
+===========================  =====  =======  =====
+Area                         Added  Deleted  Delta
+===========================  =====  =======  =====
+live-bootstrap seed/steps     1456     2246   -790
+stage0-posix wrapper           129      227    -98
+stage0-posix/x86                12      262   -250
+stage0-posix/AMD64              12      262   -250
+stage0-posix/AArch64            12      262   -250
+stage0-posix/riscv32            10      264   -254
+stage0-posix/riscv64            10      260   -250
+stage0-posix/armv7l              1        1      0
+mescc-tools                    954     2478  -1524
+mescc-tools-extra                8       61    -53
+===========================  =====  =======  =====
+
+Materialized total: ``2604`` added, ``6323`` deleted, net ``-3719`` LOC.
+
 Without using Python:
 
 0. Choose a mirror as detailed above. (You will input this later, instead of

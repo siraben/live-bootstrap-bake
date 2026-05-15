@@ -82,8 +82,10 @@ class Generator():
                 shutil.rmtree(os.path.join(self.target_dir, 'steps'))
             if os.path.exists(self.external_dir):
                 shutil.rmtree(self.external_dir)
-            shutil.copy2(os.path.join(self.git_dir, 'seed', 'preseeded.boot'),
-                         os.path.join(self.target_dir, 'kaem.x86'))
+            with open(os.path.join(self.target_dir, 'build.bake'), "w", encoding="utf-8") as out:
+                out.write(": all\n")
+                out.write("/script-generator /steps/manifest\n")
+                out.write("/usr/bin/bake --file /preseed-jump.bake all\n")
         else:
             self.stage0_posix(kernel_bootstrap)
             self.seed()

@@ -245,9 +245,14 @@ print(shutil.which('chroot'))
 
         generator.prepare(target, using_kernel=False)
 
-        arch = stage0_arch_map.get(args.arch, args.arch)
-        init = os.path.join(os.sep, 'bootstrap-seeds', 'POSIX', arch, 'kaem-optional-seed')
-        run_as_root('env', '-i', 'PATH=/bin', chroot_binary, generator.target_dir, init,
+        init_args = []
+        if args.early_preseed:
+            init = os.path.join(os.sep, 'usr', 'bin', 'bake')
+            init_args = ['--file', os.path.join(os.sep, 'build.bake'), 'all']
+        else:
+            arch = stage0_arch_map.get(args.arch, args.arch)
+            init = os.path.join(os.sep, 'bootstrap-seeds', 'POSIX', arch, 'kaem-optional-seed')
+        run_as_root('env', '-i', 'PATH=/bin', chroot_binary, generator.target_dir, init, *init_args,
                     cleanup=cleanup)
 
     elif args.bwrap:
@@ -255,10 +260,16 @@ print(shutil.which('chroot'))
         if not args.internal_ci or args.internal_ci == "pass1":
             generator.prepare(target, using_kernel=False)
 
-            arch = stage0_arch_map.get(args.arch, args.arch)
-            init = os.path.join(os.sep, 'bootstrap-seeds', 'POSIX', arch, 'kaem-optional-seed')
+            if args.early_preseed:
+                init = os.path.join(os.sep, 'usr', 'bin', 'bake')
+                init_args = ['--file', os.path.join(os.sep, 'build.bake'), 'all']
+            else:
+                arch = stage0_arch_map.get(args.arch, args.arch)
+                init = os.path.join(os.sep, 'bootstrap-seeds', 'POSIX', arch, 'kaem-optional-seed')
+                init_args = []
         else:
             generator.reuse(target)
+            init_args = []
 
         run('env', '-i', 'bwrap', '--unshare-user',
                                   '--uid', '0',
@@ -278,6 +289,7 @@ print(shutil.which('chroot'))
                                   '--bind', '/sys', '/sys',
                                   '--tmpfs', '/tmp',
                                   init,
+                                  *init_args,
             cleanup=cleanup)
 
     elif args.bare_metal:
