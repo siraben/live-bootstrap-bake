@@ -33,6 +33,10 @@ int line_size(char *pos, char *end);
 int next_line_starts_with(char *line, int size, char *end, char *pattern);
 char *copy_patch_path(char *line, int size, int strip);
 int parse_strip(char *arg);
+int parse_hunk_header(char *line, int size, int *old_start, int *old_count, int *new_count);
+int parse_count(char *line, int size, int *pos);
+int line_offset(char *buffer, int size, int line_number);
+int remove_trailing_newline(char *buffer, int size);
 
 
 int main(int argc, char **argv) {
@@ -134,7 +138,14 @@ void patch_unified_or_die(char *patch_buffer, int patch_size, int strip) {
     char *after_buffer;
     int before_size;
     int after_size;
+    int old_start;
+    int old_count;
+    int old_seen;
+    int new_count;
+    int new_seen;
+    int line_delta;
     char prefix;
+    char previous_prefix;
     int content_size;
 
     pos = patch_buffer;
@@ -143,6 +154,7 @@ void patch_unified_or_die(char *patch_buffer, int patch_size, int strip) {
     file_buffer = NULL;
     file_size = 0;
     file_offset = 0;
+    line_delta = 0;
     file_dirty = FALSE;
 
     while(pos < end) {
@@ -167,6 +179,7 @@ void patch_unified_or_die(char *patch_buffer, int patch_size, int strip) {
             file_name = copy_patch_path(pos + 4, size - 4, strip);
             read_file_or_die(file_name, &file_buffer, &file_size);
             file_offset = 0;
+            line_delta = 0;
             pos = pos + size;
         } else if(starts_with(pos, size, "@@ ")) {
             if(file_name == NULL) {
@@ -174,11 +187,19 @@ void patch_unified_or_die(char *patch_buffer, int patch_size, int strip) {
                 exit(1);
             }
 
+            if(!parse_hunk_header(pos, size, &old_start, &old_count, &new_count)) {
+                writestr_fd(2, "Malformed patch hunk header\n");
+                exit(1);
+            }
+            file_offset = line_offset(file_buffer, file_size, old_start + line_delta);
             pos = pos + size;
             before_buffer = calloc(patch_size + 1, sizeof(char));
             after_buffer = calloc(patch_size + 1, sizeof(char));
             before_size = 0;
             after_size = 0;
+            old_seen = 0;
+            new_seen = 0;
+            previous_prefix = 0;
 
             while(pos < end) {
                 size = line_size(pos, end);
@@ -193,6 +214,17 @@ void patch_unified_or_die(char *patch_buffer, int patch_size, int strip) {
                     break;
                 }
                 if(starts_with(pos, size, "\\ No newline")) {
+                    if(previous_prefix == ' ') {
+                        before_size = remove_trailing_newline(before_buffer, before_size);
+                        after_size = remove_trailing_newline(after_buffer, after_size);
+                    } else if(previous_prefix == '-') {
+                        before_size = remove_trailing_newline(before_buffer, before_size);
+                    } else if(previous_prefix == '+') {
+                        after_size = remove_trailing_newline(after_buffer, after_size);
+                    } else {
+                        writestr_fd(2, "No newline marker has no previous hunk line\n");
+                        exit(1);
+                    }
                     pos = pos + size;
                     continue;
                 }
@@ -204,22 +236,33 @@ void patch_unified_or_die(char *patch_buffer, int patch_size, int strip) {
                     memcpy(after_buffer + after_size, pos + 1, content_size);
                     before_size = before_size + content_size;
                     after_size = after_size + content_size;
+                    old_seen = old_seen + 1;
+                    new_seen = new_seen + 1;
                 } else if(prefix == '-') {
                     memcpy(before_buffer + before_size, pos + 1, content_size);
                     before_size = before_size + content_size;
+                    old_seen = old_seen + 1;
                 } else if(prefix == '+') {
                     memcpy(after_buffer + after_size, pos + 1, content_size);
                     after_size = after_size + content_size;
+                    new_seen = new_seen + 1;
                 } else {
                     writestr_fd(2, "Unsupported patch hunk line\n");
                     exit(1);
                 }
+                previous_prefix = prefix;
                 pos = pos + size;
+            }
+
+            if((old_seen != old_count) || (new_seen != new_count)) {
+                writestr_fd(2, "Patch hunk line count mismatch\n");
+                exit(1);
             }
 
             apply_hunk_or_die(&file_buffer, &file_size, &file_offset,
                          before_buffer, before_size,
                          after_buffer, after_size);
+            line_delta = line_delta + new_count - old_count;
             file_dirty = TRUE;
         } else {
             pos = pos + size;
@@ -239,20 +282,10 @@ void apply_hunk_or_die(char **file_buffer, int *file_size, int *offset,
     char *new_buffer;
 
     pos = *offset;
-    if(before_size == 0) {
-        pos = *offset;
-    } else {
-        while(pos < *file_size) {
-            if(memsame(*file_buffer + pos, *file_size - pos,
-                       before_buffer, before_size)) {
-                break;
-            }
-            pos = pos + 1;
-        }
-        if(pos >= *file_size) {
-            writestr_fd(2, "Patch hunk did not match\n");
-            exit(1);
-        }
+    if(!memsame(*file_buffer + pos, *file_size - pos,
+                before_buffer, before_size)) {
+        writestr_fd(2, "Patch hunk did not match\n");
+        exit(1);
     }
 
     new_size = *file_size - before_size + after_size;
@@ -343,11 +376,6 @@ char *copy_patch_path(char *line, int size, int strip) {
         start = start + 1;
     }
 
-    if(starts_with(line + start, size - start, "/dev/null")) {
-        writestr_fd(2, "Creating or deleting files is not supported\n");
-        exit(1);
-    }
-
     components = 0;
     while(start < size && components < strip) {
         if(line[start] == '/') {
@@ -369,14 +397,105 @@ char *copy_patch_path(char *line, int size, int strip) {
         writestr_fd(2, "Empty patch path\n");
         exit(1);
     }
+    if((9 == out_size) && memsame(line + start, out_size, "/dev/null", 9)) {
+        writestr_fd(2, "Creating or deleting files is not supported\n");
+        exit(1);
+    }
     path = calloc(out_size + 1, sizeof(char));
     memcpy(path, line + start, out_size);
     return path;
 }
 
 int parse_strip(char *arg) {
+    int i;
     if(arg[0] == 0) {
         return 0;
     }
+    i = 0;
+    while(arg[i] != 0) {
+        if(arg[i] < '0' || arg[i] > '9') {
+            usage();
+        }
+        i = i + 1;
+    }
     return atoi(arg);
+}
+
+int parse_count(char *line, int size, int *pos) {
+    int count;
+    count = 0;
+    if(*pos >= size || line[*pos] < '0' || line[*pos] > '9') {
+        return -1;
+    }
+    while(*pos < size && line[*pos] >= '0' && line[*pos] <= '9') {
+        count = (count * 10) + line[*pos] - '0';
+        *pos = *pos + 1;
+    }
+    return count;
+}
+
+int parse_hunk_header(char *line, int size, int *old_start, int *old_count, int *new_count) {
+    int pos;
+    int new_start;
+    if(!starts_with(line, size, "@@ -")) {
+        return FALSE;
+    }
+    pos = 4;
+    *old_start = parse_count(line, size, &pos);
+    if(*old_start < 0) return FALSE;
+    *old_count = 1;
+    if(pos < size && line[pos] == ',') {
+        pos = pos + 1;
+        *old_count = parse_count(line, size, &pos);
+        if(*old_count < 0) return FALSE;
+    }
+    if(pos >= size || line[pos] != ' ') return FALSE;
+    pos = pos + 1;
+    if(pos >= size || line[pos] != '+') return FALSE;
+    pos = pos + 1;
+    new_start = parse_count(line, size, &pos);
+    if(new_start < 0) return FALSE;
+    *new_count = 1;
+    if(pos < size && line[pos] == ',') {
+        pos = pos + 1;
+        *new_count = parse_count(line, size, &pos);
+        if(*new_count < 0) return FALSE;
+    }
+    if(pos >= size || line[pos] != ' ') return FALSE;
+    pos = pos + 1;
+    if(pos >= size || line[pos] != '@') return FALSE;
+    pos = pos + 1;
+    if(pos >= size || line[pos] != '@') return FALSE;
+    pos = pos + 1;
+    if(pos < size && line[pos] != ' ' && line[pos] != '\t' &&
+       line[pos] != '\n' && line[pos] != '\r') return FALSE;
+    return TRUE;
+}
+
+int line_offset(char *buffer, int size, int line_number) {
+    int pos;
+    int line;
+    if(line_number <= 1) {
+        return 0;
+    }
+    pos = 0;
+    line = 1;
+    while(pos < size && line < line_number) {
+        if(buffer[pos] == '\n') {
+            line = line + 1;
+        }
+        pos = pos + 1;
+    }
+    return pos;
+}
+
+int remove_trailing_newline(char *buffer, int size) {
+    if(size <= 0) {
+        return size;
+    }
+    if(buffer[size - 1] == '\n') {
+        buffer[size - 1] = 0;
+        return size - 1;
+    }
+    return size;
 }
