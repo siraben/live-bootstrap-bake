@@ -17,8 +17,9 @@ new file mode 100644
 index 0000000..e97e82e
 --- /dev/null
 +++ b/mescc-tools-extra.bake
-@@ -0,0 +1,5 @@
-+: all sha256sum match mkdir untar ungz unbz2 unxz catm cp chmod rm replace wrap
+@@ -0,0 +1,6 @@
++: all tools wrap
++: tools sha256sum match mkdir untar ungz unbz2 unxz catm cp chmod rm replace
 +: sha256sum match mkdir untar ungz unbz2 unxz catm cp chmod rm replace wrap :
 +export M2LIBC_PATH ${M2LIBC}
 +export PATH ${TOOLS}
