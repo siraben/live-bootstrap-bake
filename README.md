@@ -113,4 +113,5 @@ applying the patch stack.
   pre-bash packages.
 
 For the currently covered package wrappers, the recipe layer goes from 2037
-lines of `pass1.kaem` to 790 lines of `pass1.bake`.
+lines of `pass1.kaem` to 742 lines of `pass1.bake`. Fiwix and lwext4 now use
+their upstream Makefiles after small bootstrap-environment patches.

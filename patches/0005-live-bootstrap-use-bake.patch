@@ -670,6 +670,12 @@ index 5fd7449..0000000
 -./script-generator /steps/manifest
 -
 -kaem --file /steps/0.sh
+diff --git a/seed/stage0-posix b/seed/stage0-posix
+--- a/seed/stage0-posix
++++ b/seed/stage0-posix
+@@ -1 +1 @@
+-Subproject commit 45d90f5955b6907dc6cdea9ebafce558359edcd3
++Subproject commit 45d90f5955b6907dc6cdea9ebafce558359edcd3-dirty
 diff --git a/steps/bash-2.05b/pass1.bake b/steps/bash-2.05b/pass1.bake
 new file mode 100644
 index 0000000..f659fcd
@@ -821,66 +827,395 @@ index 0000000..a8fd890
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/fiwix-1.5.0-lb1/pass1.bake b/steps/fiwix-1.5.0-lb1/pass1.bake
 new file mode 100644
-index 0000000..adb6d00
+index 0000000..091376c
 --- /dev/null
 +++ b/steps/fiwix-1.5.0-lb1/pass1.bake
-@@ -0,0 +1,56 @@
+@@ -0,0 +1,27 @@
 +: all build checksum
 +
-+= KINC -I/${SRCDIR}/${pkg}/build/${pkg}/include
-+= KDEF -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__="tcc"
-+= KCBASE -m32 -march=i386 -std=c89 ${KDEF}
-+= KCFLAGS ${KCBASE} ${KINC} -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes
-+= KASFLAGS ${KCBASE} -traditional ${KINC}
-+= KERNEL_OBJS kernel/boot.o kernel/core386.o kernel/main.o kernel/init.o kernel/gdt.o kernel/idt.o kernel/syscalls.o kernel/pic.o kernel/pit.o kernel/irq.o kernel/traps.o kernel/cpu.o kernel/cmos.o kernel/timer.o kernel/sched.o kernel/sleep.o kernel/signal.o kernel/process.o kernel/multiboot.o kernel/kexec.o
-+= KERNEL_SYSCALLS_OBJS kernel/syscalls/umount.o kernel/syscalls/getgid.o kernel/syscalls/getppid.o kernel/syscalls/fstatfs.o kernel/syscalls/getgroups.o kernel/syscalls/fsync.o kernel/syscalls/setreuid.o kernel/syscalls/newuname.o kernel/syscalls/fork.o kernel/syscalls/setitimer.o kernel/syscalls/fdatasync.o kernel/syscalls/chmod.o kernel/syscalls/mmap2.o kernel/syscalls/msgsnd.o kernel/syscalls/exit.o kernel/syscalls/readlink.o kernel/syscalls/socketcall.o kernel/syscalls/stat64.o kernel/syscalls/readv.o kernel/syscalls/sigaction.o kernel/syscalls/fstat.o kernel/syscalls/waitpid.o kernel/syscalls/setfsgid.o kernel/syscalls/chown.o kernel/syscalls/flock.o kernel/syscalls/uname.o kernel/syscalls/lseek.o kernel/syscalls/setsid.o kernel/syscalls/settimeofday.o kernel/syscalls/unlink.o kernel/syscalls/sigprocmask.o kernel/syscalls/ustat.o kernel/syscalls/open.o kernel/syscalls/sync.o kernel/syscalls/iopl.o kernel/syscalls/msgget.o kernel/syscalls/pipe.o kernel/syscalls/shmdt.o kernel/syscalls/getsid.o kernel/syscalls/setfsuid.o kernel/syscalls/signal.o kernel/syscalls/newfstat.o kernel/syscalls/mkdir.o kernel/syscalls/getcwd.o kernel/syscalls/link.o kernel/syscalls/msgctl.o kernel/syscalls/sethostname.o kernel/syscalls/semctl.o kernel/syscalls/sysinfo.o kernel/syscalls/setdomainname.o kernel/syscalls/getegid.o kernel/syscalls/personality.o kernel/syscalls/setregid.o kernel/syscalls/setgid.o kernel/syscalls/lstat.o kernel/syscalls/getuid.o kernel/syscalls/llseek.o kernel/syscalls/select.o kernel/syscalls/ftruncate.o kernel/syscalls/getpgid.o kernel/syscalls/brk.o kernel/syscalls/getrusage.o kernel/syscalls/sigsuspend.o kernel/syscalls/writev.o kernel/syscalls/times.o kernel/syscalls/ssetmask.o kernel/syscalls/stat.o kernel/syscalls/fchdir.o kernel/syscalls/chdir.o kernel/syscalls/setgroups.o kernel/syscalls/newstat.o kernel/syscalls/creat.o kernel/syscalls/getdents64.o kernel/syscalls/getpid.o kernel/syscalls/read.o kernel/syscalls/dup.o kernel/syscalls/utimes.o kernel/syscalls/semget.o kernel/syscalls/mount.o kernel/syscalls/rmdir.o kernel/syscalls/setrlimit.o kernel/syscalls/sgetmask.o kernel/syscalls/pause.o kernel/syscalls/utime.o kernel/syscalls/statfs.o kernel/syscalls/ioperm.o kernel/syscalls/ftime.o kernel/syscalls/truncate.o kernel/syscalls/old_mmap.o kernel/syscalls/olduname.o kernel/syscalls/kill.o kernel/syscalls/gettimeofday.o kernel/syscalls/fchmod.o kernel/syscalls/fcntl64.o kernel/syscalls/mprotect.o kernel/syscalls/getitimer.o kernel/syscalls/old_select.o kernel/syscalls/symlink.o kernel/syscalls/mknod.o kernel/syscalls/write.o kernel/syscalls/rename.o kernel/syscalls/shmat.o kernel/syscalls/ipc.o kernel/syscalls/lstat64.o kernel/syscalls/access.o kernel/syscalls/getrlimit.o kernel/syscalls/sigreturn.o kernel/syscalls/ioctl.o kernel/syscalls/umask.o kernel/syscalls/geteuid.o kernel/syscalls/munmap.o kernel/syscalls/alarm.o kernel/syscalls/nanosleep.o kernel/syscalls/close.o kernel/syscalls/chroot.o kernel/syscalls/ftruncate64.o kernel/syscalls/truncate64.o kernel/syscalls/msgrcv.o kernel/syscalls/umount2.o kernel/syscalls/time.o kernel/syscalls/stime.o kernel/syscalls/semop.o kernel/syscalls/newlstat.o kernel/syscalls/sigpending.o kernel/syscalls/reboot.o kernel/syscalls/setuid.o kernel/syscalls/wait4.o kernel/syscalls/chown32.o kernel/syscalls/fcntl.o kernel/syscalls/fstat64.o kernel/syscalls/shmctl.o kernel/syscalls/dup2.o kernel/syscalls/setpgid.o kernel/syscalls/getdents.o kernel/syscalls/getpgrp.o kernel/syscalls/fchown.o kernel/syscalls/execve.o kernel/syscalls/shmget.o kernel/syscalls/lchown.o
-+= MM_OBJS mm/bios_map.o mm/buddy_low.o mm/memory.o mm/page.o mm/alloc.o mm/fault.o mm/mmap.o mm/swapper.o
-+= FS_OBJS fs/filesystems.o fs/devices.o fs/buffer.o fs/fd.o fs/locks.o fs/super.o fs/inode.o fs/namei.o fs/elf.o fs/script.o
-+= FS_MINIX_OBJS fs/minix/super.o fs/minix/bitmaps.o fs/minix/inode.o fs/minix/namei.o fs/minix/symlink.o fs/minix/dir.o fs/minix/file.o fs/minix/v1_inode.o fs/minix/v2_inode.o
-+= FS_EXT2_OBJS fs/ext2/inode.o fs/ext2/super.o fs/ext2/namei.o fs/ext2/symlink.o fs/ext2/dir.o fs/ext2/file.o fs/ext2/bitmaps.o
-+= FS_PIPEFS_OBJS fs/pipefs/super.o fs/pipefs/fifo.o fs/pipefs/pipe.o
-+= FS_ISO9660_OBJS fs/iso9660/inode.o fs/iso9660/super.o fs/iso9660/namei.o fs/iso9660/dir.o fs/iso9660/file.o fs/iso9660/rrip.o fs/iso9660/symlink.o
-+= FS_PROCFS_OBJS fs/procfs/super.o fs/procfs/inode.o fs/procfs/namei.o fs/procfs/dir.o fs/procfs/file.o fs/procfs/symlink.o fs/procfs/tree.o fs/procfs/data.o
-+= DRIVERS_CHAR_OBJS drivers/char/console.o drivers/char/tty.o drivers/char/tty_queue.o drivers/char/vt.o drivers/char/defkeymap.o drivers/char/keyboard.o drivers/char/memdev.o drivers/char/serial.o drivers/char/lp.o drivers/char/fb.o drivers/char/sysrq.o
-+= DRIVERS_BLOCK_OBJS drivers/block/dma.o drivers/block/floppy.o drivers/block/part.o drivers/block/ata.o drivers/block/ata_hd.o drivers/block/ata_pci.o drivers/block/atapi.o drivers/block/atapi_cd.o drivers/block/ramdisk.o
-+= DRIVERS_PCI_OBJS drivers/pci/pci.o
-+= DRIVERS_VIDEO_OBJS drivers/video/video.o drivers/video/vgacon.o drivers/video/fbcon.o drivers/video/fonts.o drivers/video/bga.o
-+= LIB_OBJS lib/ctype.o lib/strings.o lib/printk.o
-+= FIWIX_OBJS ${KERNEL_OBJS} ${KERNEL_SYSCALLS_OBJS} ${MM_OBJS} ${FS_OBJS} ${FS_MINIX_OBJS} ${FS_EXT2_OBJS} ${FS_PIPEFS_OBJS} ${FS_ISO9660_OBJS} ${FS_PROCFS_OBJS} ${DRIVERS_CHAR_OBJS} ${DRIVERS_BLOCK_OBJS} ${DRIVERS_PCI_OBJS} ${DRIVERS_VIDEO_OBJS} ${LIB_OBJS}
-+
-+: build /boot/fiwix
-+
-+: setup
++: build
 +checksum-transcriber sources
 +sha256sum -c sources.SHA256SUM
 +mkdir build
 +cd build
 +ungz --file ${DISTFILES}/${pkg}.tar.gz --output ${pkg}.tar
 +untar --file ${pkg}.tar
++rm ${pkg}.tar
 +cd ${pkg}
 +cp ../../files/custom_config.h include/fiwix
 +cp ../../files/custom_limits.h include/fiwix
 +cp ../../files/custom_kernel.h include/fiwix
 +cp ../../files/custom_system.h include/fiwix
-+
-+: kernel/boot.o kernel/boot.S setup
-+tcc ${KASFLAGS} -c -o $@ $<
-+
-+: kernel/core386.o kernel/core386.S setup
-+tcc ${KASFLAGS} -c -o $@ $<
-+
-+: %.o %.c setup
-+tcc ${KCFLAGS} -c -o $@ $<
-+
-+: /boot/fiwix ${FIWIX_OBJS}
++simple-patch -Np1 -i ../../patches/live-bootstrap-make.patch
++export CONFFLAGS -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H
++make CCEXE=tcc TEXTADDR=0x80100000 TOPDIR=/${SRCDIR}/${pkg}/build/${pkg}
 +mkdir /boot
-+tcc -m32 -Wl,-Ttext=0x80100000 -static -nostdlib -nostdinc ${FIWIX_OBJS} -o $@
++cp fiwix /boot/fiwix
++chmod 755 /boot/fiwix
++cd ../..
 +
 +: checksum build
-+cd ../..
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /boot/fiwix
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/fiwix-1.5.0-lb1/patches/live-bootstrap-make.patch b/steps/fiwix-1.5.0-lb1/patches/live-bootstrap-make.patch
+new file mode 100644
+index 0000000..d20e1f1
+--- /dev/null
++++ b/steps/fiwix-1.5.0-lb1/patches/live-bootstrap-make.patch
+@@ -0,0 +1,352 @@
++diff -ruN src/Makefile mod/Makefile
++--- src/Makefile	2024-01-06 09:16:32.000000000 -0800
+++++ mod/Makefile	2026-06-09 17:37:02.320117989 -0700
++@@ -4,9 +4,9 @@
++ # Distributed under the terms of the Fiwix License.
++ #
++ 
++-TOPDIR := $(shell if [ "$$PWD" != "" ] ; then echo $$PWD ; else pwd ; fi)
+++TOPDIR = .
++ INCLUDE = $(TOPDIR)/include
++-TMPFILE := $(shell mktemp)
+++TMPFILE = fiwix.ld.tmp
++ 
++ ARCH = -m32
++ CPU = -march=i386
++@@ -43,31 +43,297 @@
++ 	drivers/block \
++ 	drivers/pci \
++ 	drivers/video \
++-	net \
++ 	lib
++ 
++-OBJS = 	kernel/*.o \
++-	kernel/syscalls/*.o \
++-	mm/*.o \
++-	fs/*.o \
++-	fs/ext2/*.o \
++-	fs/iso9660/*.o \
++-	fs/minix/*.o \
++-	fs/pipefs/*.o \
++-	fs/procfs/*.o \
++-	fs/sockfs/*.o \
++-	drivers/char/*.o \
++-	drivers/block/*.o \
++-	drivers/pci/*.o \
++-	drivers/video/*.o \
++-	net/*.o \
++-	lib/*.o
+++OBJS = 	kernel/boot.o \
+++	kernel/core386.o \
+++	kernel/main.o kernel/init.o \
+++	kernel/gdt.o \
+++	kernel/idt.o \
+++	kernel/syscalls.o \
+++	kernel/pic.o \
+++	kernel/pit.o \
+++	kernel/irq.o \
+++	kernel/traps.o \
+++	kernel/cpu.o \
+++	kernel/cmos.o \
+++	kernel/timer.o \
+++	kernel/sched.o \
+++	kernel/sleep.o \
+++	kernel/signal.o \
+++	kernel/process.o \
+++	kernel/multiboot.o \
+++	kernel/kexec.o \
+++	kernel/syscalls/umount.o \
+++	kernel/syscalls/getgid.o \
+++	kernel/syscalls/getppid.o \
+++	kernel/syscalls/fstatfs.o \
+++	kernel/syscalls/getgroups.o \
+++	kernel/syscalls/fsync.o \
+++	kernel/syscalls/setreuid.o \
+++	kernel/syscalls/newuname.o \
+++	kernel/syscalls/fork.o \
+++	kernel/syscalls/setitimer.o \
+++	kernel/syscalls/fdatasync.o \
+++	kernel/syscalls/chmod.o \
+++	kernel/syscalls/mmap2.o \
+++	kernel/syscalls/msgsnd.o \
+++	kernel/syscalls/exit.o \
+++	kernel/syscalls/readlink.o \
+++	kernel/syscalls/socketcall.o \
+++	kernel/syscalls/stat64.o \
+++	kernel/syscalls/readv.o \
+++	kernel/syscalls/sigaction.o \
+++	kernel/syscalls/fstat.o \
+++	kernel/syscalls/waitpid.o \
+++	kernel/syscalls/setfsgid.o \
+++	kernel/syscalls/chown.o \
+++	kernel/syscalls/flock.o \
+++	kernel/syscalls/uname.o \
+++	kernel/syscalls/lseek.o \
+++	kernel/syscalls/setsid.o \
+++	kernel/syscalls/settimeofday.o \
+++	kernel/syscalls/unlink.o \
+++	kernel/syscalls/sigprocmask.o \
+++	kernel/syscalls/ustat.o \
+++	kernel/syscalls/open.o \
+++	kernel/syscalls/sync.o \
+++	kernel/syscalls/iopl.o \
+++	kernel/syscalls/msgget.o \
+++	kernel/syscalls/pipe.o \
+++	kernel/syscalls/shmdt.o \
+++	kernel/syscalls/getsid.o \
+++	kernel/syscalls/setfsuid.o \
+++	kernel/syscalls/signal.o \
+++	kernel/syscalls/newfstat.o \
+++	kernel/syscalls/mkdir.o \
+++	kernel/syscalls/getcwd.o \
+++	kernel/syscalls/link.o \
+++	kernel/syscalls/msgctl.o \
+++	kernel/syscalls/sethostname.o \
+++	kernel/syscalls/semctl.o \
+++	kernel/syscalls/sysinfo.o \
+++	kernel/syscalls/setdomainname.o \
+++	kernel/syscalls/getegid.o \
+++	kernel/syscalls/personality.o \
+++	kernel/syscalls/setregid.o \
+++	kernel/syscalls/setgid.o \
+++	kernel/syscalls/lstat.o \
+++	kernel/syscalls/getuid.o \
+++	kernel/syscalls/llseek.o \
+++	kernel/syscalls/select.o \
+++	kernel/syscalls/ftruncate.o \
+++	kernel/syscalls/getpgid.o \
+++	kernel/syscalls/brk.o \
+++	kernel/syscalls/getrusage.o \
+++	kernel/syscalls/sigsuspend.o \
+++	kernel/syscalls/writev.o \
+++	kernel/syscalls/times.o \
+++	kernel/syscalls/ssetmask.o \
+++	kernel/syscalls/stat.o \
+++	kernel/syscalls/fchdir.o \
+++	kernel/syscalls/chdir.o \
+++	kernel/syscalls/setgroups.o \
+++	kernel/syscalls/newstat.o \
+++	kernel/syscalls/creat.o \
+++	kernel/syscalls/getdents64.o \
+++	kernel/syscalls/getpid.o \
+++	kernel/syscalls/read.o \
+++	kernel/syscalls/dup.o \
+++	kernel/syscalls/utimes.o \
+++	kernel/syscalls/semget.o \
+++	kernel/syscalls/mount.o \
+++	kernel/syscalls/rmdir.o \
+++	kernel/syscalls/setrlimit.o \
+++	kernel/syscalls/sgetmask.o \
+++	kernel/syscalls/pause.o \
+++	kernel/syscalls/utime.o \
+++	kernel/syscalls/statfs.o \
+++	kernel/syscalls/ioperm.o \
+++	kernel/syscalls/ftime.o \
+++	kernel/syscalls/truncate.o \
+++	kernel/syscalls/old_mmap.o \
+++	kernel/syscalls/olduname.o \
+++	kernel/syscalls/kill.o \
+++	kernel/syscalls/gettimeofday.o \
+++	kernel/syscalls/fchmod.o \
+++	kernel/syscalls/fcntl64.o \
+++	kernel/syscalls/mprotect.o \
+++	kernel/syscalls/getitimer.o \
+++	kernel/syscalls/old_select.o \
+++	kernel/syscalls/symlink.o \
+++	kernel/syscalls/mknod.o \
+++	kernel/syscalls/write.o \
+++	kernel/syscalls/rename.o \
+++	kernel/syscalls/shmat.o \
+++	kernel/syscalls/ipc.o \
+++	kernel/syscalls/lstat64.o \
+++	kernel/syscalls/access.o \
+++	kernel/syscalls/getrlimit.o \
+++	kernel/syscalls/sigreturn.o \
+++	kernel/syscalls/ioctl.o \
+++	kernel/syscalls/umask.o \
+++	kernel/syscalls/geteuid.o \
+++	kernel/syscalls/munmap.o \
+++	kernel/syscalls/alarm.o \
+++	kernel/syscalls/nanosleep.o \
+++	kernel/syscalls/close.o \
+++	kernel/syscalls/chroot.o \
+++	kernel/syscalls/ftruncate64.o \
+++	kernel/syscalls/truncate64.o \
+++	kernel/syscalls/msgrcv.o \
+++	kernel/syscalls/umount2.o \
+++	kernel/syscalls/time.o \
+++	kernel/syscalls/stime.o \
+++	kernel/syscalls/semop.o \
+++	kernel/syscalls/newlstat.o \
+++	kernel/syscalls/sigpending.o \
+++	kernel/syscalls/reboot.o \
+++	kernel/syscalls/setuid.o \
+++	kernel/syscalls/wait4.o \
+++	kernel/syscalls/chown32.o \
+++	kernel/syscalls/fcntl.o \
+++	kernel/syscalls/fstat64.o \
+++	kernel/syscalls/shmctl.o \
+++	kernel/syscalls/dup2.o \
+++	kernel/syscalls/setpgid.o \
+++	kernel/syscalls/getdents.o \
+++	kernel/syscalls/getpgrp.o \
+++	kernel/syscalls/fchown.o \
+++	kernel/syscalls/execve.o \
+++	kernel/syscalls/shmget.o \
+++	kernel/syscalls/lchown.o \
+++	mm/bios_map.o \
+++	mm/buddy_low.o \
+++	mm/memory.o \
+++	mm/page.o \
+++	mm/alloc.o \
+++	mm/fault.o \
+++	mm/mmap.o \
+++	mm/swapper.o \
+++	fs/filesystems.o \
+++	fs/devices.o \
+++	fs/buffer.o \
+++	fs/fd.o \
+++	fs/locks.o \
+++	fs/super.o \
+++	fs/inode.o \
+++	fs/namei.o \
+++	fs/elf.o \
+++	fs/script.o \
+++	fs/minix/super.o \
+++	fs/minix/bitmaps.o \
+++	fs/minix/inode.o \
+++	fs/minix/namei.o \
+++	fs/minix/symlink.o \
+++	fs/minix/dir.o \
+++	fs/minix/file.o \
+++	fs/minix/v1_inode.o \
+++	fs/minix/v2_inode.o \
+++	fs/ext2/inode.o \
+++	fs/ext2/super.o \
+++	fs/ext2/namei.o \
+++	fs/ext2/symlink.o \
+++	fs/ext2/dir.o \
+++	fs/ext2/file.o \
+++	fs/ext2/bitmaps.o \
+++	fs/pipefs/super.o \
+++	fs/pipefs/fifo.o \
+++	fs/pipefs/pipe.o \
+++	fs/iso9660/inode.o \
+++	fs/iso9660/super.o \
+++	fs/iso9660/namei.o \
+++	fs/iso9660/dir.o \
+++	fs/iso9660/file.o \
+++	fs/iso9660/rrip.o \
+++	fs/iso9660/symlink.o \
+++	fs/procfs/super.o \
+++	fs/procfs/inode.o \
+++	fs/procfs/namei.o \
+++	fs/procfs/dir.o \
+++	fs/procfs/file.o \
+++	fs/procfs/symlink.o \
+++	fs/procfs/tree.o \
+++	fs/procfs/data.o \
+++	drivers/char/console.o \
+++	drivers/char/tty.o \
+++	drivers/char/tty_queue.o \
+++	drivers/char/vt.o \
+++	drivers/char/defkeymap.o \
+++	drivers/char/keyboard.o \
+++	drivers/char/memdev.o \
+++	drivers/char/serial.o \
+++	drivers/char/lp.o \
+++	drivers/char/fb.o \
+++	drivers/char/sysrq.o \
+++	drivers/block/dma.o \
+++	drivers/block/floppy.o \
+++	drivers/block/part.o \
+++	drivers/block/ata.o \
+++	drivers/block/ata_hd.o \
+++	drivers/block/ata_pci.o \
+++	drivers/block/atapi.o \
+++	drivers/block/atapi_cd.o \
+++	drivers/block/ramdisk.o \
+++	drivers/pci/pci.o \
+++	drivers/video/video.o \
+++	drivers/video/vgacon.o \
+++	drivers/video/fbcon.o \
+++	drivers/video/fonts.o \
+++	drivers/video/bga.o \
+++	lib/ctype.o \
+++	lib/strings.o \
+++	lib/printk.o
++ 
++ export CC LD CFLAGS LDFLAGS INCLUDE
++ 
++-all:
++-	@echo "#define UTS_VERSION \"`date -u`\"" > include/fiwix/version.h
++-	@for n in $(DIRS) ; do (cd $$n ; $(MAKE)) || exit ; done
+++all: kernel-dir kernel-syscalls-dir mm-dir fs-dir fs-minix-dir fs-ext2-dir fs-pipefs-dir fs-iso9660-dir fs-procfs-dir drivers-char-dir drivers-block-dir drivers-pci-dir drivers-video-dir lib-dir fiwix
+++
+++.PHONY: all kernel-dir kernel-syscalls-dir mm-dir fs-dir fs-minix-dir fs-ext2-dir fs-pipefs-dir fs-iso9660-dir fs-procfs-dir drivers-char-dir drivers-block-dir drivers-pci-dir drivers-video-dir lib-dir
+++
+++kernel-dir:
+++	$(MAKE) -C kernel
+++
+++kernel-syscalls-dir:
+++	$(MAKE) -C kernel/syscalls
+++
+++mm-dir:
+++	$(MAKE) -C mm
+++
+++fs-dir:
+++	$(MAKE) -C fs
+++
+++fs-minix-dir:
+++	$(MAKE) -C fs/minix
+++
+++fs-ext2-dir:
+++	$(MAKE) -C fs/ext2
+++
+++fs-pipefs-dir:
+++	$(MAKE) -C fs/pipefs
+++
+++fs-iso9660-dir:
+++	$(MAKE) -C fs/iso9660
+++
+++fs-procfs-dir:
+++	$(MAKE) -C fs/procfs
+++
+++drivers-char-dir:
+++	$(MAKE) -C drivers/char
+++
+++drivers-block-dir:
+++	$(MAKE) -C drivers/block
+++
+++drivers-pci-dir:
+++	$(MAKE) -C drivers/pci
+++
+++drivers-video-dir:
+++	$(MAKE) -C drivers/video
+++
+++lib-dir:
+++	$(MAKE) -C lib
+++
+++fiwix:
++ ifeq ($(CCEXE),gcc)
++ 	$(CPP) $(CONFFLAGS) fiwix.ld > $(TMPFILE)
++ 	$(LD) -N -T $(TMPFILE) $(LDFLAGS) $(OBJS) -L$(LIBGCC) -lgcc -o fiwix
++diff -ruN src/fs/Makefile mod/fs/Makefile
++--- src/fs/Makefile	2024-01-06 09:16:32.000000000 -0800
+++++ mod/fs/Makefile	2026-06-09 17:37:02.331118183 -0700
++@@ -9,14 +9,12 @@
++ .c.o:
++ 	$(CC) $(CFLAGS) -c -o $@ $<
++ 
++-FSDIRS = minix ext2 pipefs iso9660 procfs sockfs
+++FSDIRS = minix ext2 pipefs iso9660 procfs
++ OBJS = filesystems.o devices.o buffer.o fd.o locks.o super.o inode.o \
++ 	namei.o elf.o script.o
++ 
++ all:	$(OBJS)
++-	@for n in $(FSDIRS) ; do (cd $$n ; $(MAKE)) ; done
++ 
++ clean:
++-	@for n in $(FSDIRS) ; do (cd $$n ; $(MAKE) clean) ; done
++ 	rm -f *.o
++ 
 diff --git a/steps/gzip-1.2.4/pass1.bake b/steps/gzip-1.2.4/pass1.bake
 new file mode 100644
 index 0000000..1a42af1
@@ -1004,52 +1339,82 @@ index 4cd3de7..ff63b57 100644
  			initrd_filename = argv[i];
 diff --git a/steps/lwext4-1.0.0-lb1/pass1.bake b/steps/lwext4-1.0.0-lb1/pass1.bake
 new file mode 100644
-index 0000000..7ad0ab7
+index 0000000..f4f7489
 --- /dev/null
 +++ b/steps/lwext4-1.0.0-lb1/pass1.bake
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,24 @@
 +: all build checksum
 +
-+= LWEXT4_FLAGS -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include
-+= LWEXT4_OBJS ext4.o ext4_balloc.o ext4_bcache.o ext4_bitmap.o ext4_block_group.o ext4_blockdev.o ext4_crc32.o ext4_debug.o ext4_dir.o ext4_dir_idx.o ext4_extent.o ext4_fs.o ext4_hash.o ext4_ialloc.o ext4_inode.o ext4_journal.o ext4_mbr.o ext4_mkfs.o ext4_super.o ext4_trans.o ext4_xattr.o
-+= INITRD_OBJS ${LWEXT4_OBJS} ../blockdev/linux/file_dev.o make_fiwix_initrd.o
-+
-+: build ${BINDIR}/make_fiwix_initrd
-+
-+: setup
++: build
++checksum-transcriber sources
++sha256sum -c sources.SHA256SUM
 +mkdir build
 +cd build
 +ungz --file ${DISTFILES}/${pkg}.tar.gz --output ${pkg}.tar
 +untar --file ${pkg}.tar
++rm ${pkg}.tar
 +cd ${pkg}
 +mkdir -p build_generic/include/generated
 +catm build_generic/include/generated/ext4_config.h ../../config/ext4_config.h
 +cp ../../files/make_fiwix_initrd.c src/make_fiwix_initrd.c
-+
-+: %.o %.c setup
-+cd src
-+tcc ${LWEXT4_FLAGS} -c -o $@ $<
-+cd ..
-+
-+: make_fiwix_initrd.o make_fiwix_initrd.c setup
-+cd src
-+tcc ${LWEXT4_FLAGS} -DVERSION="1.0" -c -o make_fiwix_initrd.o make_fiwix_initrd.c
-+cd ..
-+
-+: ../blockdev/linux/file_dev.o blockdev/linux/file_dev.c setup
-+cd blockdev/linux
-+tcc -m32 -march=i386 -std=c89 -I../../include -I../../build_generic/include -I../../../tcc/tcc-0.9.27/include -DVERSION="1.0" -c -o file_dev.o file_dev.c
++simple-patch -Np1 -i ../../patches/make-fiwix-initrd.patch
++make make_fiwix_initrd
++cp make_fiwix_initrd ${BINDIR}/make_fiwix_initrd
++chmod 755 ${BINDIR}/make_fiwix_initrd
 +cd ../..
-+
-+: ${BINDIR}/make_fiwix_initrd ${INITRD_OBJS}
-+cd src
-+tcc -m32 -o $@ ${INITRD_OBJS}
-+cd ../../..
 +
 +: checksum build
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/make_fiwix_initrd
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/lwext4-1.0.0-lb1/patches/make-fiwix-initrd.patch b/steps/lwext4-1.0.0-lb1/patches/make-fiwix-initrd.patch
+new file mode 100644
+index 0000000..a07b47a
+--- /dev/null
++++ b/steps/lwext4-1.0.0-lb1/patches/make-fiwix-initrd.patch
+@@ -0,0 +1,42 @@
++diff -ruN src/lwext4-1.0.0-lb1/Makefile mod/lwext4-1.0.0-lb1/Makefile
++--- a/Makefile	2023-02-28 06:33:35.000000000 -0800
+++++ b/Makefile	2026-06-09 16:56:07.991374563 -0700
++@@ -3,9 +3,7 @@
++ #Debug
++ BUILD_TYPE = Release
++ 
++-ifneq ($(shell test -d .git), 0)
++-GIT_SHORT_HASH:= $(shell git rev-parse --short HEAD)
++-endif
+++GIT_SHORT_HASH =
++ 
++ VERSION_MAJOR = 1
++ VERSION_MINOR = 0
++@@ -78,7 +76,27 @@
++ include fs_test.mk
++ 
++ 
+++CC = tcc
+++
+++LWEXT4_FLAGS = -m32 -march=i386 -std=c89 -Iinclude -Ibuild_generic/include -I../../tcc/tcc-0.9.27/include
+++LWEXT4_OBJS = src/ext4.o src/ext4_balloc.o src/ext4_bcache.o src/ext4_bitmap.o src/ext4_block_group.o src/ext4_blockdev.o src/ext4_crc32.o src/ext4_debug.o src/ext4_dir.o src/ext4_dir_idx.o src/ext4_extent.o src/ext4_fs.o src/ext4_hash.o src/ext4_ialloc.o src/ext4_inode.o src/ext4_journal.o src/ext4_mbr.o src/ext4_mkfs.o src/ext4_super.o src/ext4_trans.o src/ext4_xattr.o
+++INITRD_OBJS = $(LWEXT4_OBJS) blockdev/linux/file_dev.o src/make_fiwix_initrd.o
+++
+++.PHONY: make_fiwix_initrd
+++make_fiwix_initrd: $(INITRD_OBJS)
+++	$(CC) -m32 -o $@ $(INITRD_OBJS)
+++
+++src/%.o: src/%.c
+++	$(CC) $(LWEXT4_FLAGS) -c -o $@ $<
+++
+++src/make_fiwix_initrd.o: src/make_fiwix_initrd.c
+++	$(CC) $(LWEXT4_FLAGS) -DVERSION=\"1.0\" -c -o $@ $<
+++
+++blockdev/linux/file_dev.o: blockdev/linux/file_dev.c
+++	$(CC) -m32 -march=i386 -std=c89 -Iinclude -Ibuild_generic/include -I../../tcc/tcc-0.9.27/include -DVERSION=\"1.0\" -c -o $@ $<
+++
++ 	
++ 
++ 	
++ 	
+++	
 diff --git a/steps/make-3.82/pass1.bake b/steps/make-3.82/pass1.bake
 new file mode 100644
 index 0000000..bf1a60b
@@ -1140,6 +1505,26 @@ index 0000000..bf1a60b
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/make
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/manifest b/steps/manifest
+index 8b99df5..1c654ff 100644
+--- a/steps/manifest
++++ b/steps/manifest
+@@ -36,6 +36,7 @@ build: simple-patch-1.0
+ build: mes-0.27.1
+ build: tcc-0.9.26
+ build: tcc-0.9.27
++build: make-3.82
+ define: BUILD_FIWIX = ( KERNEL_BOOTSTRAP == True || BUILD_KERNELS == True )
+ build: fiwix-1.5.0-lb1 ( BUILD_FIWIX == True )
+ build: lwext4-1.0.0-lb1 ( BUILD_FIWIX == True )
+@@ -43,7 +44,6 @@ build: kexec-fiwix-1.0 ( BUILD_FIWIX == True )
+ jump: fiwix ( KERNEL_BOOTSTRAP == True )
+ improve: reconfigure ( CONFIGURATOR != True )
+ define: JOBS = 1 ( KERNEL_BOOTSTRAP == True )
+-build: make-3.82
+ build: patch-2.5.9
+ build: gzip-1.2.4
+ build: tar-1.12
 diff --git a/steps/mes-0.27.1/pass1.bake b/steps/mes-0.27.1/pass1.bake
 new file mode 100644
 index 0000000..6609040
