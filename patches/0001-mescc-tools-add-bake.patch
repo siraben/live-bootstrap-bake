@@ -1,5 +1,5 @@
 diff --git a/M1-macro.c b/M1-macro.c
-index 32c0e18..e3d9918 100644
+index fb541ed..1cea699 100644
 --- a/M1-macro.c
 +++ b/M1-macro.c
 @@ -91,6 +91,25 @@ int blob_count;

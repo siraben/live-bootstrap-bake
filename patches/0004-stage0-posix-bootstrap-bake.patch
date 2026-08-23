@@ -31,7 +31,7 @@ index 3399ba1..eaff688 100644
  x86/bin/unbz2 \
  x86/bin/unxz \
 diff --git a/x86.answers b/x86.answers
-index 4f57177..ad27e2d 100644
+index 4f57177..18834b5 100644
 --- a/x86.answers
 +++ b/x86.answers
 @@ -1,19 +1,20 @@

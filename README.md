@@ -9,15 +9,16 @@ revisions:
 | project | upstream | base |
 | --- | --- | --- |
 | live-bootstrap | `https://github.com/fosslinux/live-bootstrap.git` | `9a268c4c39cae952b268bc86da342be2175f03d4` |
-| stage0-posix | `https://github.com/oriansj/stage0-posix.git` | `45d90f5955b6907dc6cdea9ebafce558359edcd3` |
-| M2-Planet-pr | `https://github.com/oriansj/M2-Planet.git` | `refs/pull/169/head` |
-| mescc-tools | `https://git.savannah.nongnu.org/git/mescc-tools.git` | `5adfbf3364261a77109878a56b100aeeb6ef9ac4` |
-| mescc-tools-extra | `https://github.com/oriansj/mescc-tools-extra.git` | `refs/pull/30/head` |
-| stage0-posix-x86 | `https://github.com/oriansj/stage0-posix-x86.git` | `3b9c2bb6d4155e4f2e5f642b5e0f59255dfc5934` |
+| stage0-posix | `https://github.com/oriansj/stage0-posix.git` | `643598041bf7639883874fe2cdc9d9693c9b03d5` |
+| M2-Planet | `https://github.com/oriansj/M2-Planet.git` | `34fbd5c2a9b6eb634a4f6ad95158dcd1efcf19e0` (master) |
+| mescc-tools | `https://git.savannah.nongnu.org/git/mescc-tools.git` | `d59464d2641de8a90032ad2456bdb34b4db3436a` (GitHub mirror) |
+| mescc-tools-extra | `https://github.com/oriansj/mescc-tools-extra.git` | `d1d814602d83226c5a5e597e13dc8013a005ce76` (master) |
+| stage0-posix-x86 | `https://github.com/oriansj/stage0-posix-x86.git` | `14721630c8d3e4a7de943e27488d0d582788837f` (master, pinned explicitly) |
 
-The M2-Planet-pr and mescc-tools-extra rows intentionally use PR heads instead
-of local patches: M2-Planet-pr carries the grammar and pointer-arithmetic fixes,
-and mescc-tools-extra removes the matching `wrap.c` workaround.
+Pins track current upstream masters (stage0-posix-x86 is pinned explicitly
+because stage0-posix records an older revision). The patch stack is
+regenerated against these bases; earlier revisions pinned PR heads for
+grammar and wrap-workaround changes that are not needed with these bases.
 
 ## Run
 
