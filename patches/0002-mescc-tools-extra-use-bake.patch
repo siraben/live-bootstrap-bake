@@ -14,7 +14,7 @@ index fd1dee8..13dda27 100644
 +${TOOLS}/bake --file mescc-tools-extra.bake all
 diff --git a/mescc-tools-extra.bake b/mescc-tools-extra.bake
 new file mode 100644
-index 0000000..49868eb
+index 0000000..e97e82e
 --- /dev/null
 +++ b/mescc-tools-extra.bake
 @@ -0,0 +1,6 @@
@@ -74,10 +74,10 @@ index bf70680..0000000
 -CC replace.c -o ${BINDIR}/replace${EXE_SUFFIX}
 -CC wrap.c -o ${BINDIR}/wrap${EXE_SUFFIX}
 diff --git a/mkdir.c b/mkdir.c
-index c316703..eaf50b0 100644
+index 149dd4d..db67d46 100644
 --- a/mkdir.c
 +++ b/mkdir.c
-@@ -62,7 +62,7 @@ void create_dir(char *pathname, int mode)
+@@ -57,7 +57,7 @@ void create_dir(char *pathname, int mode)
  		/* On failure, try creating parent directory. */
  		p = strrchr(pathname, '/');
  

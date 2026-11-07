@@ -1,6 +1,6 @@
 diff --git a/bootstrap.bake b/bootstrap.bake
 new file mode 100644
-index 0000000..2e02fba
+index 0000000..51d0b5f
 --- /dev/null
 +++ b/bootstrap.bake
 @@ -0,0 +1,38 @@
@@ -272,7 +272,7 @@ index 840a88a..0000000
 -cd ..
 diff --git a/mescc-tools-full.bake b/mescc-tools-full.bake
 new file mode 100644
-index 0000000..33a47ae
+index 0000000..3ca49d2
 --- /dev/null
 +++ b/mescc-tools-full.bake
 @@ -0,0 +1,26 @@
@@ -303,10 +303,10 @@ index 0000000..33a47ae
 +./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/M2-pr.hex2 ./${ARCH_DIR}/artifact/M2-pr.M1 ./${ARCH_DIR}/artifact/M2-pr-footer.M1
 +./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/M2-Planet ./${ARCH_DIR}/artifact/M2-pr.hex2
 diff --git a/mescc-tools-mini-kaem.kaem b/mescc-tools-mini-kaem.kaem
-index d9a65e0..a40017d 100644
+index 41916f2..48a9e2c 100644
 --- a/mescc-tools-mini-kaem.kaem
 +++ b/mescc-tools-mini-kaem.kaem
-@@ -291,3 +291,41 @@
+@@ -288,3 +288,41 @@
  	-f ./x86/artifact/kaem.hex2 \
  	--base-address 0x8048000 \
  	-o ./x86/bin/kaem

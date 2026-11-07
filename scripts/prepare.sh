@@ -18,11 +18,10 @@ X86="$STAGE0/x86"
 
 LIVE_REPO=${LIVE_REPO:-https://github.com/fosslinux/live-bootstrap.git}
 LIVE_BASE=${LIVE_BASE:-9a268c4c39cae952b268bc86da342be2175f03d4}
-STAGE0_BASE=${STAGE0_BASE:-643598041bf7639883874fe2cdc9d9693c9b03d5}
-MESCC_BASE=${MESCC_BASE:-d59464d2641de8a90032ad2456bdb34b4db3436a}
-M2_PLANET_REF=${M2_PLANET_REF:-34fbd5c2a9b6eb634a4f6ad95158dcd1efcf19e0}
-MESCC_EXTRA_REF=${MESCC_EXTRA_REF:-d1d814602d83226c5a5e597e13dc8013a005ce76}
-X86_BASE=${X86_BASE:-14721630c8d3e4a7de943e27488d0d582788837f}
+STAGE0_BASE=${STAGE0_BASE:-45d90f5955b6907dc6cdea9ebafce558359edcd3}
+MESCC_BASE=${MESCC_BASE:-5adfbf3364261a77109878a56b100aeeb6ef9ac4}
+M2_PLANET_REF=${M2_PLANET_REF:-refs/pull/169/head}
+MESCC_EXTRA_REF=${MESCC_EXTRA_REF:-refs/pull/30/head}
 
 apply_patch_once() {
 	dir=$1
@@ -49,7 +48,6 @@ git -C "$LIVE" submodule update --init --recursive
 
 git -C "$STAGE0" checkout "$STAGE0_BASE"
 git -C "$STAGE0" submodule update --init --recursive
-git -C "$X86" checkout "$X86_BASE"
 
 git -C "$MESCC" checkout "$MESCC_BASE"
 git -C "$M2_PLANET" fetch origin "$M2_PLANET_REF"
