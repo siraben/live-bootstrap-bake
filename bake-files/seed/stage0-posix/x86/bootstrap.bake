@@ -1,4 +1,4 @@
-: all mescc-tools-full mescc-tools-extra check after
+: all after
 
 = ARCH x86
 = ARCH_DIR x86
@@ -17,10 +17,21 @@
 
 : mescc-tools-extra mescc-tools-full
 cd mescc-tools-extra
-${BINDIR}/bake --file mescc-tools-extra.bake all
+${BINDIR}/bake --file mescc-tools-extra.bake tools
 cd ..
 
-: check mescc-tools-extra
+: M2-Planet-pr mescc-tools-extra
+./${ARCH_DIR}/bin/bake --file ${ARCH_DIR}/mescc-tools-full.bake M2-Planet-pr
+
+: wrap M2-Planet-pr
+cd mescc-tools-extra
+${BINDIR}/bake --file mescc-tools-extra.bake wrap
+cd ..
+
+: M2-Planet wrap
+./${ARCH_DIR}/bin/bake --file ${ARCH_DIR}/mescc-tools-full.bake M2-Planet
+
+: check M2-Planet
 ./${ARCH_DIR}/bin/sha256sum -c ${ARCH}.answers
 
 : after check

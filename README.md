@@ -8,16 +8,29 @@ revisions:
 
 | project | upstream | base |
 | --- | --- | --- |
-| live-bootstrap | `https://github.com/fosslinux/live-bootstrap.git` | `9a268c4c39cae952b268bc86da342be2175f03d4` |
-| stage0-posix | `https://github.com/oriansj/stage0-posix.git` | `45d90f5955b6907dc6cdea9ebafce558359edcd3` |
-| M2-Planet-pr | `https://github.com/oriansj/M2-Planet.git` | `refs/pull/169/head` |
-| mescc-tools | `https://git.savannah.nongnu.org/git/mescc-tools.git` | `5adfbf3364261a77109878a56b100aeeb6ef9ac4` |
-| mescc-tools-extra | `https://github.com/oriansj/mescc-tools-extra.git` | `refs/pull/30/head` |
-| stage0-posix-x86 | `https://github.com/oriansj/stage0-posix-x86.git` | `3b9c2bb6d4155e4f2e5f642b5e0f59255dfc5934` |
+| live-bootstrap | `https://github.com/fosslinux/live-bootstrap.git` | `199086e8d4aaab9e609b5f5eddaa9dfbb375ed1e` |
+| builder-hex0 | `https://github.com/ironmeld/builder-hex0.git` | `b8a2047910d47c62fe65bcd762f6c747c45c7549` |
+| stage0-posix | `https://github.com/oriansj/stage0-posix.git` | `643598041bf7639883874fe2cdc9d9693c9b03d5` |
+| M2-Planet | `https://github.com/oriansj/M2-Planet.git` | `ebfecc2fcb2c66925b94bdd4aa11fd6ac48bb172` |
+| M2-Planet-pr | `https://github.com/oriansj/M2-Planet.git` | `4d2a14d793d6abcc5474b123d7714e6c13f2eac1` (PR #169) |
+| mescc-tools | `https://github.com/oriansj/mescc-tools.git` | `d59464d2641de8a90032ad2456bdb34b4db3436a` |
+| mescc-tools-extra | `https://github.com/oriansj/mescc-tools-extra.git` | `651d4006076ceb9fe6fca17ecf6a4ecb355c6730` (PR #30) |
+| M2libc (all copies) | `https://github.com/oriansj/M2libc.git` | `b83e1243fb28aaf9e56ce53bd1da292d53c4c405` (PR #125) |
+| M2-Mesoplanet | `https://github.com/oriansj/M2-Mesoplanet.git` | `e9d604c1fe3430109939176eb38a5814845380f9` |
+| bootstrap-seeds | `https://github.com/oriansj/bootstrap-seeds.git` | `cedec6b8066d1db229b6c77d42d120a23c6980ed` |
+| stage0-posix-x86 | `https://github.com/oriansj/stage0-posix-x86.git` | `14721630c8d3e4a7de943e27488d0d582788837f` |
+| stage0-posix-amd64 | `https://github.com/oriansj/stage0-posix-amd64.git` | `15535f88e25825f01a0de275b6d45f77e618bd6b` |
+| stage0-posix-aarch64 | `https://github.com/oriansj/stage0-posix-aarch64.git` | `cedcddd24e74d10d0e41dd647e413fd7ee476530` |
+| stage0-posix-armv7l | `https://github.com/oriansj/stage0-posix-armv7l.git` | `ed899b65083d45095b0094a20311bcbf0983aaa8` |
+| stage0-posix-riscv32 | `https://github.com/oriansj/stage0-posix-riscv32.git` | `2135f3203632b5d1bd5239f84bac50eccaeaf74f` |
+| stage0-posix-riscv64 | `https://github.com/oriansj/stage0-posix-riscv64.git` | `7446a846e3e5b97eba5227e4b756f4ef257aa9e5` |
 
-The M2-Planet-pr and mescc-tools-extra rows intentionally use PR heads instead
-of local patches: M2-Planet-pr carries the grammar and pointer-arithmetic fixes,
-and mescc-tools-extra removes the matching `wrap.c` workaround.
+The defaults live in `scripts/pins.sh`; all are immutable commit IDs, including
+snapshots of the still-unmerged PRs. M2-Planet-pr supplies normal pointer
+arithmetic for `wrap`, mescc-tools-extra removes its old workaround, and M2libc
+supplies their runtime fixes. Other projects track the latest upstream default
+branches at the pin refresh. The Nix development environment is pinned separately
+in `flake.lock`. Only the x86 pre-bash path is validated end to end.
 
 ## Run
 
@@ -38,7 +51,22 @@ compiler. It is built by the stage0 path:
 hex0 -> cc_x86 -> M2 -> M1/hex2 -> x86/bin/bake
 ```
 
-The expected successful tail is a checksum line for `/usr/bin/bash`.
+This pin set passed a fresh source preparation and end-to-end build with
+`UPDATE_CHECKSUMS=False`, ending in `/usr/bin/bash: OK`. The resulting bash is
+byte-identical to the existing expected build:
+
+```text
+d6f725a9998443629e9d8496df3ed4a938a9bdc80cd1aab2b31b011b99f0dae4
+```
+
+The Mes recipe unlinks the SRFI-9 destination symlinks before copying their
+referents, avoiding source truncation with the corrected libc stream behavior.
+Shellcheck and a smoke test of the bootstrapped bash also passed.
+
+Use a fresh `WORKDIR` when changing pins, and set the same `WORKDIR` for both
+scripts. `TARGET` selects the generated build directory. To record new build
+checksums during a pin refresh, `UPDATE_CHECKSUMS=True` writes them into that
+target; review them and require a separate clean verifying run afterward.
 
 For a fast harness check without launching the bootstrap, run:
 
@@ -59,25 +87,37 @@ the seed scripts that build `bake`, then `bake` runs through
 useful as broader regression coverage, but they are not needed to measure the
 kaem-to-bake replacement.
 
-The full materialized branch audit currently gives:
+The full materialized branch audit gives:
 
 | area | added | deleted | delta |
 | --- | ---: | ---: | ---: |
-| live-bootstrap seed/steps | 1456 | 2246 | -790 |
-| stage0-posix wrapper | 129 | 227 | -98 |
-| stage0-posix/x86 | 12 | 262 | -250 |
-| stage0-posix/AMD64 | 12 | 262 | -250 |
-| stage0-posix/AArch64 | 12 | 262 | -250 |
-| stage0-posix/riscv32 | 10 | 264 | -254 |
-| stage0-posix/riscv64 | 10 | 260 | -250 |
-| stage0-posix/armv7l | 1 | 1 | 0 |
-| mescc-tools | 954 | 2478 | -1524 |
-| mescc-tools-extra | 8 | 61 | -53 |
-| total | 2604 | 6323 | -3719 |
+| live-bootstrap | 1841 | 275 | +1566 |
+| live-bootstrap/builder-hex0 | 0 | 0 | +0 |
+| stage0-posix | 24 | 21 | +3 |
+| stage0-posix/AArch64 | 0 | 0 | +0 |
+| stage0-posix/AMD64 | 0 | 0 | +0 |
+| stage0-posix/M2-Mesoplanet | 0 | 0 | +0 |
+| stage0-posix/M2-Mesoplanet/M2libc | 0 | 0 | +0 |
+| stage0-posix/M2-Planet | 0 | 0 | +0 |
+| stage0-posix/M2-Planet/M2libc | 0 | 0 | +0 |
+| stage0-posix/M2libc | 0 | 0 | +0 |
+| stage0-posix/armv7l | 0 | 0 | +0 |
+| stage0-posix/bootstrap-seeds | 0 | 0 | +0 |
+| stage0-posix/mescc-tools | 935 | 37 | +898 |
+| stage0-posix/mescc-tools/M2libc | 0 | 0 | +0 |
+| stage0-posix/mescc-tools-extra | 9 | 45 | -36 |
+| stage0-posix/mescc-tools-extra/M2libc | 0 | 0 | +0 |
+| stage0-posix/riscv32 | 0 | 0 | +0 |
+| stage0-posix/riscv64 | 0 | 0 | +0 |
+| stage0-posix/x86 | 103 | 213 | -110 |
+| stage0-posix/M2-Planet-pr | 0 | 0 | +0 |
+| total | 2912 | 591 | +2321 |
 
-The largest reductions are from deleting the full kaem implementation and the
-old simple-patch before/after data. The main costs are `bake.c`, the `.bake`
-recipes, and the standard patch reader.
+These are complete source deltas against each dependency's pinned checkout,
+including retained compatibility sources, not just a wrapper-only comparison.
+The copied PR compiler is compared against its exact archived commit. Gitlinks
+are excluded from their parent rows; nested dependencies are counted separately.
+The main additions are `bake.c`, the `.bake` recipes, and the standard patch reader.
 
 For this standalone repro checkout, after `./scripts/prepare.sh`:
 
@@ -85,8 +125,8 @@ For this standalone repro checkout, after `./scripts/prepare.sh`:
 python3 scripts/loc-audit.py
 ```
 
-prints a numstat table for the prepared `work/live-bootstrap` tree and patched
-submodules.
+prints a numstat table for the complete prepared `work/live-bootstrap` tree and
+all initialized submodules. Set `WORKDIR` when auditing another prepared tree.
 
 ## Patch Layout
 
@@ -105,7 +145,7 @@ applying the patch stack.
 
 `patches/0004-stage0-posix-bootstrap-bake.patch`
 : wires `bake` into the x86 stage0 seed answers, hands the x86 full-tool
-  rebuild from kaem to bake, and records required submodule revisions.
+  rebuild from kaem to bake, and refreshes the tool checksums.
 
 `patches/0005-live-bootstrap-use-bake.patch`
 : teaches `script-generator` to emit bake scripts before bash, replaces the
@@ -113,5 +153,5 @@ applying the patch stack.
   pre-bash packages.
 
 For the currently covered package wrappers, the recipe layer goes from 2037
-lines of `pass1.kaem` to 742 lines of `pass1.bake`. Fiwix and lwext4 now use
+lines of `pass1.kaem` to 744 lines of `pass1.bake`. Fiwix and lwext4 now use
 their upstream Makefiles after small bootstrap-environment patches.

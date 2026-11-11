@@ -1,5 +1,5 @@
 diff --git a/DEVEL.md b/DEVEL.md
-index 44aced6..68658c3 100644
+index e909770..3563da0 100644
 --- a/DEVEL.md
 +++ b/DEVEL.md
 @@ -32,7 +32,6 @@ steps
@@ -49,7 +49,7 @@ index 9b1f8bc..6fa7f62 100755
              self.stage0_posix(kernel_bootstrap)
              self.seed()
 diff --git a/rootfs.py b/rootfs.py
-index 7cbb4bc..3c893e8 100755
+index 33e555d..2f95792 100755
 --- a/rootfs.py
 +++ b/rootfs.py
 @@ -245,9 +245,14 @@ print(shutil.which('chroot'))
@@ -127,6 +127,13 @@ index 348ec23..0000000
 -
 -catm seed-full.kaem /steps/bootstrap.cfg /steps/env seed.kaem
 -kaem --file seed-full.kaem
+diff --git a/seed/configurator.x86.checksums b/seed/configurator.x86.checksums
+index b1f037b..2585273 100644
+--- a/seed/configurator.x86.checksums
++++ b/seed/configurator.x86.checksums
+@@ -1 +1 @@
+-87bd49d43cbd73a12ba50d26d6aa370bdc4b86bbbd7761b4138e3d39d8b307fd  configurator
++57342f1a00827ac1c0f3483626c294b74f145a2015e60fbda9dd5f18e0e07803  configurator
 diff --git a/seed/preseeded.kaem b/seed/preseeded.kaem
 deleted file mode 100755
 index 0d92eaa..0000000
@@ -149,7 +156,7 @@ index 66da31c..5abc933 100644
 -91cced9f6d7bae32b47b8fc456567e73be382fd8b00693b7d3eedd0d52bea890  script-generator
 +28bd503ce7f9933826d244b51e6aa422ab79e40a51f1ba6e62a01fef2a0b8fb6  script-generator
 diff --git a/seed/script-generator.c b/seed/script-generator.c
-index faedd1d..419a04e 100644
+index fe32a8b..a57036f 100644
 --- a/seed/script-generator.c
 +++ b/seed/script-generator.c
 @@ -165,6 +165,51 @@ void output_config(FILE *out) {
@@ -503,12 +510,12 @@ index 4fed61e..31116be 100644
 -13f1d4db2e248fe736ee20ef99826cbdcb28557d5109054869ceff7b6844ade3  script-generator
 +08c1aeb379fcb9d3819bd13561fe1c547f0480b854545561c5f2551cf0a6a58b  script-generator
 diff --git a/seed/script-generator.x86.checksums b/seed/script-generator.x86.checksums
-index 36175af..9b3b9bf 100644
+index 36175af..c890cfd 100644
 --- a/seed/script-generator.x86.checksums
 +++ b/seed/script-generator.x86.checksums
 @@ -1 +1 @@
 -fbec25d987c89e66fd7dd89d780be0629bab84f78ebf1878fd2528fca9e46c45  script-generator
-+45d2f5ed898ccdc8803f0f34c8ae9927ec404cff625ed33950d17d6c74643479  script-generator
++c2e35d28c7704d406a410e1049946c870f23ede832c0f8c3851b54a09e3863ae  script-generator
 diff --git a/seed/seed.bake b/seed/seed.bake
 new file mode 100644
 index 0000000..2643fc8
@@ -670,12 +677,6 @@ index 5fd7449..0000000
 -./script-generator /steps/manifest
 -
 -kaem --file /steps/0.sh
-diff --git a/seed/stage0-posix b/seed/stage0-posix
---- a/seed/stage0-posix
-+++ b/seed/stage0-posix
-@@ -1 +1 @@
--Subproject commit 45d90f5955b6907dc6cdea9ebafce558359edcd3
-+Subproject commit 45d90f5955b6907dc6cdea9ebafce558359edcd3-dirty
 diff --git a/steps/bash-2.05b/pass1.bake b/steps/bash-2.05b/pass1.bake
 new file mode 100644
 index 0000000..f659fcd
@@ -765,6 +766,13 @@ index cf0863f..66571f8 100644
  -	@if ( test -f $(RANLIB) -o -f /usr/bin/ranlib -o \
  -		-f /bin/ranlib -o -f /usr/ccs/bin/ranlib ) ; then \
  -		echo $(RANLIB) libbz2.a ; \
+diff --git a/steps/checksum-transcriber-1.0/checksum-transcriber-1.0.x86.checksums b/steps/checksum-transcriber-1.0/checksum-transcriber-1.0.x86.checksums
+index 269f907..8f857fd 100644
+--- a/steps/checksum-transcriber-1.0/checksum-transcriber-1.0.x86.checksums
++++ b/steps/checksum-transcriber-1.0/checksum-transcriber-1.0.x86.checksums
+@@ -1 +1 @@
+-3b43fcfe665d48c7041292bc78b3de0c5e7fe17fab425837bc5c596856d20bf8  /usr/bin/checksum-transcriber
++ea1594daa0d6046707aeb8a9cf520357860a7cb127ce8e542a377febb94697e3  /usr/bin/checksum-transcriber
 diff --git a/steps/checksum-transcriber-1.0/pass1.bake b/steps/checksum-transcriber-1.0/pass1.bake
 new file mode 100644
 index 0000000..1b40980
@@ -1525,12 +1533,22 @@ index 8b99df5..1c654ff 100644
  build: patch-2.5.9
  build: gzip-1.2.4
  build: tar-1.12
+diff --git a/steps/mes-0.27.1/mes-0.27.1.x86.checksums b/steps/mes-0.27.1/mes-0.27.1.x86.checksums
+index 85e3ffd..a09914d 100644
+--- a/steps/mes-0.27.1/mes-0.27.1.x86.checksums
++++ b/steps/mes-0.27.1/mes-0.27.1.x86.checksums
+@@ -1,4 +1,4 @@
+-62895fcf68b21961e018c797b3144fc86f9dbd5a535776e9e68a01b3fd33de08  /usr/bin/mes-m2
++cb0f415bd12a1ce58b492e47abbf835d42768163cd63f0d0d95605f5c6778c72  /usr/bin/mes-m2
+ 761fe4fbbee5bfd45506ea8dbd0aeecfe8855159bd794e07fca1988109510170  /usr/bin/mescc.scm
+ 234c264965116a24583dd569050adc766d7cc2da83b1db38085210f26031b70c  /usr/lib/x86-mes/crt1.s
+ 494f184a87175abc485a898c250c3831b2b5dcf5aead46591e00b39d1c5529fc  /usr/lib/x86-mes/crt1.o
 diff --git a/steps/mes-0.27.1/pass1.bake b/steps/mes-0.27.1/pass1.bake
 new file mode 100644
-index 0000000..6609040
+index 0000000..0bf1be9
 --- /dev/null
 +++ b/steps/mes-0.27.1/pass1.bake
-@@ -0,0 +1,183 @@
+@@ -0,0 +1,184 @@
 +: all build checksum
 +
 += NYACC_GENERATED module/nyacc/lang/c99/mach.d/c99-act.scm module/nyacc/lang/c99/mach.d/c99-tab.scm module/nyacc/lang/c99/mach.d/c99cx-act.scm module/nyacc/lang/c99/mach.d/c99cx-tab.scm module/nyacc/lang/c99/mach.d/c99x-act.scm module/nyacc/lang/c99/mach.d/c99x-tab.scm module/nyacc/lang/c99/mach.d/cpp-act.scm module/nyacc/lang/c99/mach.d/cpp-tab.scm
@@ -1583,6 +1601,7 @@ index 0000000..6609040
 +cp include/linux/${MES_ARCH}/signal.h include/arch/signal.h
 +cp include/linux/${MES_ARCH}/syscall.h include/arch/syscall.h
 +rm mes/module/mes/psyntax.pp mes/module/mes/psyntax.pp.header
++rm mes/module/srfi/srfi-9.mes mes/module/srfi/srfi-9/gnu.mes
 +cp mes/module/srfi/srfi-9-struct.mes mes/module/srfi/srfi-9.mes
 +cp mes/module/srfi/srfi-9/gnu-struct.mes mes/module/srfi/srfi-9/gnu.mes
 +mkdir -p m2
@@ -1882,12 +1901,12 @@ index f809f45..1991e8e 100644
 -dc72b76c8835b1a08b1ecaa2ab8e9179c290805dd2c8bf3636004f375948c238  /usr/bin/simple-patch
 +69ebc57948328a35bd1b711491c28f81b9e7769de49d5bdb0d4ecb0263c15d2d  /usr/bin/simple-patch
 diff --git a/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums b/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums
-index de5f92d..291fcba 100644
+index de5f92d..34b9593 100644
 --- a/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums
 +++ b/steps/simple-patch-1.0/simple-patch-1.0.x86.checksums
 @@ -1 +1 @@
 -887c9270655ceb8a07b7b244d893ba9d0377d66bacd85b4cf9ceb28e5884000f  /usr/bin/simple-patch
-+370f170025e3c13659202c8b7ba876efb63b27b7747ef781f1176e071dba4a9d  /usr/bin/simple-patch
++d4c2278fcc525b2dc0fbb4086a27aa3af4e1df7e5eb6dc110c4b22f03544432a  /usr/bin/simple-patch
 diff --git a/steps/simple-patch-1.0/src/simple-patch.c b/steps/simple-patch-1.0/src/simple-patch.c
 index ed6faea..0f930b7 100644
 --- a/steps/simple-patch-1.0/src/simple-patch.c

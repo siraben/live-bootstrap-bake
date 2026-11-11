@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 
 if [ "${LIVE_BOOTSTRAP_BAKE_IN_NIX:-0}" != 1 ]; then
 	exec nix develop "$ROOT" --command env LIVE_BOOTSTRAP_BAKE_IN_NIX=1 "$0" "$@"
@@ -30,11 +30,15 @@ awk '{ print; if ($0 == "build: bash-2.05b") exit }' "$backup" > steps/manifest
 
 python3 - "$TARGET" <<'PY'
 from pathlib import Path
+import os
 import sys
 from lib.generator import Generator
 from lib.target import Target
 
 target = Path(sys.argv[1])
+update_checksums = os.environ.get("UPDATE_CHECKSUMS", "False")
+if update_checksums not in ("True", "False"):
+    raise SystemExit("UPDATE_CHECKSUMS must be True or False")
 g = Generator(arch="x86", external_sources=False, early_preseed=None, repo_path=None, mirrors=[])
 g.prepare(Target(path=str(target)), using_kernel=False)
 
@@ -66,7 +70,7 @@ INCDIR=/usr/include/mes
 SRCDIR=/steps
 TMPDIR=/tmp
 PATH=/usr/bin:/x86/bin
-""")
+""".replace("UPDATE_CHECKSUMS=False", "UPDATE_CHECKSUMS=" + update_checksums))
 
 seed = target / "seed.bake"
 seed.write_text(seed.read_text().replace(

@@ -23,6 +23,7 @@
             pkgs.gnutar
             pkgs.gzip
             pkgs.patch
+            pkgs.shellcheck
             (pkgs.python3.withPackages (ps: [
               ps.requests
             ]))

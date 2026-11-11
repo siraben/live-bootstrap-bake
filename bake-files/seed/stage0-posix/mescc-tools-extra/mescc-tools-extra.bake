@@ -1,4 +1,5 @@
-: all sha256sum match mkdir untar ungz unbz2 unxz catm cp chmod rm replace wrap
+: all tools wrap
+: tools sha256sum match mkdir untar ungz unbz2 unxz catm cp chmod rm replace
 : sha256sum match mkdir untar ungz unbz2 unxz catm cp chmod rm replace wrap :
 export M2LIBC_PATH ${M2LIBC}
 export PATH ${TOOLS}
