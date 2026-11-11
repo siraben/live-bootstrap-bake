@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
+# SPDX-FileCopyrightText: 2026 Ben Siraphob
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 : all build checksum
 
 : build

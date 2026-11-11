@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2023 Samuel Tyler <samuel@samuelt.me>
+# SPDX-FileCopyrightText: 2026 Ben Siraphob
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 : all
 make_fiwix_initrd -s 1381376 /boot/fiwix.ext2
 ? BARE_METAL True kexec-fiwix /boot/fiwix -i /boot/fiwix.ext2 -m /e820 -c fiwix console=/dev/tty1 root=/dev/ram0 initrd=fiwix.ext2 kexec_proto=linux kexec_size=199680 kexec_cmdline=init=/init consoleblank=0

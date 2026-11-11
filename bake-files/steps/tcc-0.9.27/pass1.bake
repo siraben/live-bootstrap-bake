@@ -1,3 +1,9 @@
+# SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
+# SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+# SPDX-FileCopyrightText: 2026 Ben Siraphob
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 : all build checksum
 
 = TCC27_FLAGS -v -static -D TCC_TARGET_I386=1 -D CONFIG_TCCDIR="${LIBDIR}/tcc" -D CONFIG_TCC_CRTPREFIX="${LIBDIR}" -D CONFIG_TCC_ELFINTERP="/mes/loader" -D CONFIG_TCC_LIBPATHS="${LIBDIR}:${LIBDIR}/tcc" -D CONFIG_TCC_SYSINCLUDEPATHS="${PREFIX}/include/mes" -D TCC_LIBGCC="${LIBDIR}/libc.a" -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_VERSION="0.9.27" -D ONE_SOURCE=1

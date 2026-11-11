@@ -61,7 +61,14 @@ d6f725a9998443629e9d8496df3ed4a938a9bdc80cd1aab2b31b011b99f0dae4
 
 The Mes recipe unlinks the SRFI-9 destination symlinks before copying their
 referents, avoiding source truncation with the corrected libc stream behavior.
-Shellcheck and a smoke test of the bootstrapped bash also passed.
+The local run passed 137 checksum entries with recording disabled. Shellcheck,
+a smoke test of the bootstrapped bash, and native mescc-tools/bake tests passed.
+AMD64 and AArch64 stage0 toolchains each reproduced 19 checked binary hashes.
+The AArch64 M1 and GAS compiler regression suites also passed.
+
+RISC-V validation is deferred. Its recipe ports are not certified with these
+pins, and its upstream answer lists have not been regenerated; those targets
+still need a validated checksum refresh before use.
 
 Use a fresh `WORKDIR` when changing pins, and set the same `WORKDIR` for both
 scripts. `TARGET` selects the generated build directory. To record new build
@@ -91,11 +98,11 @@ The full materialized branch audit gives:
 
 | area | added | deleted | delta |
 | --- | ---: | ---: | ---: |
-| live-bootstrap | 1841 | 275 | +1566 |
+| live-bootstrap | 1965 | 2298 | -333 |
 | live-bootstrap/builder-hex0 | 0 | 0 | +0 |
-| stage0-posix | 24 | 21 | +3 |
-| stage0-posix/AArch64 | 0 | 0 | +0 |
-| stage0-posix/AMD64 | 0 | 0 | +0 |
+| stage0-posix | 177 | 124 | +53 |
+| stage0-posix/AArch64 | 37 | 240 | -203 |
+| stage0-posix/AMD64 | 11 | 240 | -229 |
 | stage0-posix/M2-Mesoplanet | 0 | 0 | +0 |
 | stage0-posix/M2-Mesoplanet/M2libc | 0 | 0 | +0 |
 | stage0-posix/M2-Planet | 0 | 0 | +0 |
@@ -103,21 +110,27 @@ The full materialized branch audit gives:
 | stage0-posix/M2libc | 0 | 0 | +0 |
 | stage0-posix/armv7l | 0 | 0 | +0 |
 | stage0-posix/bootstrap-seeds | 0 | 0 | +0 |
-| stage0-posix/mescc-tools | 935 | 37 | +898 |
+| stage0-posix/mescc-tools | 1069 | 2520 | -1451 |
 | stage0-posix/mescc-tools/M2libc | 0 | 0 | +0 |
 | stage0-posix/mescc-tools-extra | 9 | 45 | -36 |
 | stage0-posix/mescc-tools-extra/M2libc | 0 | 0 | +0 |
-| stage0-posix/riscv32 | 0 | 0 | +0 |
-| stage0-posix/riscv64 | 0 | 0 | +0 |
-| stage0-posix/x86 | 103 | 213 | -110 |
+| stage0-posix/riscv32 | 11 | 244 | -233 |
+| stage0-posix/riscv64 | 11 | 240 | -229 |
+| stage0-posix/x86 | 12 | 241 | -229 |
 | stage0-posix/M2-Planet-pr | 0 | 0 | +0 |
-| total | 2912 | 591 | +2321 |
+| total | 3302 | 6192 | -2890 |
+
+The converted package wrappers are removed, not retained alongside their bake
+replacements. All five stage0 architectures share the full-tool rebuild and
+orchestration recipes; only their machine parameters differ. The full kaem
+interpreter is removed, including its build/install hooks and obsolete tests.
+Seed/minimal kaem remains necessary to bootstrap bake.
 
 These are complete source deltas against each dependency's pinned checkout,
-including retained compatibility sources, not just a wrapper-only comparison.
-The copied PR compiler is compared against its exact archived commit. Gitlinks
-are excluded from their parent rows; nested dependencies are counted separately.
-The main additions are `bake.c`, the `.bake` recipes, and the standard patch reader.
+including new regression tests and documentation. The copied PR compiler is
+compared against its exact archived commit. Gitlinks are excluded from parent
+rows; nested dependencies are counted separately. Generated build outputs and
+the textual size of the patch files are not counted.
 
 For this standalone repro checkout, after `./scripts/prepare.sh`:
 
@@ -135,23 +148,32 @@ at their intended upstream paths. This makes the recipes readable without first
 applying the patch stack.
 
 `patches/0001-mescc-tools-add-bake.patch`
-: adds the bootstrappable `bake` implementation and builds it in stage0.
+: replaces the full kaem interpreter with bootstrappable `bake`, updates native
+  build/install hooks, and adds recipe-runner regression tests.
 
 `patches/0002-mescc-tools-extra-use-bake.patch`
 : switches the extra stage0 tools build to `bake`.
 
 `patches/0003-stage0-posix-x86-use-bake.patch`
-: adds the x86 stage0 bake bootstrap recipe.
+: builds bake directly in the x86 minimal seed chain and removes its duplicated
+  full-tool rebuild script.
 
 `patches/0004-stage0-posix-bootstrap-bake.patch`
-: wires `bake` into the x86 stage0 seed answers, hands the x86 full-tool
-  rebuild from kaem to bake, and refreshes the tool checksums.
+: shares `bootstrap.common.bake` and `mescc-tools-full.bake` across the five
+  architectures, adds small machine-parameter recipes, and verifies tool hashes.
 
 `patches/0005-live-bootstrap-use-bake.patch`
 : teaches `script-generator` to emit bake scripts before bash, replaces the
   seed handoff with `seed.bake`, and adds `pass1.bake` recipes for all
-  pre-bash packages.
+  pre-bash packages, removing their obsolete kaem wrappers.
+
+`patches/0006-stage0-posix-amd64-use-bake.patch` through
+`patches/0009-stage0-posix-riscv64-use-bake.patch`
+: switch the remaining supported stage0 seed chains to bake and remove their
+  duplicated full-tool rebuild scripts. The AArch64 patch also preserves live
+  operands across token guards and adds compile-and-run regressions.
 
 For the currently covered package wrappers, the recipe layer goes from 2037
-lines of `pass1.kaem` to 744 lines of `pass1.bake`. Fiwix and lwext4 now use
+lines of `pass1.kaem` to 843 lines of `pass1.bake`, including preserved SPDX
+attribution and license headers. Fiwix and lwext4 now use
 their upstream Makefiles after small bootstrap-environment patches.

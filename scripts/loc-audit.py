@@ -48,7 +48,7 @@ def repository_delta(repo, children):
         return not any(name == p or name.startswith(p + "/") for p in excluded)
 
     added = deleted = 0
-    for line in git(repo, "diff", "--numstat", "HEAD").splitlines():
+    for line in git(repo, "diff", "--no-renames", "--numstat", "HEAD").splitlines():
         plus, minus, name = line.split("\t", 2)
         if included(name) and plus != "-" and minus != "-":
             added += int(plus)
@@ -76,7 +76,7 @@ def copied_compiler_delta():
         reference.mkdir()
         with tarfile.open(archive) as source:
             source.extractall(reference, filter="data")
-        result = subprocess.run(("git", "diff", "--no-index", "--numstat",
+        result = subprocess.run(("git", "diff", "--no-index", "--no-renames", "--numstat",
                                  str(reference), str(copied)),
                                 text=True, capture_output=True)
         if result.returncode not in (0, 1):

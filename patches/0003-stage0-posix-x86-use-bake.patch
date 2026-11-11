@@ -1,55 +1,37 @@
-diff --git a/bootstrap.bake b/bootstrap.bake
-new file mode 100644
-index 0000000..51d0b5f
---- /dev/null
-+++ b/bootstrap.bake
-@@ -0,0 +1,38 @@
-+: all after
-+
-+= ARCH x86
-+= ARCH_DIR x86
-+= M2LIBC ../M2libc
-+= TOOLS ../x86/bin
-+= BLOOD_FLAG
-+= BASE_ADDRESS 0x08048000
-+= ENDIAN_FLAG --little-endian
-+= BINDIR ../x86/bin
-+= BUILDDIR ../x86/artifact
-+= TMPDIR ../x86/artifact
-+= OPERATING_SYSTEM Linux
-+
-+: mescc-tools-full
-+./${ARCH_DIR}/bin/bake --file ${ARCH_DIR}/mescc-tools-full.bake all
-+
-+: mescc-tools-extra mescc-tools-full
-+cd mescc-tools-extra
-+${BINDIR}/bake --file mescc-tools-extra.bake tools
-+cd ..
-+
-+: M2-Planet-pr mescc-tools-extra
-+./${ARCH_DIR}/bin/bake --file ${ARCH_DIR}/mescc-tools-full.bake M2-Planet-pr
-+
-+: wrap M2-Planet-pr
-+cd mescc-tools-extra
-+${BINDIR}/bake --file mescc-tools-extra.bake wrap
-+cd ..
-+
-+: M2-Planet wrap
-+./${ARCH_DIR}/bin/bake --file ${ARCH_DIR}/mescc-tools-full.bake M2-Planet
-+
-+: check M2-Planet
-+./${ARCH_DIR}/bin/sha256sum -c ${ARCH}.answers
-+
-+: after check
-+./${ARCH_DIR}/bin/bake --file ./after.bake all
+diff --git a/README.md b/README.md
+index 26952bf..93ff7f5 100644
+--- a/README.md
++++ b/README.md
+@@ -3,6 +3,6 @@ This folder contains the x86 specific parts of stage0-posix and was separated ou
+ To use this in your project:
+ 1) add it as a git submodule (or just extract into a folder) named x86
+ 2) create a kaem.x86 file (if you are using bootstrap-seeds)
+-3) create an after.kaem file to hook your tools you wish to have built after these
++3) create an after.bake file with an all target to build your tools after these
+ 
+ The master location of this code is: https://github.com/oriansj/stage0-posix-x86
 diff --git a/kaem.run b/kaem.run
-index 6435235..d4b9cf7 100644
+index 6435235..81ef209 100644
 --- a/kaem.run
 +++ b/kaem.run
-@@ -32,20 +32,4 @@ BUILDDIR="../${ARCH_DIR}/artifact"
- TMPDIR="${BUILDDIR}"
- OPERATING_SYSTEM="Linux"
+@@ -18,34 +18,4 @@
+ # You should have received a copy of the GNU General Public License
+ # along with Mes.  If not, see <http://www.gnu.org/licenses/>.
  
+-# To run in kaem simply: kaem --verbose --strict
+-
+-ARCH="x86"
+-ARCH_DIR="x86"
+-M2LIBC="../M2libc"
+-TOOLS="../${ARCH_DIR}/bin"
+-BLOOD_FLAG=" "
+-BASE_ADDRESS="0x08048000"
+-ENDIAN_FLAG="--little-endian"
+-BINDIR="../${ARCH_DIR}/bin"
+-BUILDDIR="../${ARCH_DIR}/artifact"
+-TMPDIR="${BUILDDIR}"
+-OPERATING_SYSTEM="Linux"
+-
 -################################################
 -# Phase 12-15 Rebuild M2-Planet from C sources #
 -################################################
@@ -67,7 +49,7 @@ index 6435235..d4b9cf7 100644
 -# Load after.kaem hook  #
 -#########################
 -exec ./${ARCH_DIR}/bin/kaem --verbose --strict --file ./after.kaem
-+./${ARCH_DIR}/bin/bake --file ${ARCH_DIR}/bootstrap.bake all
++./x86/bin/bake --file bootstrap.x86.bake all
 diff --git a/mescc-tools-full-kaem.kaem b/mescc-tools-full-kaem.kaem
 deleted file mode 100644
 index 840a88a..0000000
@@ -270,81 +252,53 @@ index 840a88a..0000000
 -	-o ./bin/M2-Planet
 -
 -cd ..
-diff --git a/mescc-tools-full.bake b/mescc-tools-full.bake
-new file mode 100644
-index 0000000..3ca49d2
---- /dev/null
-+++ b/mescc-tools-full.bake
-@@ -0,0 +1,26 @@
-+: all M2-Mesoplanet blood-elf get_machine M2-Planet
-+: M2-Mesoplanet
-+./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} --debug -o ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.M1 ./M2libc/sys/types.h ./M2libc/stddef.h ./M2libc/${ARCH}/linux/fcntl.c ./M2libc/fcntl.c ./M2libc/sys/utsname.h ./M2libc/${ARCH}/linux/unistd.c ./M2libc/${ARCH}/linux/sys/stat.c ./M2libc/ctype.c ./M2libc/stdlib.c ./M2libc/stdarg.h ./M2libc/stdio.h ./M2libc/stdio.c ./M2libc/string.c ./M2libc/bootstrappable.c ./M2-Mesoplanet/cc.h ./M2-Mesoplanet/cc_globals.c ./M2-Mesoplanet/cc_env.c ./M2-Mesoplanet/cc_reader.c ./M2-Mesoplanet/cc_spawn.c ./M2-Mesoplanet/cc_core.c ./M2-Mesoplanet/cc_macro.c ./M2-Mesoplanet/cc.c
-+./${ARCH_DIR}/artifact/blood-elf-0 ${ENDIAN_FLAG} -o ./${ARCH_DIR}/artifact/M2-Mesoplanet-1-footer.M1 ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.M1
-+./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.hex2 ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.M1 ./${ARCH_DIR}/artifact/M2-Mesoplanet-1-footer.M1
-+./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/M2-Mesoplanet ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.hex2
-+: blood-elf M2-Mesoplanet
-+./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} --debug -o ./${ARCH_DIR}/artifact/blood-elf-1.M1 ./M2libc/sys/types.h ./M2libc/stddef.h ./M2libc/${ARCH}/linux/fcntl.c ./M2libc/fcntl.c ./M2libc/sys/utsname.h ./M2libc/${ARCH}/linux/unistd.c ./M2libc/ctype.c ./M2libc/stdlib.c ./M2libc/stdarg.h ./M2libc/stdio.h ./M2libc/stdio.c ./M2libc/bootstrappable.c ./mescc-tools/stringify.c ./mescc-tools/blood-elf.c
-+./${ARCH_DIR}/artifact/blood-elf-0 ${ENDIAN_FLAG} -o ./${ARCH_DIR}/artifact/blood-elf-1-footer.M1 ./${ARCH_DIR}/artifact/blood-elf-1.M1
-+./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/blood-elf-1.hex2 ./${ARCH_DIR}/artifact/blood-elf-1.M1 ./${ARCH_DIR}/artifact/blood-elf-1-footer.M1
-+./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/blood-elf ./${ARCH_DIR}/artifact/blood-elf-1.hex2
-+: get_machine blood-elf
-+./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} --debug -o ./${ARCH_DIR}/artifact/get_machine.M1 ./M2libc/sys/types.h ./M2libc/stddef.h ./M2libc/sys/utsname.h ./M2libc/${ARCH}/linux/unistd.c ./M2libc/${ARCH}/linux/fcntl.c ./M2libc/fcntl.c ./M2libc/ctype.c ./M2libc/stdlib.c ./M2libc/stdarg.h ./M2libc/stdio.h ./M2libc/stdio.c ./M2libc/bootstrappable.c ./mescc-tools/get_machine.c
-+./${ARCH_DIR}/bin/blood-elf ${ENDIAN_FLAG} -o ./${ARCH_DIR}/artifact/get_machine-footer.M1 ./${ARCH_DIR}/artifact/get_machine.M1
-+./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/get_machine.hex2 ./${ARCH_DIR}/artifact/get_machine.M1 ./${ARCH_DIR}/artifact/get_machine-footer.M1
-+./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/get_machine ./${ARCH_DIR}/artifact/get_machine.hex2
-+: M2-Planet get_machine
-+./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} --debug -o ./${ARCH_DIR}/artifact/M2-1.M1 ./M2libc/sys/types.h ./M2libc/stddef.h ./M2libc/sys/utsname.h ./M2libc/${ARCH}/linux/unistd.c ./M2libc/${ARCH}/linux/fcntl.c ./M2libc/fcntl.c ./M2libc/ctype.c ./M2libc/stdlib.c ./M2libc/stdarg.h ./M2libc/stdio.h ./M2libc/stdio.c ./M2libc/bootstrappable.c ./M2-Planet/cc.h ./M2-Planet/cc_globals.c ./M2-Planet/cc_reader.c ./M2-Planet/cc_strings.c ./M2-Planet/cc_types.c ./M2-Planet/cc_emit.c ./M2-Planet/cc_core.c ./M2-Planet/cc_macro.c ./M2-Planet/cc.c
-+./${ARCH_DIR}/bin/blood-elf ${ENDIAN_FLAG} -o ./${ARCH_DIR}/artifact/M2-1-footer.M1 ./${ARCH_DIR}/artifact/M2-1.M1
-+./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/M2-1.hex2 ./${ARCH_DIR}/artifact/M2-1.M1 ./${ARCH_DIR}/artifact/M2-1-footer.M1
-+./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/M2-Planet ./${ARCH_DIR}/artifact/M2-1.hex2
-+: M2-Planet-pr get_machine
-+./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} --debug -o ./${ARCH_DIR}/artifact/M2-pr.M1 ./M2libc/sys/types.h ./M2libc/stddef.h ./M2libc/sys/utsname.h ./M2libc/${ARCH}/linux/unistd.c ./M2libc/${ARCH}/linux/fcntl.c ./M2libc/fcntl.c ./M2libc/ctype.c ./M2libc/stdlib.c ./M2libc/stdarg.h ./M2libc/stdio.h ./M2libc/stdio.c ./M2libc/bootstrappable.c ./M2-Planet-pr/cc.h ./M2-Planet-pr/cc_globals.c ./M2-Planet-pr/cc_reader.c ./M2-Planet-pr/cc_strings.c ./M2-Planet-pr/cc_types.c ./M2-Planet-pr/cc_emit.c ./M2-Planet-pr/cc_core.c ./M2-Planet-pr/cc_macro.c ./M2-Planet-pr/cc.c
-+./${ARCH_DIR}/bin/blood-elf ${ENDIAN_FLAG} -o ./${ARCH_DIR}/artifact/M2-pr-footer.M1 ./${ARCH_DIR}/artifact/M2-pr.M1
-+./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/M2-pr.hex2 ./${ARCH_DIR}/artifact/M2-pr.M1 ./${ARCH_DIR}/artifact/M2-pr-footer.M1
-+./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/M2-Planet ./${ARCH_DIR}/artifact/M2-pr.hex2
 diff --git a/mescc-tools-mini-kaem.kaem b/mescc-tools-mini-kaem.kaem
-index 41916f2..48a9e2c 100644
+index d9a65e0..ff91133 100644
 --- a/mescc-tools-mini-kaem.kaem
 +++ b/mescc-tools-mini-kaem.kaem
-@@ -288,3 +288,41 @@
- 	-f ./x86/artifact/kaem.hex2 \
- 	--base-address 0x8048000 \
- 	-o ./x86/bin/kaem
-+
+@@ -252,8 +252,8 @@
+ 
+ 
+ #####################################
+-# Phase-11 Build kaem from C sources#
+-#####################################
++# Phase-11 Build bake  from C source#
 +##########################################
-+# Phase-11b Build bake from C source#
-+##########################################
-+./x86/artifact/M2 --architecture x86 \
-+	-f ./M2libc/sys/types.h \
-+	-f ./M2libc/stddef.h \
-+	-f ./M2libc/sys/utsname.h \
-+	-f ./M2libc/x86/linux/unistd.c \
-+	-f ./M2libc/x86/linux/fcntl.c \
-+	-f ./M2libc/fcntl.c \
-+	-f ./M2libc/ctype.c \
-+	-f ./M2libc/stdlib.c \
-+	-f ./M2libc/string.c \
-+	-f ./M2libc/stdarg.h \
-+	-f ./M2libc/stdio.h \
-+	-f ./M2libc/stdio.c \
-+	-f ./M2libc/bootstrappable.c \
+ ./x86/artifact/M2 --architecture x86 \
+ 	-f ./M2libc/sys/types.h \
+ 	-f ./M2libc/stddef.h \
+@@ -268,26 +268,23 @@
+ 	-f ./M2libc/stdio.h \
+ 	-f ./M2libc/stdio.c \
+ 	-f ./M2libc/bootstrappable.c \
+-	-f ./mescc-tools/Kaem/kaem.h \
+-	-f ./mescc-tools/Kaem/variable.c \
+-	-f ./mescc-tools/Kaem/kaem_globals.c \
+-	-f ./mescc-tools/Kaem/kaem.c \
 +	-f ./mescc-tools/bake.c \
-+	--debug \
+ 	--debug \
+-	-o ./x86/artifact/kaem.M1
 +	-o ./x86/artifact/bake.M1
-+
+ 
+-./x86/artifact/blood-elf-0 -f ./x86/artifact/kaem.M1 --little-endian -o ./x86/artifact/kaem-footer.M1
 +./x86/artifact/blood-elf-0 -f ./x86/artifact/bake.M1 --little-endian -o ./x86/artifact/bake-footer.M1
-+
-+./x86/bin/M1 --architecture x86 \
-+	--little-endian \
-+	-f ./M2libc/x86/x86_defs.M1 \
-+	-f ./M2libc/x86/libc-full.M1 \
+ 
+ ./x86/bin/M1 --architecture x86 \
+ 	--little-endian \
+ 	-f ./M2libc/x86/x86_defs.M1 \
+ 	-f ./M2libc/x86/libc-full.M1 \
+-	-f ./x86/artifact/kaem.M1 \
+-	-f ./x86/artifact/kaem-footer.M1 \
+-	-o ./x86/artifact/kaem.hex2
 +	-f ./x86/artifact/bake.M1 \
 +	-f ./x86/artifact/bake-footer.M1 \
 +	-o ./x86/artifact/bake.hex2
-+
-+./x86/bin/hex2 --architecture x86 \
-+	--little-endian \
-+	-f ./M2libc/x86/ELF-x86-debug.hex2 \
+ 
+ ./x86/bin/hex2 --architecture x86 \
+ 	--little-endian \
+ 	-f ./M2libc/x86/ELF-x86-debug.hex2 \
+-	-f ./x86/artifact/kaem.hex2 \
 +	-f ./x86/artifact/bake.hex2 \
-+	--base-address 0x8048000 \
+ 	--base-address 0x8048000 \
+-	-o ./x86/bin/kaem
 +	-o ./x86/bin/bake

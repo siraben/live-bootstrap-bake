@@ -97,36 +97,35 @@ index 33e555d..2f95792 100755
              cleanup=cleanup)
  
      elif args.bare_metal:
-diff --git a/seed/after.bake b/seed/after.bake
-new file mode 100644
-index 0000000..4e33058
---- /dev/null
-+++ b/seed/after.bake
-@@ -0,0 +1,3 @@
-+: all
-+./${ARCH_DIR}/bin/catm seed-full.bake /steps/bootstrap.cfg /steps/env seed.bake
-+./${ARCH_DIR}/bin/bake --file seed-full.bake all
-diff --git a/seed/after.kaem b/seed/after.kaem
-deleted file mode 100755
-index 348ec23..0000000
+diff --git a/seed/after.kaem b/seed/after.bake
+old mode 100755
+new mode 100644
+similarity index 63%
+rename from seed/after.kaem
+rename to seed/after.bake
+index 348ec23..096baab
 --- a/seed/after.kaem
-+++ /dev/null
-@@ -1,15 +0,0 @@
++++ b/seed/after.bake
+@@ -1,15 +1,11 @@
 -#!/bin/sh
 -
--# SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
--# SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
--# SPDX-FileCopyrightText: 2020-2022 Samuel Tyler <samuel@samuelt.me>
--# SPDX-FileCopyrightText: 2022 Dor Askayo <dor.askayo@gmail.com>
--#
--# SPDX-License-Identifier: GPL-3.0-or-later
--
+ # SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+ # SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
+ # SPDX-FileCopyrightText: 2020-2022 Samuel Tyler <samuel@samuelt.me>
+ # SPDX-FileCopyrightText: 2022 Dor Askayo <dor.askayo@gmail.com>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
+ #
+ # SPDX-License-Identifier: GPL-3.0-or-later
+ 
 -set -ex
 -
 -PATH=/${ARCH_DIR}/bin
 -
 -catm seed-full.kaem /steps/bootstrap.cfg /steps/env seed.kaem
 -kaem --file seed-full.kaem
++: all
++./${ARCH_DIR}/bin/catm seed-full.bake /steps/bootstrap.cfg /steps/env seed.bake
++./${ARCH_DIR}/bin/bake --file seed-full.bake all
 diff --git a/seed/configurator.x86.checksums b/seed/configurator.x86.checksums
 index b1f037b..2585273 100644
 --- a/seed/configurator.x86.checksums
@@ -516,139 +515,75 @@ index 36175af..c890cfd 100644
 @@ -1 +1 @@
 -fbec25d987c89e66fd7dd89d780be0629bab84f78ebf1878fd2528fca9e46c45  script-generator
 +c2e35d28c7704d406a410e1049946c870f23ede832c0f8c3851b54a09e3863ae  script-generator
-diff --git a/seed/seed.bake b/seed/seed.bake
-new file mode 100644
-index 0000000..2643fc8
---- /dev/null
-+++ b/seed/seed.bake
-@@ -0,0 +1,64 @@
-+: all run
-+
-+: setup
-+export PATH /${ARCH_DIR}/bin
-+mkdir --parents ${PREFIX} ${BINDIR} ${LIBDIR} ${INCDIR} ${SRCDIR} ${TMPDIR} /dev
-+cp /${ARCH_DIR}/bin/blood-elf ${BINDIR}/blood-elf
-+cp /${ARCH_DIR}/bin/bake ${BINDIR}/bake
-+cp /${ARCH_DIR}/bin/catm ${BINDIR}/catm
-+cp /${ARCH_DIR}/bin/chmod ${BINDIR}/chmod
-+cp /${ARCH_DIR}/bin/get_machine ${BINDIR}/get_machine
-+cp /${ARCH_DIR}/bin/hex2 ${BINDIR}/hex2
-+cp /${ARCH_DIR}/bin/match ${BINDIR}/match
-+cp /${ARCH_DIR}/bin/M1 ${BINDIR}/M1
-+cp /${ARCH_DIR}/bin/M2-Mesoplanet ${BINDIR}/M2-Mesoplanet
-+cp /${ARCH_DIR}/bin/M2-Planet ${BINDIR}/M2-Planet
-+cp /${ARCH_DIR}/bin/mkdir ${BINDIR}/mkdir
-+cp /${ARCH_DIR}/bin/sha256sum ${BINDIR}/sha256sum
-+cp /${ARCH_DIR}/bin/unbz2 ${BINDIR}/unbz2
-+cp /${ARCH_DIR}/bin/ungz ${BINDIR}/ungz
-+cp /${ARCH_DIR}/bin/untar ${BINDIR}/untar
-+cp /${ARCH_DIR}/bin/unxz ${BINDIR}/unxz
-+cp /${ARCH_DIR}/bin/cp ${BINDIR}/cp
-+cp /${ARCH_DIR}/bin/replace ${BINDIR}/replace
-+cp /${ARCH_DIR}/bin/rm ${BINDIR}/rm
-+chmod 755 ${BINDIR}/blood-elf
-+chmod 755 ${BINDIR}/bake
-+chmod 755 ${BINDIR}/catm
-+chmod 755 ${BINDIR}/chmod
-+chmod 755 ${BINDIR}/cp
-+chmod 755 ${BINDIR}/get_machine
-+chmod 755 ${BINDIR}/hex2
-+chmod 755 ${BINDIR}/match
-+chmod 755 ${BINDIR}/M1
-+chmod 755 ${BINDIR}/M2-Mesoplanet
-+chmod 755 ${BINDIR}/M2-Planet
-+chmod 755 ${BINDIR}/mkdir
-+chmod 755 ${BINDIR}/sha256sum
-+chmod 755 ${BINDIR}/unbz2
-+chmod 755 ${BINDIR}/ungz
-+chmod 755 ${BINDIR}/untar
-+chmod 755 ${BINDIR}/unxz
-+chmod 755 ${BINDIR}/replace
-+chmod 755 ${BINDIR}/rm
-+export PATH ${BINDIR}
-+export M2LIBC_PATH /M2libc
-+export NYACC_PKG nyacc-1.00.2
-+export MES_PKG mes-0.27.1
-+export MES_PREFIX ${SRCDIR}/${MES_PKG}/build/${MES_PKG}
-+export GUILE_LOAD_PATH ${MES_PREFIX}/mes/module:${MES_PREFIX}/module:${SRCDIR}/${MES_PKG}/build/${NYACC_PKG}/module
-+
-+: configurator setup
-+M2-Mesoplanet --architecture ${ARCH} -o configurator configurator.c
-+? UPDATE_CHECKSUMS True sha256sum -o configurator.${ARCH}.checksums configurator
-+! UPDATE_CHECKSUMS True sha256sum -c configurator.${ARCH}.checksums
-+./configurator /steps/configurator
-+
-+: script-generator configurator
-+M2-Mesoplanet --architecture ${ARCH} -o script-generator script-generator.c
-+? UPDATE_CHECKSUMS True sha256sum -o script-generator.${ARCH}.checksums script-generator
-+! UPDATE_CHECKSUMS True sha256sum -c script-generator.${ARCH}.checksums
-+./script-generator /steps/manifest
-+
-+: run script-generator
-+bake --file /steps/0.bake all
-diff --git a/seed/seed.kaem b/seed/seed.kaem
-deleted file mode 100755
-index 5fd7449..0000000
+diff --git a/seed/seed.kaem b/seed/seed.bake
+old mode 100755
+new mode 100644
+similarity index 60%
+rename from seed/seed.kaem
+rename to seed/seed.bake
+index 5fd7449..034683e
 --- a/seed/seed.kaem
-+++ /dev/null
-@@ -1,85 +0,0 @@
++++ b/seed/seed.bake
+@@ -1,26 +1,22 @@
 -#!/bin/sh
 -
--# SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
--# SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
--# SPDX-FileCopyrightText: 2020-2022 Samuel Tyler <samuel@samuelt.me>
--# SPDX-FileCopyrightText: 2022 Dor Askayo <dor.askayo@gmail.com>
--#
--# SPDX-License-Identifier: GPL-3.0-or-later
--
+ # SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+ # SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
+ # SPDX-FileCopyrightText: 2020-2022 Samuel Tyler <samuel@samuelt.me>
+ # SPDX-FileCopyrightText: 2022 Dor Askayo <dor.askayo@gmail.com>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
+ #
+ # SPDX-License-Identifier: GPL-3.0-or-later
+ 
 -set -ex
--
++: all run
+ 
 -mkdir -p ${PREFIX} ${BINDIR} ${LIBDIR} ${INCDIR} ${SRCDIR} ${TMPDIR} /dev
 -
 -# Temporarily change PATH
 -PATH=/${ARCH_DIR}/bin
 -
 -# Remove remaining dependencies on /bin (stage0-posix directory)
--cp /${ARCH_DIR}/bin/blood-elf ${BINDIR}/blood-elf
--cp /${ARCH_DIR}/bin/catm ${BINDIR}/catm
--cp /${ARCH_DIR}/bin/chmod ${BINDIR}/chmod
--cp /${ARCH_DIR}/bin/get_machine ${BINDIR}/get_machine
--cp /${ARCH_DIR}/bin/hex2 ${BINDIR}/hex2
++: setup
++export PATH /${ARCH_DIR}/bin
++mkdir --parents ${PREFIX} ${BINDIR} ${LIBDIR} ${INCDIR} ${SRCDIR} ${TMPDIR} /dev
+ cp /${ARCH_DIR}/bin/blood-elf ${BINDIR}/blood-elf
++cp /${ARCH_DIR}/bin/bake ${BINDIR}/bake
+ cp /${ARCH_DIR}/bin/catm ${BINDIR}/catm
+ cp /${ARCH_DIR}/bin/chmod ${BINDIR}/chmod
+ cp /${ARCH_DIR}/bin/get_machine ${BINDIR}/get_machine
+ cp /${ARCH_DIR}/bin/hex2 ${BINDIR}/hex2
 -cp /${ARCH_DIR}/bin/kaem ${BINDIR}/kaem
--cp /${ARCH_DIR}/bin/match ${BINDIR}/match
--cp /${ARCH_DIR}/bin/M1 ${BINDIR}/M1
--cp /${ARCH_DIR}/bin/M2-Mesoplanet ${BINDIR}/M2-Mesoplanet
--cp /${ARCH_DIR}/bin/M2-Planet ${BINDIR}/M2-Planet
--cp /${ARCH_DIR}/bin/mkdir ${BINDIR}/mkdir
--cp /${ARCH_DIR}/bin/sha256sum ${BINDIR}/sha256sum
--cp /${ARCH_DIR}/bin/unbz2 ${BINDIR}/unbz2
--cp /${ARCH_DIR}/bin/ungz ${BINDIR}/ungz
--cp /${ARCH_DIR}/bin/untar ${BINDIR}/untar
--cp /${ARCH_DIR}/bin/unxz ${BINDIR}/unxz
--cp /${ARCH_DIR}/bin/cp ${BINDIR}/cp
--cp /${ARCH_DIR}/bin/replace ${BINDIR}/replace
--cp /${ARCH_DIR}/bin/rm ${BINDIR}/rm
+ cp /${ARCH_DIR}/bin/match ${BINDIR}/match
+ cp /${ARCH_DIR}/bin/M1 ${BINDIR}/M1
+ cp /${ARCH_DIR}/bin/M2-Mesoplanet ${BINDIR}/M2-Mesoplanet
+@@ -34,14 +30,13 @@ cp /${ARCH_DIR}/bin/unxz ${BINDIR}/unxz
+ cp /${ARCH_DIR}/bin/cp ${BINDIR}/cp
+ cp /${ARCH_DIR}/bin/replace ${BINDIR}/replace
+ cp /${ARCH_DIR}/bin/rm ${BINDIR}/rm
 -
--chmod 755 ${BINDIR}/blood-elf
--chmod 755 ${BINDIR}/catm
--chmod 755 ${BINDIR}/chmod
--chmod 755 ${BINDIR}/cp
--chmod 755 ${BINDIR}/get_machine
--chmod 755 ${BINDIR}/hex2
+ chmod 755 ${BINDIR}/blood-elf
++chmod 755 ${BINDIR}/bake
+ chmod 755 ${BINDIR}/catm
+ chmod 755 ${BINDIR}/chmod
+ chmod 755 ${BINDIR}/cp
+ chmod 755 ${BINDIR}/get_machine
+ chmod 755 ${BINDIR}/hex2
 -chmod 755 ${BINDIR}/kaem
--chmod 755 ${BINDIR}/match
--chmod 755 ${BINDIR}/M1
--chmod 755 ${BINDIR}/M2-Mesoplanet
--chmod 755 ${BINDIR}/M2-Planet
--chmod 755 ${BINDIR}/mkdir
--chmod 755 ${BINDIR}/sha256sum
--chmod 755 ${BINDIR}/unbz2
--chmod 755 ${BINDIR}/ungz
--chmod 755 ${BINDIR}/untar
--chmod 755 ${BINDIR}/unxz
--chmod 755 ${BINDIR}/replace
--chmod 755 ${BINDIR}/rm
--
+ chmod 755 ${BINDIR}/match
+ chmod 755 ${BINDIR}/M1
+ chmod 755 ${BINDIR}/M2-Mesoplanet
+@@ -54,32 +49,24 @@ chmod 755 ${BINDIR}/untar
+ chmod 755 ${BINDIR}/unxz
+ chmod 755 ${BINDIR}/replace
+ chmod 755 ${BINDIR}/rm
++export PATH ${BINDIR}
++export M2LIBC_PATH /M2libc
++export NYACC_PKG nyacc-1.00.2
++export MES_PKG mes-0.27.1
++export MES_PREFIX ${SRCDIR}/${MES_PKG}/build/${MES_PKG}
++export GUILE_LOAD_PATH ${MES_PREFIX}/mes/module:${MES_PREFIX}/module:${SRCDIR}/${MES_PKG}/build/${NYACC_PKG}/module
+ 
 -PATH=${BINDIR}
 -M2LIBC_PATH=/M2libc
 -
@@ -665,8 +600,12 @@ index 5fd7449..0000000
 -else
 -    sha256sum -c configurator.${ARCH}.checksums
 -fi
--./configurator /steps/configurator
--
++: configurator setup
++M2-Mesoplanet --architecture ${ARCH} -o configurator configurator.c
++? UPDATE_CHECKSUMS True sha256sum -o configurator.${ARCH}.checksums configurator
++! UPDATE_CHECKSUMS True sha256sum -c configurator.${ARCH}.checksums
+ ./configurator /steps/configurator
+ 
 -M2-Mesoplanet --architecture ${ARCH} -f script-generator.c -o script-generator
 -# Checksums
 -if match x${UPDATE_CHECKSUMS} xTrue; then
@@ -674,80 +613,157 @@ index 5fd7449..0000000
 -else
 -    sha256sum -c script-generator.${ARCH}.checksums
 -fi
--./script-generator /steps/manifest
--
++: script-generator configurator
++M2-Mesoplanet --architecture ${ARCH} -o script-generator script-generator.c
++? UPDATE_CHECKSUMS True sha256sum -o script-generator.${ARCH}.checksums script-generator
++! UPDATE_CHECKSUMS True sha256sum -c script-generator.${ARCH}.checksums
+ ./script-generator /steps/manifest
+ 
 -kaem --file /steps/0.sh
-diff --git a/steps/bash-2.05b/pass1.bake b/steps/bash-2.05b/pass1.bake
-new file mode 100644
-index 0000000..f659fcd
---- /dev/null
++: run script-generator
++bake --file /steps/0.bake all
+diff --git a/steps/bash-2.05b/pass1.kaem b/steps/bash-2.05b/pass1.bake
+old mode 100755
+new mode 100644
+similarity index 76%
+rename from steps/bash-2.05b/pass1.kaem
+rename to steps/bash-2.05b/pass1.bake
+index a236283..569cb0f
+--- a/steps/bash-2.05b/pass1.kaem
 +++ b/steps/bash-2.05b/pass1.bake
-@@ -0,0 +1,37 @@
+@@ -1,21 +1,17 @@
+-#!/bin/sh
+-
+ # SPDX-FileCopyrightText: 2022 Andrius Štikonas <andrius@stikonas.eu>
+ # SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
+ # SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
+ #
+ # SPDX-License-Identifier: GPL-3.0-or-later
+ 
+-set -ex
 +: all build checksum
-+
+ 
+-# Check tarball checksums
 +: build
-+checksum-transcriber sources
-+sha256sum -c sources.SHA256SUM
-+mkdir build src
-+cd build
-+cp ${DISTFILES}/${pkg}.tar.gz ../src/
-+gzip -d -f ../src/${pkg}.tar.gz
-+tar xf ../src/${pkg}.tar
-+rm -r ../src/
-+cd ${pkg}
-+cp ../../mk/main.mk Makefile
-+cp ../../mk/builtins.mk builtins/Makefile
-+cp ../../mk/common.mk common.mk
-+touch config.h
-+touch include/version.h
-+touch include/pipesize.h
-+rm y.tab.c y.tab.h parser-built
-+patch -Np1 -i ../../patches/mes-libc.patch
-+patch -Np1 -i ../../patches/tinycc.patch
-+patch -Np1 -i ../../patches/missing-defines.patch
-+patch -Np1 -i ../../patches/locale.patch
-+patch -Np1 -i ../../patches/dev-tty.patch
-+make mkbuiltins
-+cd builtins
-+make libbuiltins.a
-+cd ..
-+make
-+install bash ${PREFIX}/bin/
-+install bash ${PREFIX}/bin/sh
-+cd ../..
-+
+ checksum-transcriber sources
+ sha256sum -c sources.SHA256SUM
+-
+ mkdir build src
+ cd build
+-
+-# Extract
+ cp ${DISTFILES}/${pkg}.tar.gz ../src/
+ gzip -d -f ../src/${pkg}.tar.gz
+ tar xf ../src/${pkg}.tar
+@@ -24,39 +20,25 @@ cd ${pkg}
+ cp ../../mk/main.mk Makefile
+ cp ../../mk/builtins.mk builtins/Makefile
+ cp ../../mk/common.mk common.mk
+-
+-# Create various .h files
+ touch config.h
+ touch include/version.h
+ touch include/pipesize.h
+ rm y.tab.c y.tab.h parser-built
+-
+-# Patch
+ patch -Np1 -i ../../patches/mes-libc.patch
+ patch -Np1 -i ../../patches/tinycc.patch
+ patch -Np1 -i ../../patches/missing-defines.patch
+ patch -Np1 -i ../../patches/locale.patch
+ patch -Np1 -i ../../patches/dev-tty.patch
+-
+-# Compile
+ make mkbuiltins
+ cd builtins
+ make libbuiltins.a
+ cd ..
+ make
+-
+-# Install
+ install bash ${PREFIX}/bin/
+ install bash ${PREFIX}/bin/sh
+-
+ cd ../..
+ 
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/bash
+-
+-    install ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 +: checksum build
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/bash
 +? UPDATE_CHECKSUMS True install ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
-diff --git a/steps/bzip2-1.0.8/pass1.bake b/steps/bzip2-1.0.8/pass1.bake
-new file mode 100644
-index 0000000..c1ecde4
---- /dev/null
+diff --git a/steps/bzip2-1.0.8/pass1.kaem b/steps/bzip2-1.0.8/pass1.bake
+old mode 100755
+new mode 100644
+similarity index 64%
+rename from steps/bzip2-1.0.8/pass1.kaem
+rename to steps/bzip2-1.0.8/pass1.bake
+index 9427627..e3d1b75
+--- a/steps/bzip2-1.0.8/pass1.kaem
 +++ b/steps/bzip2-1.0.8/pass1.bake
-@@ -0,0 +1,26 @@
+@@ -1,50 +1,32 @@
+-#!/bin/sh
+-
+ # SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+ # SPDX-FileCopyrightText: 2021 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
+ #
+ # SPDX-License-Identifier: GPL-3.0-or-later
+ 
+-set -ex
 +: all build checksum
-+
+ 
+-# Check tarball checksums
 +: build
-+checksum-transcriber sources
-+sha256sum -c sources.SHA256SUM
-+mkdir build src
-+cd build
-+cp ${DISTFILES}/${pkg}.tar.gz ../src/
-+gzip -d -f ../src/${pkg}.tar.gz
-+tar xf ../src/${pkg}.tar
-+rm -r ../src
-+cd ${pkg}
-+patch -Np1 -i ../../patches/mes-libc.patch
-+patch -Np1 -i ../../patches/coreutils.patch
+ checksum-transcriber sources
+ sha256sum -c sources.SHA256SUM
+-
+ mkdir build src
+ cd build
+-
+-# Extract
+ cp ${DISTFILES}/${pkg}.tar.gz ../src/
+ gzip -d -f ../src/${pkg}.tar.gz
+ tar xf ../src/${pkg}.tar
+ rm -r ../src
+ cd ${pkg}
+-
+-# Patch
+ patch -Np1 -i ../../patches/mes-libc.patch
+ patch -Np1 -i ../../patches/coreutils.patch
+-
+-# Build
+-make CC=tcc AR="tcc -ar" LDFLAGS="-static" bzip2
+-
+-# Install
 +make CC=tcc LDFLAGS=-static bzip2
-+cp bzip2 ${PREFIX}/bin/bzip2
-+cp bzip2 ${PREFIX}/bin/bunzip2
-+chmod 755 ${PREFIX}/bin/bzip2
-+chmod 755 ${PREFIX}/bin/bunzip2
-+bzip2 --help
-+cd ../..
-+
+ cp bzip2 ${PREFIX}/bin/bzip2
+ cp bzip2 ${PREFIX}/bin/bunzip2
+ chmod 755 ${PREFIX}/bin/bzip2
+ chmod 755 ${PREFIX}/bin/bunzip2
+-
+-# Test
+ bzip2 --help
+-
+ cd ../..
+ 
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/bzip2
+-
+-    cp ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 +: checksum build
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/bzip2
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
@@ -775,10 +791,15 @@ index 269f907..8f857fd 100644
 +ea1594daa0d6046707aeb8a9cf520357860a7cb127ce8e542a377febb94697e3  /usr/bin/checksum-transcriber
 diff --git a/steps/checksum-transcriber-1.0/pass1.bake b/steps/checksum-transcriber-1.0/pass1.bake
 new file mode 100644
-index 0000000..1b40980
+index 0000000..1051f31
 --- /dev/null
 +++ b/steps/checksum-transcriber-1.0/pass1.bake
-@@ -0,0 +1,9 @@
+@@ -0,0 +1,14 @@
++# SPDX-FileCopyrightText: 2023 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
 +: all build checksum
 +
 +: build
@@ -788,12 +809,46 @@ index 0000000..1b40980
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/checksum-transcriber
 +? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
+diff --git a/steps/checksum-transcriber-1.0/pass1.kaem b/steps/checksum-transcriber-1.0/pass1.kaem
+deleted file mode 100644
+index 7ad2e8f..0000000
+--- a/steps/checksum-transcriber-1.0/pass1.kaem
++++ /dev/null
+@@ -1,20 +0,0 @@
+-#!/bin/sh
+-
+-# SPDX-FileCopyrightText: 2023 Samuel Tyler <samuel@samuelt.me>
+-#
+-# SPDX-License-Identifier: GPL-3.0-or-later
+-
+-set -ex
+-
+-# Build & install
+-M2-Mesoplanet --architecture ${ARCH} -f src/checksum-transcriber.c -o ${BINDIR}/checksum-transcriber
+-
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.${ARCH}.checksums \
+-        /usr/bin/checksum-transcriber
+-
+-    cp ${pkg}.${ARCH}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.${ARCH}.checksums
+-fi
 diff --git a/steps/coreutils-5.0/pass1.bake b/steps/coreutils-5.0/pass1.bake
 new file mode 100644
-index 0000000..a8fd890
+index 0000000..0a4e113
 --- /dev/null
 +++ b/steps/coreutils-5.0/pass1.bake
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,47 @@
++# SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
++# SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
++# SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2023 Emily Trau <emily@downunderctf.com>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
 +: all build checksum
 +
 += COREUTILS_BINS /usr/bin/install /usr/bin/basename /usr/bin/cat /usr/bin/chmod /usr/bin/cksum /usr/bin/cp /usr/bin/csplit /usr/bin/cut /usr/bin/dirname /usr/bin/echo /usr/bin/expand /usr/bin/expr /usr/bin/factor /usr/bin/false /usr/bin/fmt /usr/bin/fold /usr/bin/head /usr/bin/hostname /usr/bin/id /usr/bin/join /usr/bin/kill /usr/bin/link /usr/bin/ln /usr/bin/logname /usr/bin/mkfifo /usr/bin/mkdir /usr/bin/mknod /usr/bin/nl /usr/bin/od /usr/bin/paste /usr/bin/pathchk /usr/bin/pr /usr/bin/printf /usr/bin/ptx /usr/bin/pwd /usr/bin/readlink /usr/bin/rmdir /usr/bin/seq /usr/bin/sleep /usr/bin/sort /usr/bin/split /usr/bin/sum /usr/bin/tail /usr/bin/tee /usr/bin/tr /usr/bin/tsort /usr/bin/unexpand /usr/bin/uniq /usr/bin/unlink /usr/bin/wc /usr/bin/whoami /usr/bin/tac /usr/bin/test /usr/bin/touch /usr/bin/true /usr/bin/yes /usr/bin/ls /usr/bin/md5sum /usr/bin/mv /usr/bin/rm /usr/bin/sha1sum
@@ -833,12 +888,146 @@ index 0000000..a8fd890
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums ${COREUTILS_BINS}
 +? UPDATE_CHECKSUMS True install ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/coreutils-5.0/pass1.kaem b/steps/coreutils-5.0/pass1.kaem
+deleted file mode 100755
+index 10b46ee..0000000
+--- a/steps/coreutils-5.0/pass1.kaem
++++ /dev/null
+@@ -1,123 +0,0 @@
+-#!/bin/sh
+-
+-# SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+-# SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
+-# SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
+-# SPDX-FileCopyrightText: 2023 Emily Trau <emily@downunderctf.com>
+-#
+-# SPDX-License-Identifier: GPL-3.0-or-later
+-
+-set -ex
+-
+-# Check tarball checksums
+-checksum-transcriber sources
+-sha256sum -c sources.SHA256SUM
+-
+-mkdir build src
+-cd build
+-
+-# Extract
+-cp ${DISTFILES}/${pkg}.tar.bz2 ../src/
+-bunzip2 -f ../src/${pkg}.tar.bz2
+-tar xf ../src/${pkg}.tar
+-rm -r ../src
+-cd ${pkg}
+-cp ../../mk/main.mk Makefile
+-
+-# Patch and prepare
+-cp lib/fnmatch_.h lib/fnmatch.h
+-cp lib/ftw_.h lib/ftw.h
+-cp lib/search_.h lib/search.h
+-catm config.h
+-
+-# We will rebuild it
+-rm src/false.c
+-
+-rm src/dircolors.h
+-
+-patch -Np1 -i ../../patches/modechange.patch
+-patch -Np1 -i ../../patches/mbstate.patch
+-patch -Np1 -i ../../patches/ls-strcmp.patch
+-patch -Np1 -i ../../patches/touch-getdate.patch
+-patch -Np1 -i ../../patches/touch-dereference.patch
+-patch -Np1 -i ../../patches/tac-uint64.patch
+-patch -Np1 -i ../../patches/expr-strcmp.patch
+-patch -Np1 -i ../../patches/sort-locale.patch
+-patch -Np1 -i ../../patches/uniq-fopen.patch
+-
+-# Build and install
+-make -f Makefile PREFIX=${PREFIX}
+-make -f Makefile PREFIX=${PREFIX} install
+-
+-cd ../..
+-rm -r src/
+-
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/install \
+-        /usr/bin/basename \
+-        /usr/bin/cat \
+-        /usr/bin/chmod \
+-        /usr/bin/cksum \
+-        /usr/bin/cp \
+-        /usr/bin/csplit \
+-        /usr/bin/cut \
+-        /usr/bin/dirname \
+-        /usr/bin/echo \
+-        /usr/bin/expand \
+-        /usr/bin/expr \
+-        /usr/bin/factor \
+-        /usr/bin/false \
+-        /usr/bin/fmt \
+-        /usr/bin/fold \
+-        /usr/bin/head \
+-        /usr/bin/hostname \
+-        /usr/bin/id \
+-        /usr/bin/join \
+-        /usr/bin/kill \
+-        /usr/bin/link \
+-        /usr/bin/ln \
+-        /usr/bin/logname \
+-        /usr/bin/mkfifo \
+-        /usr/bin/mkdir \
+-        /usr/bin/mknod \
+-        /usr/bin/nl \
+-        /usr/bin/od \
+-        /usr/bin/paste \
+-        /usr/bin/pathchk \
+-        /usr/bin/pr \
+-        /usr/bin/printf \
+-        /usr/bin/ptx \
+-        /usr/bin/pwd \
+-        /usr/bin/readlink \
+-        /usr/bin/rmdir \
+-        /usr/bin/seq \
+-        /usr/bin/sleep \
+-        /usr/bin/sort \
+-        /usr/bin/split \
+-        /usr/bin/sum \
+-        /usr/bin/tail \
+-        /usr/bin/tee \
+-        /usr/bin/tr \
+-        /usr/bin/tsort \
+-        /usr/bin/unexpand \
+-        /usr/bin/uniq \
+-        /usr/bin/unlink \
+-        /usr/bin/wc \
+-        /usr/bin/whoami \
+-        /usr/bin/tac \
+-        /usr/bin/test \
+-        /usr/bin/touch \
+-        /usr/bin/true \
+-        /usr/bin/yes \
+-        /usr/bin/ls \
+-        /usr/bin/md5sum \
+-        /usr/bin/mv \
+-        /usr/bin/rm \
+-        /usr/bin/sha1sum
+-
+-    install ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 diff --git a/steps/fiwix-1.5.0-lb1/pass1.bake b/steps/fiwix-1.5.0-lb1/pass1.bake
 new file mode 100644
-index 0000000..091376c
+index 0000000..4aa947d
 --- /dev/null
 +++ b/steps/fiwix-1.5.0-lb1/pass1.bake
-@@ -0,0 +1,27 @@
+@@ -0,0 +1,32 @@
++# SPDX-FileCopyrightText: 2023 Richard Masters <grick23@gmail.com>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: MIT
++
 +: all build checksum
 +
 +: build
@@ -866,6 +1055,573 @@ index 0000000..091376c
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /boot/fiwix
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/fiwix-1.5.0-lb1/pass1.kaem b/steps/fiwix-1.5.0-lb1/pass1.kaem
+deleted file mode 100755
+index 7f358bc..0000000
+--- a/steps/fiwix-1.5.0-lb1/pass1.kaem
++++ /dev/null
+@@ -1,561 +0,0 @@
+-#!/bin/sh
+-# SPDX-FileCopyrightText: 2023 Richard Masters <grick23@gmail.com>
+-# SPDX-License-Identifier: MIT
+-
+-set -ex
+-
+-# Check tarball checksums
+-checksum-transcriber sources
+-sha256sum -c sources.SHA256SUM
+-
+-# Extract
+-mkdir build
+-cd build
+-ungz --file ${DISTFILES}/${pkg}.tar.gz --output ${pkg}.tar
+-untar --file ${pkg}.tar
+-cd ${pkg}
+-
+-cp ../../files/custom_config.h include/fiwix
+-cp ../../files/custom_limits.h include/fiwix
+-cp ../../files/custom_kernel.h include/fiwix
+-cp ../../files/custom_system.h include/fiwix
+-
+-
+-alias as="tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__=\"tcc\" -traditional -I/${SRCDIR}/${pkg}/build/${pkg}/include"
+-
+-alias cc="tcc -m32 -march=i386 -std=c89 -D__KERNEL__ -DCUSTOM_CONFIG_H -DCUSTOM_LIMITS_H -DCUSTOM_KERNEL_H -DCUSTOM_SYSTEM_H -D__VERSION__=\"tcc\" -I/${SRCDIR}/${pkg}/build/${pkg}/include -O2 -fno-pie -fno-common -ffreestanding -Wall -Wstrict-prototypes"
+-
+-cd kernel
+-as -c -o boot.o boot.S
+-as -c -o core386.o core386.S
+-cc -c -o main.o main.c
+-cc -c -o init.o init.c
+-cc -c -o gdt.o gdt.c
+-cc -c -o idt.o idt.c
+-cc -c -o syscalls.o syscalls.c
+-cc -c -o pic.o pic.c
+-cc -c -o pit.o pit.c
+-cc -c -o irq.o irq.c
+-cc -c -o traps.o traps.c
+-cc -c -o cpu.o cpu.c
+-cc -c -o cmos.o cmos.c
+-cc -c -o timer.o timer.c
+-cc -c -o sched.o sched.c
+-cc -c -o sleep.o sleep.c
+-cc -c -o signal.o signal.c
+-cc -c -o process.o process.c
+-cc -c -o multiboot.o multiboot.c
+-cc -c -o kexec.o kexec.c
+-
+-cd syscalls
+-cc -c -o umount.o umount.c
+-cc -c -o getgid.o getgid.c
+-cc -c -o getppid.o getppid.c
+-cc -c -o fstatfs.o fstatfs.c
+-cc -c -o getgroups.o getgroups.c
+-cc -c -o fsync.o fsync.c
+-cc -c -o setreuid.o setreuid.c
+-cc -c -o newuname.o newuname.c
+-cc -c -o fork.o fork.c
+-cc -c -o setitimer.o setitimer.c
+-cc -c -o fdatasync.o fdatasync.c
+-cc -c -o chmod.o chmod.c
+-cc -c -o mmap2.o mmap2.c
+-cc -c -o msgsnd.o msgsnd.c
+-cc -c -o exit.o exit.c
+-cc -c -o readlink.o readlink.c
+-cc -c -o socketcall.o socketcall.c
+-cc -c -o stat64.o stat64.c
+-cc -c -o readv.o readv.c
+-cc -c -o sigaction.o sigaction.c
+-cc -c -o fstat.o fstat.c
+-cc -c -o waitpid.o waitpid.c
+-cc -c -o setfsgid.o setfsgid.c
+-cc -c -o chown.o chown.c
+-cc -c -o flock.o flock.c
+-cc -c -o uname.o uname.c
+-cc -c -o lseek.o lseek.c
+-cc -c -o setsid.o setsid.c
+-cc -c -o settimeofday.o settimeofday.c
+-cc -c -o unlink.o unlink.c
+-cc -c -o sigprocmask.o sigprocmask.c
+-cc -c -o ustat.o ustat.c
+-cc -c -o open.o open.c
+-cc -c -o sync.o sync.c
+-cc -c -o iopl.o iopl.c
+-cc -c -o msgget.o msgget.c
+-cc -c -o pipe.o pipe.c
+-cc -c -o shmdt.o shmdt.c
+-cc -c -o getsid.o getsid.c
+-cc -c -o setfsuid.o setfsuid.c
+-cc -c -o signal.o signal.c
+-cc -c -o newfstat.o newfstat.c
+-cc -c -o mkdir.o mkdir.c
+-cc -c -o getcwd.o getcwd.c
+-cc -c -o link.o link.c
+-cc -c -o msgctl.o msgctl.c
+-cc -c -o sethostname.o sethostname.c
+-cc -c -o semctl.o semctl.c
+-cc -c -o sysinfo.o sysinfo.c
+-cc -c -o setdomainname.o setdomainname.c
+-cc -c -o getegid.o getegid.c
+-cc -c -o personality.o personality.c
+-cc -c -o setregid.o setregid.c
+-cc -c -o setgid.o setgid.c
+-cc -c -o lstat.o lstat.c
+-cc -c -o getuid.o getuid.c
+-cc -c -o llseek.o llseek.c
+-cc -c -o select.o select.c
+-cc -c -o ftruncate.o ftruncate.c
+-cc -c -o getpgid.o getpgid.c
+-cc -c -o brk.o brk.c
+-cc -c -o getrusage.o getrusage.c
+-cc -c -o sigsuspend.o sigsuspend.c
+-cc -c -o writev.o writev.c
+-cc -c -o times.o times.c
+-cc -c -o ssetmask.o ssetmask.c
+-cc -c -o stat.o stat.c
+-cc -c -o fchdir.o fchdir.c
+-cc -c -o chdir.o chdir.c
+-cc -c -o setgroups.o setgroups.c
+-cc -c -o newstat.o newstat.c
+-cc -c -o creat.o creat.c
+-cc -c -o getdents64.o getdents64.c
+-cc -c -o getpid.o getpid.c
+-cc -c -o read.o read.c
+-cc -c -o dup.o dup.c
+-cc -c -o utimes.o utimes.c
+-cc -c -o semget.o semget.c
+-cc -c -o mount.o mount.c
+-cc -c -o rmdir.o rmdir.c
+-cc -c -o setrlimit.o setrlimit.c
+-cc -c -o sgetmask.o sgetmask.c
+-cc -c -o pause.o pause.c
+-cc -c -o utime.o utime.c
+-cc -c -o statfs.o statfs.c
+-cc -c -o ioperm.o ioperm.c
+-cc -c -o ftime.o ftime.c
+-cc -c -o truncate.o truncate.c
+-cc -c -o old_mmap.o old_mmap.c
+-cc -c -o olduname.o olduname.c
+-cc -c -o kill.o kill.c
+-cc -c -o gettimeofday.o gettimeofday.c
+-cc -c -o fchmod.o fchmod.c
+-cc -c -o fcntl64.o fcntl64.c
+-cc -c -o mprotect.o mprotect.c
+-cc -c -o getitimer.o getitimer.c
+-cc -c -o old_select.o old_select.c
+-cc -c -o symlink.o symlink.c
+-cc -c -o mknod.o mknod.c
+-cc -c -o write.o write.c
+-cc -c -o rename.o rename.c
+-cc -c -o shmat.o shmat.c
+-cc -c -o ipc.o ipc.c
+-cc -c -o lstat64.o lstat64.c
+-cc -c -o access.o access.c
+-cc -c -o getrlimit.o getrlimit.c
+-cc -c -o sigreturn.o sigreturn.c
+-cc -c -o ioctl.o ioctl.c
+-cc -c -o umask.o umask.c
+-cc -c -o geteuid.o geteuid.c
+-cc -c -o munmap.o munmap.c
+-cc -c -o alarm.o alarm.c
+-cc -c -o nanosleep.o nanosleep.c
+-cc -c -o close.o close.c
+-cc -c -o chroot.o chroot.c
+-cc -c -o ftruncate64.o ftruncate64.c
+-cc -c -o truncate64.o truncate64.c
+-cc -c -o msgrcv.o msgrcv.c
+-cc -c -o umount2.o umount2.c
+-cc -c -o time.o time.c
+-cc -c -o stime.o stime.c
+-cc -c -o semop.o semop.c
+-cc -c -o newlstat.o newlstat.c
+-cc -c -o sigpending.o sigpending.c
+-cc -c -o reboot.o reboot.c
+-cc -c -o setuid.o setuid.c
+-cc -c -o wait4.o wait4.c
+-cc -c -o chown32.o chown32.c
+-cc -c -o fcntl.o fcntl.c
+-cc -c -o fstat64.o fstat64.c
+-cc -c -o shmctl.o shmctl.c
+-cc -c -o dup2.o dup2.c
+-cc -c -o setpgid.o setpgid.c
+-cc -c -o getdents.o getdents.c
+-cc -c -o getpgrp.o getpgrp.c
+-cc -c -o fchown.o fchown.c
+-cc -c -o execve.o execve.c
+-cc -c -o shmget.o shmget.c
+-cc -c -o lchown.o lchown.c
+-cd ../..
+-
+-cd mm
+-cc -c -o bios_map.o bios_map.c
+-cc -c -o buddy_low.o buddy_low.c
+-cc -c -o memory.o memory.c
+-cc -c -o page.o page.c
+-cc -c -o alloc.o alloc.c
+-cc -c -o fault.o fault.c
+-cc -c -o mmap.o mmap.c
+-cc -c -o swapper.o swapper.c
+-cd ..
+-
+-cd fs
+-cc -c -o filesystems.o filesystems.c
+-cc -c -o devices.o devices.c
+-cc -c -o buffer.o buffer.c
+-cc -c -o fd.o fd.c
+-cc -c -o locks.o locks.c
+-cc -c -o super.o super.c
+-cc -c -o inode.o inode.c
+-cc -c -o namei.o namei.c
+-cc -c -o elf.o elf.c
+-cc -c -o script.o script.c
+-
+-cd minix
+-cc -c -o super.o super.c
+-cc -c -o bitmaps.o bitmaps.c
+-cc -c -o inode.o inode.c
+-cc -c -o namei.o namei.c
+-cc -c -o symlink.o symlink.c
+-cc -c -o dir.o dir.c
+-cc -c -o file.o file.c
+-cc -c -o v1_inode.o v1_inode.c
+-cc -c -o v2_inode.o v2_inode.c
+-cd ..
+-
+-cd ext2
+-cc -c -o inode.o inode.c
+-cc -c -o super.o super.c
+-cc -c -o namei.o namei.c
+-cc -c -o symlink.o symlink.c
+-cc -c -o dir.o dir.c
+-cc -c -o file.o file.c
+-cc -c -o bitmaps.o bitmaps.c
+-cd ..
+-
+-cd pipefs
+-cc -c -o super.o super.c
+-cc -c -o fifo.o fifo.c
+-cc -c -o pipe.o pipe.c
+-cd ..
+-
+-cd iso9660
+-cc -c -o inode.o inode.c
+-cc -c -o super.o super.c
+-cc -c -o namei.o namei.c
+-cc -c -o dir.o dir.c
+-cc -c -o file.o file.c
+-cc -c -o rrip.o rrip.c
+-cc -c -o symlink.o symlink.c
+-cd ..
+-
+-cd procfs
+-cc -c -o super.o super.c
+-cc -c -o inode.o inode.c
+-cc -c -o namei.o namei.c
+-cc -c -o dir.o dir.c
+-cc -c -o file.o file.c
+-cc -c -o symlink.o symlink.c
+-cc -c -o tree.o tree.c
+-cc -c -o data.o data.c
+-cd ../..
+-
+-cd drivers/char
+-cc -c -o console.o console.c
+-cc -c -o tty.o tty.c
+-cc -c -o tty_queue.o tty_queue.c
+-cc -c -o vt.o vt.c
+-cc -c -o defkeymap.o defkeymap.c
+-cc -c -o keyboard.o keyboard.c
+-cc -c -o memdev.o memdev.c
+-cc -c -o serial.o serial.c
+-cc -c -o lp.o lp.c
+-cc -c -o fb.o fb.c
+-cc -c -o sysrq.o sysrq.c
+-cd ..
+-
+-cd block
+-cc -c -o dma.o dma.c
+-cc -c -o floppy.o floppy.c
+-cc -c -o part.o part.c
+-cc -c -o ata.o ata.c
+-cc -c -o ata_hd.o ata_hd.c
+-cc -c -o ata_pci.o ata_pci.c
+-cc -c -o atapi.o atapi.c
+-cc -c -o atapi_cd.o atapi_cd.c
+-cc -c -o ramdisk.o ramdisk.c
+-cd ..
+-
+-cd pci
+-cc -c -o pci.o pci.c
+-cd ..
+-
+-cd video
+-cc -c -o video.o video.c
+-cc -c -o vgacon.o vgacon.c
+-cc -c -o fbcon.o fbcon.c
+-cc -c -o fonts.o fonts.c
+-cc -c -o bga.o bga.c
+-cd ../..
+-
+-cd lib
+-cc -c -o ctype.o ctype.c
+-cc -c -o strings.o strings.c
+-cc -c -o printk.o printk.c
+-cd ..
+-
+-mkdir /boot
+-tcc -m32 -Wl,-Ttext=0x80100000 -static -nostdlib -nostdinc \
+-	kernel/boot.o \
+-       	kernel/core386.o \
+-	kernel/main.o kernel/init.o \
+-	kernel/gdt.o \
+-	kernel/idt.o \
+-	kernel/syscalls.o \
+-	kernel/pic.o \
+-	kernel/pit.o \
+-	kernel/irq.o \
+-	kernel/traps.o \
+-	kernel/cpu.o \
+-	kernel/cmos.o \
+-	kernel/timer.o \
+-	kernel/sched.o \
+-	kernel/sleep.o \
+-	kernel/signal.o \
+-	kernel/process.o \
+-	kernel/multiboot.o \
+-	kernel/kexec.o \
+-	kernel/syscalls/umount.o \
+-	kernel/syscalls/getgid.o \
+-	kernel/syscalls/getppid.o \
+-	kernel/syscalls/fstatfs.o \
+-	kernel/syscalls/getgroups.o \
+-	kernel/syscalls/fsync.o \
+-	kernel/syscalls/setreuid.o \
+-	kernel/syscalls/newuname.o \
+-	kernel/syscalls/fork.o \
+-	kernel/syscalls/setitimer.o \
+-	kernel/syscalls/fdatasync.o \
+-	kernel/syscalls/chmod.o \
+-	kernel/syscalls/mmap2.o \
+-	kernel/syscalls/msgsnd.o \
+-	kernel/syscalls/exit.o \
+-	kernel/syscalls/readlink.o \
+-	kernel/syscalls/socketcall.o \
+-	kernel/syscalls/stat64.o \
+-	kernel/syscalls/readv.o \
+-	kernel/syscalls/sigaction.o \
+-	kernel/syscalls/fstat.o \
+-	kernel/syscalls/waitpid.o \
+-	kernel/syscalls/setfsgid.o \
+-	kernel/syscalls/chown.o \
+-	kernel/syscalls/flock.o \
+-	kernel/syscalls/uname.o \
+-	kernel/syscalls/lseek.o \
+-	kernel/syscalls/setsid.o \
+-	kernel/syscalls/settimeofday.o \
+-	kernel/syscalls/unlink.o \
+-	kernel/syscalls/sigprocmask.o \
+-	kernel/syscalls/ustat.o \
+-	kernel/syscalls/open.o \
+-	kernel/syscalls/sync.o \
+-	kernel/syscalls/iopl.o \
+-	kernel/syscalls/msgget.o \
+-	kernel/syscalls/pipe.o \
+-	kernel/syscalls/shmdt.o \
+-	kernel/syscalls/getsid.o \
+-	kernel/syscalls/setfsuid.o \
+-	kernel/syscalls/signal.o \
+-	kernel/syscalls/newfstat.o \
+-	kernel/syscalls/mkdir.o \
+-	kernel/syscalls/getcwd.o \
+-	kernel/syscalls/link.o \
+-	kernel/syscalls/msgctl.o \
+-	kernel/syscalls/sethostname.o \
+-	kernel/syscalls/semctl.o \
+-	kernel/syscalls/sysinfo.o \
+-	kernel/syscalls/setdomainname.o \
+-	kernel/syscalls/getegid.o \
+-	kernel/syscalls/personality.o \
+-	kernel/syscalls/setregid.o \
+-	kernel/syscalls/setgid.o \
+-	kernel/syscalls/lstat.o \
+-	kernel/syscalls/getuid.o \
+-	kernel/syscalls/llseek.o \
+-	kernel/syscalls/select.o \
+-	kernel/syscalls/ftruncate.o \
+-	kernel/syscalls/getpgid.o \
+-	kernel/syscalls/brk.o \
+-	kernel/syscalls/getrusage.o \
+-	kernel/syscalls/sigsuspend.o \
+-	kernel/syscalls/writev.o \
+-	kernel/syscalls/times.o \
+-	kernel/syscalls/ssetmask.o \
+-	kernel/syscalls/stat.o \
+-	kernel/syscalls/fchdir.o \
+-	kernel/syscalls/chdir.o \
+-	kernel/syscalls/setgroups.o \
+-	kernel/syscalls/newstat.o \
+-	kernel/syscalls/creat.o \
+-	kernel/syscalls/getdents64.o \
+-	kernel/syscalls/getpid.o \
+-	kernel/syscalls/read.o \
+-	kernel/syscalls/dup.o \
+-	kernel/syscalls/utimes.o \
+-	kernel/syscalls/semget.o \
+-	kernel/syscalls/mount.o \
+-	kernel/syscalls/rmdir.o \
+-	kernel/syscalls/setrlimit.o \
+-	kernel/syscalls/sgetmask.o \
+-	kernel/syscalls/pause.o \
+-	kernel/syscalls/utime.o \
+-	kernel/syscalls/statfs.o \
+-	kernel/syscalls/ioperm.o \
+-	kernel/syscalls/ftime.o \
+-	kernel/syscalls/truncate.o \
+-	kernel/syscalls/old_mmap.o \
+-	kernel/syscalls/olduname.o \
+-	kernel/syscalls/kill.o \
+-	kernel/syscalls/gettimeofday.o \
+-	kernel/syscalls/fchmod.o \
+-	kernel/syscalls/fcntl64.o \
+-	kernel/syscalls/mprotect.o \
+-	kernel/syscalls/getitimer.o \
+-	kernel/syscalls/old_select.o \
+-	kernel/syscalls/symlink.o \
+-	kernel/syscalls/mknod.o \
+-	kernel/syscalls/write.o \
+-	kernel/syscalls/rename.o \
+-	kernel/syscalls/shmat.o \
+-	kernel/syscalls/ipc.o \
+-	kernel/syscalls/lstat64.o \
+-	kernel/syscalls/access.o \
+-	kernel/syscalls/getrlimit.o \
+-	kernel/syscalls/sigreturn.o \
+-	kernel/syscalls/ioctl.o \
+-	kernel/syscalls/umask.o \
+-	kernel/syscalls/geteuid.o \
+-	kernel/syscalls/munmap.o \
+-	kernel/syscalls/alarm.o \
+-	kernel/syscalls/nanosleep.o \
+-	kernel/syscalls/close.o \
+-	kernel/syscalls/chroot.o \
+-	kernel/syscalls/ftruncate64.o \
+-	kernel/syscalls/truncate64.o \
+-	kernel/syscalls/msgrcv.o \
+-	kernel/syscalls/umount2.o \
+-	kernel/syscalls/time.o \
+-	kernel/syscalls/stime.o \
+-	kernel/syscalls/semop.o \
+-	kernel/syscalls/newlstat.o \
+-	kernel/syscalls/sigpending.o \
+-	kernel/syscalls/reboot.o \
+-	kernel/syscalls/setuid.o \
+-	kernel/syscalls/wait4.o \
+-	kernel/syscalls/chown32.o \
+-	kernel/syscalls/fcntl.o \
+-	kernel/syscalls/fstat64.o \
+-	kernel/syscalls/shmctl.o \
+-	kernel/syscalls/dup2.o \
+-	kernel/syscalls/setpgid.o \
+-	kernel/syscalls/getdents.o \
+-	kernel/syscalls/getpgrp.o \
+-	kernel/syscalls/fchown.o \
+-	kernel/syscalls/execve.o \
+-	kernel/syscalls/shmget.o \
+-	kernel/syscalls/lchown.o \
+-	mm/bios_map.o \
+-	mm/buddy_low.o \
+-	mm/memory.o \
+-	mm/page.o \
+-	mm/alloc.o \
+-	mm/fault.o \
+-	mm/mmap.o \
+-	mm/swapper.o \
+-	fs/filesystems.o \
+-	fs/devices.o \
+-	fs/buffer.o \
+-	fs/fd.o \
+-	fs/locks.o \
+-	fs/super.o \
+-	fs/inode.o \
+-	fs/namei.o \
+-	fs/elf.o \
+-	fs/script.o \
+-	fs/minix/super.o \
+-	fs/minix/bitmaps.o \
+-	fs/minix/inode.o \
+-	fs/minix/namei.o \
+-	fs/minix/symlink.o \
+-	fs/minix/dir.o \
+-	fs/minix/file.o \
+-	fs/minix/v1_inode.o \
+-	fs/minix/v2_inode.o \
+-	fs/ext2/inode.o \
+-	fs/ext2/super.o \
+-	fs/ext2/namei.o \
+-	fs/ext2/symlink.o \
+-	fs/ext2/dir.o \
+-	fs/ext2/file.o \
+-	fs/ext2/bitmaps.o \
+-	fs/pipefs/super.o \
+-	fs/pipefs/fifo.o \
+-	fs/pipefs/pipe.o \
+-	fs/iso9660/inode.o \
+-	fs/iso9660/super.o \
+-	fs/iso9660/namei.o \
+-	fs/iso9660/dir.o \
+-	fs/iso9660/file.o \
+-	fs/iso9660/rrip.o \
+-	fs/iso9660/symlink.o \
+-	fs/procfs/super.o \
+-	fs/procfs/inode.o \
+-	fs/procfs/namei.o \
+-	fs/procfs/dir.o \
+-	fs/procfs/file.o \
+-	fs/procfs/symlink.o \
+-	fs/procfs/tree.o \
+-	fs/procfs/data.o \
+-	drivers/char/console.o \
+-	drivers/char/tty.o \
+-	drivers/char/tty_queue.o \
+-	drivers/char/vt.o \
+-	drivers/char/defkeymap.o \
+-	drivers/char/keyboard.o \
+-	drivers/char/memdev.o \
+-	drivers/char/serial.o \
+-	drivers/char/lp.o \
+-	drivers/char/fb.o \
+-	drivers/char/sysrq.o \
+-	drivers/block/dma.o \
+-	drivers/block/floppy.o \
+-	drivers/block/part.o \
+-	drivers/block/ata.o \
+-	drivers/block/ata_hd.o \
+-	drivers/block/ata_pci.o \
+-	drivers/block/atapi.o \
+-	drivers/block/atapi_cd.o \
+-	drivers/block/ramdisk.o \
+-	drivers/pci/pci.o \
+-	drivers/video/video.o \
+-	drivers/video/vgacon.o \
+-	drivers/video/fbcon.o \
+-	drivers/video/fonts.o \
+-	drivers/video/bga.o \
+-	lib/ctype.o \
+-	lib/strings.o \
+-	lib/printk.o \
+-	-o /boot/fiwix
+-
+-cd ../..
+-
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /boot/fiwix
+-
+-    cp ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 diff --git a/steps/fiwix-1.5.0-lb1/patches/live-bootstrap-make.patch b/steps/fiwix-1.5.0-lb1/patches/live-bootstrap-make.patch
 new file mode 100644
 index 0000000..d20e1f1
@@ -1224,58 +1980,117 @@ index 0000000..d20e1f1
 +-	@for n in $(FSDIRS) ; do (cd $$n ; $(MAKE) clean) ; done
 + 	rm -f *.o
 + 
-diff --git a/steps/gzip-1.2.4/pass1.bake b/steps/gzip-1.2.4/pass1.bake
+diff --git a/steps/fiwix-1.5.0-lb1/patches/live-bootstrap-make.patch.license b/steps/fiwix-1.5.0-lb1/patches/live-bootstrap-make.patch.license
 new file mode 100644
-index 0000000..1a42af1
+index 0000000..7bf0add
 --- /dev/null
++++ b/steps/fiwix-1.5.0-lb1/patches/live-bootstrap-make.patch.license
+@@ -0,0 +1,3 @@
++SPDX-FileCopyrightText: 2023 Richard Masters <grick23@gmail.com>
++SPDX-FileCopyrightText: 2026 Ben Siraphob
++SPDX-License-Identifier: MIT
+diff --git a/steps/gzip-1.2.4/pass1.kaem b/steps/gzip-1.2.4/pass1.bake
+old mode 100755
+new mode 100644
+similarity index 65%
+rename from steps/gzip-1.2.4/pass1.kaem
+rename to steps/gzip-1.2.4/pass1.bake
+index 8a11aed..161c376
+--- a/steps/gzip-1.2.4/pass1.kaem
 +++ b/steps/gzip-1.2.4/pass1.bake
-@@ -0,0 +1,31 @@
+@@ -1,60 +1,38 @@
+-#!/bin/sh
+-
+ # SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+ # SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
+ # SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
+ #
+ # SPDX-License-Identifier: GPL-3.0-or-later
+ 
+-set -ex
 +: all build checksum
-+
+ 
+-# Check tarball checksums
 +: build
-+checksum-transcriber sources
-+sha256sum -c sources.SHA256SUM
-+mkdir build
-+cd build
-+ungz --file ${DISTFILES}/${pkg}.tar.gz --output ${pkg}.tar
-+untar --file ${pkg}.tar
-+rm ${pkg}.tar
-+cd ${pkg}
-+cp ../../mk/main.mk Makefile
-+catm gzip.c.new ../../files/stat_override.c gzip.c
-+cp gzip.c.new gzip.c
-+patch -Np1 -i ../../patches/removecrc.patch
-+patch -Np1 -i ../../patches/makecrc-write-to-file.patch
-+tcc -static -o makecrc sample/makecrc.c
-+./makecrc
-+catm util.c.new util.c crc.c
-+cp util.c.new util.c
-+make
-+cp gzip ${BINDIR}/gzip
-+cp gzip ${BINDIR}/gunzip
-+chmod 755 ${BINDIR}/gzip
-+chmod 755 ${BINDIR}/gunzip
-+cd ../..
-+
+ checksum-transcriber sources
+ sha256sum -c sources.SHA256SUM
+-
+ mkdir build
+ cd build
+-
+-# Extract
+ ungz --file ${DISTFILES}/${pkg}.tar.gz --output ${pkg}.tar
+ untar --file ${pkg}.tar
+ rm ${pkg}.tar
+ cd ${pkg}
+-
+-# Prepare
+ cp ../../mk/main.mk Makefile
+ catm gzip.c.new ../../files/stat_override.c gzip.c
+ cp gzip.c.new gzip.c
+-
+-# Remove generated crc table from util.c
+ patch -Np1 -i ../../patches/removecrc.patch
+-
+-# Since IO redirection is not available yet, patch makecrc.c so that it writes
+-# C code to file crc.c that can be appended to util.c
+ patch -Np1 -i ../../patches/makecrc-write-to-file.patch
+-
+ tcc -static -o makecrc sample/makecrc.c
+ ./makecrc
+ catm util.c.new util.c crc.c
+ cp util.c.new util.c
+-
+-# Build
+ make
+-
+-# Install
+ cp gzip ${BINDIR}/gzip
+ cp gzip ${BINDIR}/gunzip
+ chmod 755 ${BINDIR}/gzip
+ chmod 755 ${BINDIR}/gunzip
+-
+ cd ../..
+ 
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/gzip
+-
+-    cp ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 +: checksum build
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/gzip
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/improve/reconfigure.bake b/steps/improve/reconfigure.bake
 new file mode 100644
-index 0000000..83457e8
+index 0000000..90fc2ce
 --- /dev/null
 +++ b/steps/improve/reconfigure.bake
-@@ -0,0 +1,3 @@
+@@ -0,0 +1,8 @@
++# SPDX-FileCopyrightText: 2024 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
 +: all
 +/configurator /steps/configurator
 +/script-generator /steps/manifest
 diff --git a/steps/jump/fiwix.bake b/steps/jump/fiwix.bake
 new file mode 100644
-index 0000000..4d0a5f5
+index 0000000..d492f59
 --- /dev/null
 +++ b/steps/jump/fiwix.bake
-@@ -0,0 +1,4 @@
+@@ -0,0 +1,9 @@
++# SPDX-FileCopyrightText: 2023 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
 +: all
 +make_fiwix_initrd -s 1381376 /boot/fiwix.ext2
 +? BARE_METAL True kexec-fiwix /boot/fiwix -i /boot/fiwix.ext2 -m /e820 -c fiwix console=/dev/tty1 root=/dev/ram0 initrd=fiwix.ext2 kexec_proto=linux kexec_size=199680 kexec_cmdline=init=/init consoleblank=0
@@ -1289,10 +2104,15 @@ index 30c5330..fa15907 100644
 +812c1283acd56479ab5c4cc32cb97fac07f4250d6768e087453b4464f5debe61  /usr/bin/kexec-fiwix
 diff --git a/steps/kexec-fiwix-1.0/pass1.bake b/steps/kexec-fiwix-1.0/pass1.bake
 new file mode 100644
-index 0000000..8b2f802
+index 0000000..d3cac53
 --- /dev/null
 +++ b/steps/kexec-fiwix-1.0/pass1.bake
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,16 @@
++# SPDX-FileCopyrightText: 2023 Richard Masters <grick23@gmail.com>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: MIT
++
 +: all build checksum
 +
 +: build
@@ -1304,6 +2124,32 @@ index 0000000..8b2f802
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/kexec-fiwix
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/kexec-fiwix-1.0/pass1.kaem b/steps/kexec-fiwix-1.0/pass1.kaem
+deleted file mode 100755
+index 5c3de33..0000000
+--- a/steps/kexec-fiwix-1.0/pass1.kaem
++++ /dev/null
+@@ -1,20 +0,0 @@
+-#!/bin/sh
+-#
+-# SPDX-FileCopyrightText: 2023 Richard Masters <grick23@gmail.com>
+-# SPDX-License-Identifier: MIT
+-
+-set -ex
+-
+-cd src
+-tcc -m32 -march=i386 -std=c89 -I../../tcc/tcc-0.9.27/include -o ${BINDIR}/kexec-fiwix kexec-fiwix.c
+-cd ..
+-
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/kexec-fiwix
+-
+-    cp ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 diff --git a/steps/kexec-fiwix-1.0/src/kexec-fiwix.c b/steps/kexec-fiwix-1.0/src/kexec-fiwix.c
 index 4cd3de7..ff63b57 100644
 --- a/steps/kexec-fiwix-1.0/src/kexec-fiwix.c
@@ -1347,10 +2193,15 @@ index 4cd3de7..ff63b57 100644
  			initrd_filename = argv[i];
 diff --git a/steps/lwext4-1.0.0-lb1/pass1.bake b/steps/lwext4-1.0.0-lb1/pass1.bake
 new file mode 100644
-index 0000000..f4f7489
+index 0000000..be6e9a1
 --- /dev/null
 +++ b/steps/lwext4-1.0.0-lb1/pass1.bake
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,29 @@
++# SPDX-FileCopyrightText: 2023 Richard Masters <grick23@gmail.com>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: MIT
++
 +: all build checksum
 +
 +: build
@@ -1375,6 +2226,70 @@ index 0000000..f4f7489
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/make_fiwix_initrd
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/lwext4-1.0.0-lb1/pass1.kaem b/steps/lwext4-1.0.0-lb1/pass1.kaem
+deleted file mode 100755
+index 48d7d0f..0000000
+--- a/steps/lwext4-1.0.0-lb1/pass1.kaem
++++ /dev/null
+@@ -1,58 +0,0 @@
+-#!/bin/sh
+-# SPDX-FileCopyrightText: 2023 Richard Masters <grick23@gmail.com>
+-# SPDX-License-Identifier: MIT
+-
+-set -ex
+-
+-mkdir build
+-cd build
+-ungz --file ${DISTFILES}/${pkg}.tar.gz --output ${pkg}.tar
+-untar --file ${pkg}.tar
+-cd ${pkg}
+-
+-mkdir -p build_generic/include/generated
+-catm build_generic/include/generated/ext4_config.h ../../config/ext4_config.h
+-
+-cd blockdev/linux
+-tcc -m32 -march=i386 -std=c89 -I../../include -I../../build_generic/include -I../../../tcc/tcc-0.9.27/include -DVERSION="\"1.0\"" -c file_dev.c
+-
+-cd ../../src
+-alias cc="tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include"
+-cc -c ext4.c
+-cc -c ext4_balloc.c
+-cc -c ext4_bcache.c
+-cc -c ext4_bitmap.c
+-cc -c ext4_block_group.c
+-cc -c ext4_blockdev.c
+-cc -c ext4_crc32.c
+-cc -c ext4_debug.c
+-cc -c ext4_dir.c
+-cc -c ext4_dir_idx.c
+-cc -c ext4_extent.c
+-cc -c ext4_fs.c
+-cc -c ext4_hash.c
+-cc -c ext4_ialloc.c
+-cc -c ext4_inode.c
+-cc -c ext4_journal.c
+-cc -c ext4_mbr.c
+-cc -c ext4_mkfs.c
+-cc -c ext4_super.c
+-cc -c ext4_trans.c
+-cc -c ext4_xattr.c
+-
+-cp ../../../files/make_fiwix_initrd.c make_fiwix_initrd.c
+-tcc -m32 -march=i386 -std=c89 -I../include -I../build_generic/include -I../../tcc/tcc-0.9.27/include -DVERSION="\"1.0\"" -c make_fiwix_initrd.c
+-
+-tcc -m32 -o ${BINDIR}/make_fiwix_initrd ext4.o ext4_balloc.o ext4_bcache.o ext4_bitmap.o ext4_block_group.o ext4_blockdev.o ext4_crc32.o ext4_debug.o ext4_dir.o ext4_dir_idx.o ext4_extent.o ext4_fs.o ext4_hash.o ext4_ialloc.o ext4_inode.o ext4_journal.o ext4_mbr.o ext4_mkfs.o ext4_super.o ext4_trans.o ext4_xattr.o ../blockdev/linux/file_dev.o make_fiwix_initrd.o
+-
+-cd ../../..
+-
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/make_fiwix_initrd
+-
+-    cp ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 diff --git a/steps/lwext4-1.0.0-lb1/patches/make-fiwix-initrd.patch b/steps/lwext4-1.0.0-lb1/patches/make-fiwix-initrd.patch
 new file mode 100644
 index 0000000..a07b47a
@@ -1423,12 +2338,26 @@ index 0000000..a07b47a
 + 	
 + 	
 ++	
+diff --git a/steps/lwext4-1.0.0-lb1/patches/make-fiwix-initrd.patch.license b/steps/lwext4-1.0.0-lb1/patches/make-fiwix-initrd.patch.license
+new file mode 100644
+index 0000000..7bf0add
+--- /dev/null
++++ b/steps/lwext4-1.0.0-lb1/patches/make-fiwix-initrd.patch.license
+@@ -0,0 +1,3 @@
++SPDX-FileCopyrightText: 2023 Richard Masters <grick23@gmail.com>
++SPDX-FileCopyrightText: 2026 Ben Siraphob
++SPDX-License-Identifier: MIT
 diff --git a/steps/make-3.82/pass1.bake b/steps/make-3.82/pass1.bake
 new file mode 100644
-index 0000000..bf1a60b
+index 0000000..0ad9308
 --- /dev/null
 +++ b/steps/make-3.82/pass1.bake
-@@ -0,0 +1,84 @@
+@@ -0,0 +1,89 @@
++# SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
 +: all build checksum
 +
 += MAKE_CFLAGS -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART
@@ -1513,6 +2442,82 @@ index 0000000..bf1a60b
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/make
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
+diff --git a/steps/make-3.82/pass1.kaem b/steps/make-3.82/pass1.kaem
+deleted file mode 100755
+index 79ad2f9..0000000
+--- a/steps/make-3.82/pass1.kaem
++++ /dev/null
+@@ -1,70 +0,0 @@
+-#!/bin/sh
+-
+-# SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
+-#
+-# SPDX-License-Identifier: GPL-3.0-or-later
+-
+-set -ex
+-
+-# Check tarball checksums
+-checksum-transcriber sources
+-sha256sum -c sources.SHA256SUM
+-
+-mkdir build
+-cd build 
+-
+-# Extract
+-unbz2 --file ${DISTFILES}/${pkg}.tar.bz2 --output ${pkg}.tar
+-untar --file ${pkg}.tar
+-rm ${pkg}.tar
+-cd ${pkg}
+-
+-# Create .h files
+-catm config.h
+-
+-# Compile
+-tcc -c getopt.c
+-tcc -c getopt1.c
+-tcc -c -I. -Iglob -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_STDINT_H ar.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_FCNTL_H arscan.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DFILE_TIMESTAMP_HI_RES=0 commands.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DSCCS_GET=\"/nullop\" default.c
+-tcc -c -I. -Iglob -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_DIRENT_H dir.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART expand.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DFILE_TIMESTAMP_HI_RES=0 file.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -Dvfork=fork function.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART implicit.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_DUP2 -DHAVE_STRCHR -Dvfork=fork job.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DLOCALEDIR=\"/fake-locale\" -DPACKAGE=\"fake-make\" -DHAVE_MKTEMP -DHAVE_GETCWD main.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DHAVE_STRERROR -DHAVE_VPRINTF -DHAVE_ANSI_COMPILER -DHAVE_STDARG_H misc.c
+-tcc -c -I. -Iglob -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DINCLUDEDIR=\"${PREFIX}/include\" read.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART -DFILE_TIMESTAMP_HI_RES=0 -DHAVE_FCNTL_H -DLIBDIR=\"${PREFIX}/lib\" remake.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART rule.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART signame.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART strcache.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART variable.c
+-tcc -c -I. -DVERSION=\"3.82\" version.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART vpath.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART hash.c
+-tcc -c -I. -DHAVE_INTTYPES_H -DHAVE_SA_RESTART remote-stub.c
+-tcc -c -DHAVE_FCNTL_H getloadavg.c
+-tcc -c -Iglob -DSTDC_HEADERS glob/fnmatch.c
+-tcc -c -Iglob -DHAVE_STRDUP -DHAVE_DIRENT_H glob/glob.c
+-
+-# Link
+-tcc -static -o ${BINDIR}/make getopt.o getopt1.o ar.o arscan.o commands.o default.o dir.o expand.o file.o function.o implicit.o job.o main.o misc.o read.o remake.o rule.o signame.o strcache.o variable.o version.o vpath.o hash.o remote-stub.o getloadavg.o fnmatch.o glob.o
+-
+-# Test
+-make --version
+-
+-cd ../..
+-
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/make
+-
+-    cp ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 diff --git a/steps/manifest b/steps/manifest
 index 8b99df5..1c654ff 100644
 --- a/steps/manifest
@@ -1545,10 +2550,16 @@ index 85e3ffd..a09914d 100644
  494f184a87175abc485a898c250c3831b2b5dcf5aead46591e00b39d1c5529fc  /usr/lib/x86-mes/crt1.o
 diff --git a/steps/mes-0.27.1/pass1.bake b/steps/mes-0.27.1/pass1.bake
 new file mode 100644
-index 0000000..0bf1be9
+index 0000000..322b555
 --- /dev/null
 +++ b/steps/mes-0.27.1/pass1.bake
-@@ -0,0 +1,184 @@
+@@ -0,0 +1,190 @@
++# SPDX-FileCopyrightText: 2020-2023 Andrius Štikonas <andrius@stikonas.eu>
++# SPDX-FileCopyrightText: 2020-2022 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
 +: all build checksum
 +
 += NYACC_GENERATED module/nyacc/lang/c99/mach.d/c99-act.scm module/nyacc/lang/c99/mach.d/c99-tab.scm module/nyacc/lang/c99/mach.d/c99cx-act.scm module/nyacc/lang/c99/mach.d/c99cx-tab.scm module/nyacc/lang/c99/mach.d/c99x-act.scm module/nyacc/lang/c99/mach.d/c99x-tab.scm module/nyacc/lang/c99/mach.d/cpp-act.scm module/nyacc/lang/c99/mach.d/cpp-tab.scm
@@ -1734,19 +2745,409 @@ index 0000000..0bf1be9
 +? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
 diff --git a/steps/mes-0.27.1/pass1.kaem b/steps/mes-0.27.1/pass1.kaem
-index c833f7c..d36a0b9 100755
+deleted file mode 100755
+index c833f7c..0000000
 --- a/steps/mes-0.27.1/pass1.kaem
-+++ b/steps/mes-0.27.1/pass1.kaem
-@@ -46,8 +46,7 @@ rm ${NYACC_PKG}.tar ${MES_PKG}.tar
- cp ../files/config.h ${MES_PREFIX}/include/mes
- 
- # This patch was upstreamed after mes 0.27.1
++++ /dev/null
+@@ -1,398 +0,0 @@
+-#!/bin/sh
+-
+-# SPDX-FileCopyrightText: 2020-2023 Andrius Štikonas <andrius@stikonas.eu>
+-# SPDX-FileCopyrightText: 2020-2022 Samuel Tyler <samuel@samuelt.me>
+-#
+-# SPDX-License-Identifier: GPL-3.0-or-later
+-
+-set -ex
+-
+-# Variables
+-MES_ARENA=20000000
+-MES_MAX_ARENA=20000000
+-MES_STACK=6000000
+-MES=${BINDIR}/mes-m2
+-LIBDIR=${MES_PREFIX}/lib
+-
+-if match ${ARCH} x86; then
+-    MES_ARCH=x86
+-    ARCH_BITS=32
+-fi
+-if match ${ARCH} amd64; then
+-    MES_ARCH=x86_64
+-    ARCH_BITS=64
+-fi
+-if match ${ARCH} riscv64; then
+-    MES_ARCH=riscv64
+-    ARCH_BITS=64
+-fi
+-
+-# Check tarball checksums
+-checksum-transcriber sources
+-sha256sum -c sources.SHA256SUM
+-
+-# Unpack
+-mkdir build
+-cd build
+-ungz --file ${DISTFILES}/${NYACC_PKG}-lb1.tar.gz --output ${NYACC_PKG}.tar
+-ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
+-untar --file ${NYACC_PKG}.tar
+-untar --non-strict --file ${MES_PKG}.tar # ignore symlinks
+-mes_run=${MES_PREFIX}/kaem.run
+-replace --file ${mes_run} --output ${mes_run} --match-on 0x1000000 --replace-with 0x8048000
+-
+-rm ${NYACC_PKG}.tar ${MES_PKG}.tar
+-
+-cp ../files/config.h ${MES_PREFIX}/include/mes
+-
+-# This patch was upstreamed after mes 0.27.1
 -simple-patch ${MES_PREFIX}/lib/linux/wait4.c \
 -    ../simple-patches/wait4.before ../simple-patches/wait4.after
-+simple-patch -Np0 -i ../patches/wait4.patch
- 
- cd ${MES_PREFIX}
- mkdir include/arch
+-
+-cd ${MES_PREFIX}
+-mkdir include/arch
+-cp include/linux/${MES_ARCH}/kernel-stat.h include/arch/kernel-stat.h
+-cp include/linux/${MES_ARCH}/signal.h include/arch/signal.h
+-cp include/linux/${MES_ARCH}/syscall.h include/arch/syscall.h
+-
+-# Remove pregenerated files
+-rm mes/module/mes/psyntax.pp mes/module/mes/psyntax.pp.header
+-
+-# These files are symlinked in the repo
+-cp mes/module/srfi/srfi-9-struct.mes mes/module/srfi/srfi-9.mes
+-cp mes/module/srfi/srfi-9/gnu-struct.mes mes/module/srfi/srfi-9/gnu.mes
+-
+-# Build mes-m2
+-kaem --verbose --strict --file kaem.${MES_ARCH}
+-cp bin/mes-m2 ${BINDIR}/mes-m2
+-chmod 755 ${BINDIR}/mes-m2
+-
+-# Rebuild pregenerated files in nyacc
+-cd ../${NYACC_PKG}
+-rm module/nyacc/lang/c99/mach.d/c99-act.scm module/nyacc/lang/c99/mach.d/c99-tab.scm \
+-    module/nyacc/lang/c99/mach.d/c99cx-act.scm module/nyacc/lang/c99/mach.d/c99cx-tab.scm \
+-    module/nyacc/lang/c99/mach.d/c99x-act.scm module/nyacc/lang/c99/mach.d/c99x-tab.scm \
+-    module/nyacc/lang/c99/mach.d/cpp-act.scm module/nyacc/lang/c99/mach.d/cpp-tab.scm
+-${MES} -L module gen-cpp-files.scm
+-# More RAM for this one!
+-MES_ARENA=32000000
+-${MES} -L module gen-c99-files.scm
+-MES_ARENA=20000000
+-${MES} -L module gen-c99cx-files.scm
+-cd ../${MES_PKG}
+-
+-# Create mescc.scm
+-mescc_in=scripts/mescc.scm.in
+-replace --file ${mescc_in} --output ${mescc_in} --match-on @prefix@ --replace-with ${PREFIX}
+-replace --file ${mescc_in} --output ${mescc_in} --match-on @VERSION@ --replace-with ${MES_VERSION}
+-replace --file ${mescc_in} --output ${mescc_in} --match-on @mes_cpu@ --replace-with ${MES_ARCH}
+-replace --file ${mescc_in} --output ${mescc_in} --match-on @mes_kernel@ --replace-with linux
+-
+-mescc_scm=${BINDIR}/mescc.scm
+-cp ${mescc_in} ${mescc_scm}
+-chmod 755 ${mescc_scm}
+-
+-# Recompile Mes and Mes C library using mes-m2 bootstrapped Mes
+-
+-alias mescc="${MES} -e main ${BINDIR}/mescc.scm -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -c"
+-
+-# Start with crt1.o
+-mescc lib/linux/${MES_ARCH}-mes-mescc/crt1.c -o lib/${MES_ARCH}-mes/crt1.o
+-
+-# Now for libc-mini.a
+-catm libc-mini.c \
+- lib/mes/__init_io.c \
+- lib/mes/eputs.c \
+- lib/mes/oputs.c \
+- lib/mes/globals.c \
+- lib/stdlib/exit.c \
+- lib/linux/${MES_ARCH}-mes-mescc/_exit.c \
+- lib/linux/${MES_ARCH}-mes-mescc/_write.c \
+- lib/stdlib/puts.c \
+- lib/string/strlen.c
+-mescc libc-mini.c
+-cp libc-mini.o ${LIBDIR}/${MES_ARCH}-mes/libc-mini.a
+-cp libc-mini.s ${LIBDIR}/${MES_ARCH}-mes/libc-mini.s
+-
+-# libmescc.a
+-catm libmescc.c \
+- lib/mes/globals.c \
+- lib/linux/${MES_ARCH}-mes-mescc/syscall-internal.c
+-mescc libmescc.c
+-cp libmescc.o ${LIBDIR}/${MES_ARCH}-mes/libmescc.a
+-cp libmescc.s ${LIBDIR}/${MES_ARCH}-mes/libmescc.s
+-
+-# libc.a
+-catm libc.c \
+- lib/ctype/isnumber.c \
+- lib/mes/abtol.c \
+- lib/mes/cast.c \
+- lib/mes/eputc.c \
+- lib/mes/fdgetc.c \
+- lib/mes/fdputc.c \
+- lib/mes/fdputs.c \
+- lib/mes/fdungetc.c \
+- lib/mes/itoa.c \
+- lib/mes/ltoa.c \
+- lib/mes/ltoab.c \
+- lib/mes/mes_open.c \
+- lib/mes/ntoab.c \
+- lib/mes/oputc.c \
+- lib/mes/ultoa.c \
+- lib/mes/utoa.c \
+- lib/ctype/isdigit.c \
+- lib/ctype/isspace.c \
+- lib/ctype/isxdigit.c \
+- lib/mes/assert_msg.c \
+- lib/posix/write.c \
+- lib/stdlib/atoi.c \
+- lib/linux/lseek.c \
+- lib/mes/__assert_fail.c \
+- lib/mes/__buffered_read.c \
+- lib/mes/__mes_debug.c \
+- lib/posix/execv.c \
+- lib/posix/getcwd.c \
+- lib/posix/getenv.c \
+- lib/posix/isatty.c \
+- lib/posix/open.c \
+- lib/posix/buffered-read.c \
+- lib/posix/setenv.c \
+- lib/posix/wait.c \
+- lib/dirent/closedir.c \
+- lib/dirent/opendir.c \
+- lib/stdio/fgetc.c \
+- lib/stdio/fputc.c \
+- lib/stdio/fputs.c \
+- lib/stdio/getc.c \
+- lib/stdio/getchar.c \
+- lib/stdio/putc.c \
+- lib/stdio/putchar.c \
+- lib/stdio/ungetc.c \
+- lib/stdlib/calloc.c \
+- lib/stdlib/free.c \
+- lib/stdlib/realloc.c \
+- lib/string/memchr.c \
+- lib/string/memcmp.c \
+- lib/string/memcpy.c \
+- lib/string/memmove.c \
+- lib/string/memset.c \
+- lib/string/strcmp.c \
+- lib/string/strcpy.c \
+- lib/string/strncmp.c \
+- lib/posix/raise.c \
+- lib/linux/access.c \
+- lib/linux/brk.c \
+- lib/linux/chdir.c \
+- lib/linux/chmod.c \
+- lib/linux/clock_gettime.c \
+- lib/linux/dup.c \
+- lib/linux/dup2.c \
+- lib/linux/execve.c \
+- lib/linux/fork.c \
+- lib/linux/fsync.c \
+- lib/linux/_getcwd.c \
+- lib/linux/gettimeofday.c \
+- lib/linux/ioctl3.c \
+- lib/linux/malloc.c \
+- lib/linux/_open3.c \
+- lib/linux/_read.c \
+- lib/linux/readdir.c \
+- lib/linux/rename.c \
+- lib/linux/time.c \
+- lib/linux/umask.c \
+- lib/linux/uname.c \
+- lib/linux/unlink.c \
+- lib/linux/utimensat.c \
+- lib/linux/wait4.c \
+- lib/linux/waitpid.c \
+- lib/linux/${MES_ARCH}-mes-mescc/syscall.c \
+- lib/linux/getpid.c \
+- lib/linux/kill.c \
+- lib/linux/pipe.c \
+- lib/linux/stat.c \
+- lib/linux/lstat.c \
+- lib/linux/mkdir.c \
+- lib/linux/rmdir.c \
+- lib/linux/link.c \
+- lib/linux/symlink.c \
+- lib/linux/close.c \
+- lib/linux/nanosleep.c \
+- lib/linux/fcntl.c \
+- lib/linux/fstat.c \
+- lib/linux/getdents.c
+-mescc libc.c
+-catm ${LIBDIR}/${MES_ARCH}-mes/libc.a ${LIBDIR}/${MES_ARCH}-mes/libc-mini.a libc.o
+-catm ${LIBDIR}/${MES_ARCH}-mes/libc.s ${LIBDIR}/${MES_ARCH}-mes/libc-mini.s libc.s
+-
+-# libc+tcc.a
+-catm libc+tcc.c \
+- lib/ctype/islower.c \
+- lib/ctype/isupper.c \
+- lib/ctype/tolower.c \
+- lib/ctype/toupper.c \
+- lib/mes/abtod.c \
+- lib/mes/dtoab.c \
+- lib/mes/search-path.c \
+- lib/posix/execvp.c \
+- lib/stdio/fclose.c \
+- lib/stdio/fdopen.c \
+- lib/stdio/ferror.c \
+- lib/stdio/fflush.c \
+- lib/stdio/fopen.c \
+- lib/stdio/fprintf.c \
+- lib/stdio/fread.c \
+- lib/stdio/fseek.c \
+- lib/stdio/ftell.c \
+- lib/stdio/fwrite.c \
+- lib/stdio/printf.c \
+- lib/stdio/remove.c \
+- lib/stdio/snprintf.c \
+- lib/stdio/sprintf.c \
+- lib/stdio/sscanf.c \
+- lib/stdio/vfprintf.c \
+- lib/stdio/vprintf.c \
+- lib/stdio/vsnprintf.c \
+- lib/stdio/vsprintf.c \
+- lib/stdio/vsscanf.c \
+- lib/stdlib/abort.c \
+- lib/stdlib/qsort.c \
+- lib/stdlib/strtod.c \
+- lib/stdlib/strtof.c \
+- lib/stdlib/strtol.c \
+- lib/stdlib/strtold.c \
+- lib/stdlib/strtoll.c \
+- lib/stdlib/strtoul.c \
+- lib/stdlib/strtoull.c \
+- lib/string/memmem.c \
+- lib/string/strcat.c \
+- lib/string/strchr.c \
+- lib/string/strlwr.c \
+- lib/string/strncpy.c \
+- lib/string/strrchr.c \
+- lib/string/strstr.c \
+- lib/string/strupr.c \
+- lib/stub/sigaction.c \
+- lib/stub/ldexp.c \
+- lib/stub/mprotect.c \
+- lib/stub/localtime.c \
+- lib/stub/sigemptyset.c \
+- lib/${MES_ARCH}-mes-mescc/setjmp.c \
+- lib/linux/close.c \
+- lib/linux/rmdir.c \
+- lib/linux/stat.c
+-mescc libc+tcc.c
+-catm ${LIBDIR}/${MES_ARCH}-mes/libc+tcc.a ${LIBDIR}/${MES_ARCH}-mes/libc.a libc+tcc.o
+-catm ${LIBDIR}/${MES_ARCH}-mes/libc+tcc.s ${LIBDIR}/${MES_ARCH}-mes/libc.s libc+tcc.s
+-
+-# Make directories
+-mkdir ${PREFIX}/lib/linux ${INCDIR}/mes ${INCDIR}/sys ${INCDIR}/linux ${INCDIR}/arch
+-mkdir ${PREFIX}/lib/${MES_ARCH}-mes ${PREFIX}/lib/linux/${MES_ARCH}-mes ${INCDIR}/linux/${MES_ARCH}
+-
+-# Install libraries
+-cp ${LIBDIR}/${MES_ARCH}-mes/libc.a ${PREFIX}/lib/${MES_ARCH}-mes/
+-cp ${LIBDIR}/${MES_ARCH}-mes/libc+tcc.a ${PREFIX}/lib/${MES_ARCH}-mes/
+-cp ${LIBDIR}/${MES_ARCH}-mes/libmescc.a ${PREFIX}/lib/${MES_ARCH}-mes/
+-cp ${LIBDIR}/${MES_ARCH}-mes/libc.s ${PREFIX}/lib/${MES_ARCH}-mes/
+-cp ${LIBDIR}/${MES_ARCH}-mes/libc+tcc.s ${PREFIX}/lib/${MES_ARCH}-mes/
+-cp ${LIBDIR}/${MES_ARCH}-mes/libmescc.s ${PREFIX}/lib/${MES_ARCH}-mes/
+-cp ${LIBDIR}/${MES_ARCH}-mes/${MES_ARCH}.M1 ${PREFIX}/lib/${MES_ARCH}-mes/
+-cp ${LIBDIR}/${MES_ARCH}-mes/crt1.o ${PREFIX}/lib/${MES_ARCH}-mes/
+-cp ${LIBDIR}/${MES_ARCH}-mes/crt1.s ${PREFIX}/lib/${MES_ARCH}-mes/
+-cp ${LIBDIR}/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-footer-single-main.hex2 ${PREFIX}/lib/linux/${MES_ARCH}-mes/
+-cp ${LIBDIR}/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-header.hex2 ${PREFIX}/lib/linux/${MES_ARCH}-mes/
+-
+-# Install header files
+-cp include/alloca.h ${INCDIR}/alloca.h
+-cp include/argz.h ${INCDIR}/argz.h
+-cp include/ar.h ${INCDIR}/ar.h
+-cp include/assert.h ${INCDIR}/assert.h
+-cp include/ctype.h ${INCDIR}/ctype.h
+-cp include/dirent.h ${INCDIR}/dirent.h
+-cp include/dirstream.h ${INCDIR}/dirstream.h
+-cp include/dlfcn.h ${INCDIR}/dlfcn.h
+-cp include/endian.h ${INCDIR}/endian.h
+-cp include/errno.h ${INCDIR}/errno.h
+-cp include/fcntl.h ${INCDIR}/fcntl.h
+-cp include/features.h ${INCDIR}/features.h
+-cp include/float.h ${INCDIR}/float.h
+-cp include/getopt.h ${INCDIR}/getopt.h
+-cp include/grp.h ${INCDIR}/grp.h
+-cp include/inttypes.h ${INCDIR}/inttypes.h
+-cp include/libgen.h ${INCDIR}/libgen.h
+-cp include/limits.h ${INCDIR}/limits.h
+-cp include/locale.h ${INCDIR}/locale.h
+-cp include/math.h ${INCDIR}/math.h
+-cp include/memory.h ${INCDIR}/memory.h
+-cp include/pwd.h ${INCDIR}/pwd.h
+-cp include/setjmp.h ${INCDIR}/setjmp.h
+-cp include/signal.h ${INCDIR}/signal.h
+-cp include/stdarg.h ${INCDIR}/stdarg.h
+-cp include/linux/${MES_ARCH}/signal.h ${INCDIR}/arch/signal.h
+-cp include/stdbool.h ${INCDIR}/stdbool.h
+-cp include/stddef.h ${INCDIR}/stddef.h
+-cp include/stdint.h ${INCDIR}/stdint.h
+-cp include/stdio.h ${INCDIR}/stdio.h
+-cp include/stdlib.h ${INCDIR}/stdlib.h
+-cp include/stdnoreturn.h ${INCDIR}/stdnoreturn.h
+-cp include/string.h ${INCDIR}/string.h
+-cp include/strings.h ${INCDIR}/strings.h
+-cp include/termio.h ${INCDIR}/termio.h
+-cp include/time.h ${INCDIR}/time.h
+-cp include/unistd.h ${INCDIR}/unistd.h
+-
+-cp include/arch/kernel-stat.h ${INCDIR}/arch/kernel-stat.h
+-cp include/arch/syscall.h ${INCDIR}/arch/syscall.h
+-
+-cp include/linux/syscall.h ${INCDIR}/linux/syscall.h
+-cp include/linux/${MES_ARCH}/syscall.h ${INCDIR}/linux/${MES_ARCH}/syscall.h
+-
+-cp include/mes/builtins.h ${INCDIR}/mes/builtins.h
+-cp include/mes/cc.h ${INCDIR}/mes/cc.h
+-catm ${INCDIR}/mes/config.h
+-cp include/mes/constants.h ${INCDIR}/mes/constants.h
+-cp include/mes/lib.h ${INCDIR}/mes/lib.h
+-cp include/mes/lib-cc.h ${INCDIR}/mes/lib-cc.h
+-cp include/mes/lib-mini.h ${INCDIR}/mes/lib-mini.h
+-cp include/mes/mes.h ${INCDIR}/mes/mes.h
+-cp include/mes/symbols.h ${INCDIR}/mes/symbols.h
+-
+-cp include/sys/cdefs.h ${INCDIR}/sys/cdefs.h
+-cp include/sys/dir.h ${INCDIR}/sys/dir.h
+-cp include/sys/file.h ${INCDIR}/sys/file.h
+-cp include/sys/ioctl.h ${INCDIR}/sys/ioctl.h
+-cp include/sys/mman.h ${INCDIR}/sys/mman.h
+-cp include/sys/param.h ${INCDIR}/sys/param.h
+-cp include/sys/resource.h ${INCDIR}/sys/resource.h
+-cp include/sys/select.h ${INCDIR}/sys/select.h
+-cp include/sys/stat.h ${INCDIR}/sys/stat.h
+-cp include/sys/timeb.h ${INCDIR}/sys/timeb.h
+-cp include/sys/time.h ${INCDIR}/sys/time.h
+-cp include/sys/times.h ${INCDIR}/sys/times.h
+-cp include/sys/types.h ${INCDIR}/sys/types.h
+-cp include/sys/ucontext.h ${INCDIR}/sys/ucontext.h
+-cp include/sys/user.h ${INCDIR}/sys/user.h
+-cp include/sys/wait.h ${INCDIR}/sys/wait.h
+-
+-cd ../..
+-
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.${ARCH}.checksums \
+-        /usr/bin/mes-m2 \
+-        /usr/bin/mescc.scm \
+-        /usr/lib/${MES_ARCH}-mes/crt1.s \
+-        /usr/lib/${MES_ARCH}-mes/crt1.o \
+-        /usr/lib/${MES_ARCH}-mes/${MES_ARCH}.M1 \
+-        /usr/lib/${MES_ARCH}-mes/libmescc.s \
+-        /usr/lib/${MES_ARCH}-mes/libc+tcc.s \
+-        /usr/lib/${MES_ARCH}-mes/libc.s \
+-        /usr/lib/${MES_ARCH}-mes/libmescc.a \
+-        /usr/lib/${MES_ARCH}-mes/libc+tcc.a \
+-        /usr/lib/${MES_ARCH}-mes/libc.a \
+-        /usr/lib/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-header.hex2 \
+-        /usr/lib/linux/${MES_ARCH}-mes/elf${ARCH_BITS}-footer-single-main.hex2
+-
+-    cp ${pkg}.${ARCH}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.${ARCH}.checksums
+-fi
 diff --git a/steps/mes-0.27.1/patches/wait4.patch b/steps/mes-0.27.1/patches/wait4.patch
 new file mode 100644
 index 0000000..17e99d3
@@ -1783,100 +3184,202 @@ index fe36af7..0000000
 -  long long_status_ptr = cast_voidp_to_long (status_ptr);
 -  long long_options = options;
 -  long long_rusage = cast_voidp_to_long (rusage);
-diff --git a/steps/oyacc-6.6/pass1.bake b/steps/oyacc-6.6/pass1.bake
-new file mode 100644
-index 0000000..75aec5c
---- /dev/null
+diff --git a/steps/oyacc-6.6/pass1.kaem b/steps/oyacc-6.6/pass1.bake
+similarity index 60%
+rename from steps/oyacc-6.6/pass1.kaem
+rename to steps/oyacc-6.6/pass1.bake
+index 31b7e4f..66e22be 100644
+--- a/steps/oyacc-6.6/pass1.kaem
 +++ b/steps/oyacc-6.6/pass1.bake
-@@ -0,0 +1,24 @@
+@@ -1,46 +1,29 @@
+-#!/bin/sh
+-
+ # SPDX-FileCopyrightText: 2025 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
+ #
+ # SPDX-License-Identifier: GPL-3.0-or-later
+ 
+-set -ex
 +: all build checksum
-+
+ 
+-# Check tarball checksums
 +: build
-+checksum-transcriber sources
-+sha256sum -c sources.SHA256SUM
-+mkdir build src
-+cd build
-+cp ${DISTFILES}/${pkg}.tar.gz ../src/${pkg}.tar.gz
-+gunzip -f ../src/${pkg}.tar.gz
-+tar xf ../src/${pkg}.tar
-+rm -r ../src/
-+cd ${pkg}
-+cp ../../mk/main.mk Makefile
-+touch config.h
-+patch -Np1 -i ../../patches/meslibc.patch
-+patch -Np1 -i ../../patches/tcc.patch
-+make
-+make install
-+cd ../..
-+
+ checksum-transcriber sources
+ sha256sum -c sources.SHA256SUM
+-
+ mkdir build src
+ cd build
+-
+-# Extract
+ cp ${DISTFILES}/${pkg}.tar.gz ../src/${pkg}.tar.gz
+ gunzip -f ../src/${pkg}.tar.gz
+ tar xf ../src/${pkg}.tar
+ rm -r ../src/
+ cd ${pkg}
+-
+-# Prepare
+ cp ../../mk/main.mk Makefile
+ touch config.h
+ patch -Np1 -i ../../patches/meslibc.patch
+ patch -Np1 -i ../../patches/tcc.patch
+-
+-# Build
+ make
+-
+-# Install
+ make install
+-
+ cd ../..
+ 
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/yacc \
+-        /usr/bin/yyfix
+-
+-    install ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 +: checksum build
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/yacc /usr/bin/yyfix
 +? UPDATE_CHECKSUMS True install ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
-diff --git a/steps/patch-2.5.9/pass1.bake b/steps/patch-2.5.9/pass1.bake
-new file mode 100644
-index 0000000..f0f27d1
---- /dev/null
+diff --git a/steps/patch-2.5.9/pass1.kaem b/steps/patch-2.5.9/pass1.bake
+old mode 100755
+new mode 100644
+similarity index 60%
+rename from steps/patch-2.5.9/pass1.kaem
+rename to steps/patch-2.5.9/pass1.bake
+index 2e377b6..c785677
+--- a/steps/patch-2.5.9/pass1.kaem
 +++ b/steps/patch-2.5.9/pass1.bake
-@@ -0,0 +1,23 @@
+@@ -1,44 +1,28 @@
+-#!/bin/sh
+-
+ # SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
+ #
+ # SPDX-License-Identifier: GPL-3.0-or-later
+ 
+-set -ex
 +: all build checksum
-+
+ 
+-# Check tarball checksums
 +: build
-+checksum-transcriber sources
-+sha256sum -c sources.SHA256SUM
-+mkdir build
-+cd build
-+ungz --file ${DISTFILES}/${pkg}.tar.gz --output ${pkg}.tar
-+untar --file ${pkg}.tar
-+rm ${pkg}.tar
-+cd ${pkg}
-+cp ../../mk/main.mk Makefile
-+catm config.h
-+catm patchlevel.h
-+make -f Makefile PREFIX=${PREFIX}
-+cp patch ${PREFIX}/bin/patch
-+chmod 755 ${PREFIX}/bin/patch
-+cd ../..
-+
+ checksum-transcriber sources
+ sha256sum -c sources.SHA256SUM
+-
+ mkdir build
+ cd build
+-
+-# Extract
+ ungz --file ${DISTFILES}/${pkg}.tar.gz --output ${pkg}.tar
+ untar --file ${pkg}.tar
+ rm ${pkg}.tar
+ cd ${pkg}
+ cp ../../mk/main.mk Makefile
+-
+-# Create config.h and patchlevel.h
+ catm config.h
+ catm patchlevel.h
+-
+-# Build
+ make -f Makefile PREFIX=${PREFIX}
+-
+-# Install
+ cp patch ${PREFIX}/bin/patch
+ chmod 755 ${PREFIX}/bin/patch
+-
+ cd ../..
+ 
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/patch
+-
+-    cp ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 +: checksum build
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/patch
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
-diff --git a/steps/sed-4.0.9/pass1.bake b/steps/sed-4.0.9/pass1.bake
-new file mode 100644
-index 0000000..d31d786
---- /dev/null
+diff --git a/steps/sed-4.0.9/pass1.kaem b/steps/sed-4.0.9/pass1.bake
+old mode 100755
+new mode 100644
+similarity index 67%
+rename from steps/sed-4.0.9/pass1.kaem
+rename to steps/sed-4.0.9/pass1.bake
+index 3185a04..c5c93f3
+--- a/steps/sed-4.0.9/pass1.kaem
 +++ b/steps/sed-4.0.9/pass1.bake
-@@ -0,0 +1,23 @@
+@@ -1,46 +1,30 @@
+-#!/bin/sh
+-
+ # SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+ # SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
+ # SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
+ #
+ # SPDX-License-Identifier: GPL-3.0-or-later
+ 
+-set -ex
 +: all build checksum
-+
+ 
+-# Check tarball checksums
 +: build
-+checksum-transcriber sources
-+sha256sum -c sources.SHA256SUM
-+mkdir build src
-+cd build
-+cp ${DISTFILES}/${pkg}.tar.gz ../src/
-+gzip -d -f ../src/${pkg}.tar.gz
-+tar xf ../src/${pkg}.tar
-+rm -r ../src
-+cd ${pkg}
-+cp ../../mk/main.mk Makefile
-+catm config.h
-+make -f Makefile LIBC=mes
-+cp sed/sed ${PREFIX}/bin/sed
-+chmod 755 ${PREFIX}/bin/sed
-+cd ../..
-+
+ checksum-transcriber sources
+ sha256sum -c sources.SHA256SUM
+-
+ mkdir build src
+ cd build
+-
+-# Extract
+ cp ${DISTFILES}/${pkg}.tar.gz ../src/
+ gzip -d -f ../src/${pkg}.tar.gz
+ tar xf ../src/${pkg}.tar
+ rm -r ../src
+ cd ${pkg}
+ cp ../../mk/main.mk Makefile
+-
+-# Create config.h
+ catm config.h
+-
+-# Build
+ make -f Makefile LIBC=mes
+-
+-# Install
+ cp sed/sed ${PREFIX}/bin/sed
+ chmod 755 ${PREFIX}/bin/sed
+-
+ cd ../..
+ 
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/sed
+-
+-    cp ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 +: checksum build
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/sed
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/simple-patch-1.0/pass1.bake b/steps/simple-patch-1.0/pass1.bake
 new file mode 100644
-index 0000000..505148c
+index 0000000..0dba586
 --- /dev/null
 +++ b/steps/simple-patch-1.0/pass1.bake
-@@ -0,0 +1,9 @@
+@@ -0,0 +1,14 @@
++# SPDX-FileCopyrightText: 2023 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
 +: all build checksum
 +
 +: build
@@ -1886,6 +3389,32 @@ index 0000000..505148c
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.${ARCH}.checksums /usr/bin/simple-patch
 +? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
+diff --git a/steps/simple-patch-1.0/pass1.kaem b/steps/simple-patch-1.0/pass1.kaem
+deleted file mode 100644
+index 16be040..0000000
+--- a/steps/simple-patch-1.0/pass1.kaem
++++ /dev/null
+@@ -1,20 +0,0 @@
+-#!/bin/sh
+-
+-# SPDX-FileCopyrightText: 2023 Samuel Tyler <samuel@samuelt.me>
+-#
+-# SPDX-License-Identifier: GPL-3.0-or-later
+-
+-set -ex
+-
+-# Build & install
+-M2-Mesoplanet --architecture ${ARCH} -f src/simple-patch.c -o ${BINDIR}/simple-patch
+-
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.${ARCH}.checksums \
+-        /usr/bin/simple-patch
+-
+-    cp ${pkg}.${ARCH}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.${ARCH}.checksums
+-fi
 diff --git a/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums b/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums
 index f339112..1108e86 100644
 --- a/steps/simple-patch-1.0/simple-patch-1.0.amd64.checksums
@@ -2300,43 +3829,83 @@ index ed6faea..0f930b7 100644
 +    }
 +    return atoi(arg);
 +}
-diff --git a/steps/tar-1.12/pass1.bake b/steps/tar-1.12/pass1.bake
-new file mode 100644
-index 0000000..6ef461b
---- /dev/null
+diff --git a/steps/tar-1.12/pass1.kaem b/steps/tar-1.12/pass1.bake
+old mode 100755
+new mode 100644
+similarity index 71%
+rename from steps/tar-1.12/pass1.kaem
+rename to steps/tar-1.12/pass1.bake
+index 078e7a4..898c21d
+--- a/steps/tar-1.12/pass1.kaem
 +++ b/steps/tar-1.12/pass1.bake
-@@ -0,0 +1,25 @@
+@@ -1,49 +1,32 @@
+-#!/bin/sh
+-
+ # SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+ # SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
+ # SPDX-FileCopyrightText: 2021 Paul Dersey <pdersey@gmail.com>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
+ #
+ # SPDX-License-Identifier: GPL-3.0-or-later
+ 
+-set -ex
 +: all build checksum
-+
+ 
+-# Check tarball checksums
 +: build
-+checksum-transcriber sources
-+sha256sum -c sources.SHA256SUM
-+mkdir build src
-+cd build
-+cp ${DISTFILES}/${pkg}.tar.gz ../src/
-+gzip -d -f ../src/${pkg}.tar.gz
-+untar --file ../src/${pkg}.tar
-+rm -r ../src
-+cd ${pkg}
-+cp ../../mk/main.mk Makefile
-+cp ../../files/getdate_stub.c lib/getdate_stub.c
-+catm src/create.c.new ../../files/stat_override.c src/create.c
-+cp src/create.c.new src/create.c
-+make -f Makefile
-+cp tar ${PREFIX}/bin/tar
-+chmod 755 ${PREFIX}/bin/tar
-+cd ../..
-+
+ checksum-transcriber sources
+ sha256sum -c sources.SHA256SUM
+-
+ mkdir build src
+ cd build
+-
+-# Extract
+ cp ${DISTFILES}/${pkg}.tar.gz ../src/
+ gzip -d -f ../src/${pkg}.tar.gz
+ untar --file ../src/${pkg}.tar
+ rm -r ../src
+-
+ cd ${pkg}
+-
+-# Prepare
+ cp ../../mk/main.mk Makefile
+ cp ../../files/getdate_stub.c lib/getdate_stub.c
+ catm src/create.c.new ../../files/stat_override.c src/create.c
+ cp src/create.c.new src/create.c
+-
+-# Build
+ make -f Makefile
+-
+-# Install
+ cp tar ${PREFIX}/bin/tar
+ chmod 755 ${PREFIX}/bin/tar
+-
+ cd ../..
+ 
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/tar
+-
+-    cp ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 +: checksum build
 +? UPDATE_CHECKSUMS True sha256sum -o ${pkg}.checksums /usr/bin/tar
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/tcc-0.9.26/pass1.bake b/steps/tcc-0.9.26/pass1.bake
 new file mode 100644
-index 0000000..57afb8d
+index 0000000..e56b9eb
 --- /dev/null
 +++ b/steps/tcc-0.9.26/pass1.bake
-@@ -0,0 +1,127 @@
+@@ -0,0 +1,132 @@
++# SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
 +: all build checksum
 +
 += UNIFIED_LIBC_FILES ctype/isalnum.c ctype/isalpha.c ctype/isascii.c ctype/iscntrl.c ctype/isdigit.c ctype/isgraph.c ctype/islower.c ctype/isnumber.c ctype/isprint.c ctype/ispunct.c ctype/isspace.c ctype/isupper.c ctype/isxdigit.c ctype/tolower.c ctype/toupper.c dirent/closedir.c dirent/__getdirentries.c dirent/opendir.c linux/readdir.c linux/access.c linux/brk.c linux/chdir.c linux/chmod.c linux/clock_gettime.c linux/close.c linux/dup2.c linux/dup.c linux/execve.c linux/fcntl.c linux/fork.c linux/fsync.c linux/fstat.c linux/_getcwd.c linux/getdents.c linux/getegid.c linux/geteuid.c linux/getgid.c linux/getpid.c linux/getppid.c linux/getrusage.c linux/gettimeofday.c linux/getuid.c linux/ioctl.c linux/ioctl3.c linux/kill.c linux/link.c linux/lseek.c linux/lstat.c linux/malloc.c linux/mkdir.c linux/mknod.c linux/nanosleep.c linux/_open3.c linux/pipe.c linux/_read.c linux/readlink.c linux/rename.c linux/rmdir.c linux/setgid.c linux/settimer.c linux/setuid.c linux/signal.c linux/sigprogmask.c linux/symlink.c linux/stat.c linux/time.c linux/unlink.c linux/waitpid.c linux/wait4.c linux/${MES_ARCH}-mes-gcc/_exit.c linux/${MES_ARCH}-mes-gcc/syscall.c linux/${MES_ARCH}-mes-gcc/_write.c math/ceil.c math/fabs.c math/floor.c mes/abtod.c mes/abtol.c mes/__assert_fail.c mes/assert_msg.c mes/__buffered_read.c mes/__init_io.c mes/cast.c mes/dtoab.c mes/eputc.c mes/eputs.c mes/fdgetc.c mes/fdgets.c mes/fdputc.c mes/fdputs.c mes/fdungetc.c mes/globals.c mes/itoa.c mes/ltoab.c mes/ltoa.c mes/__mes_debug.c mes/mes_open.c mes/ntoab.c mes/oputc.c mes/oputs.c mes/search-path.c mes/ultoa.c mes/utoa.c posix/alarm.c posix/buffered-read.c posix/execl.c posix/execlp.c posix/execv.c posix/execvp.c posix/getcwd.c posix/getenv.c posix/isatty.c posix/mktemp.c posix/open.c posix/pathconf.c posix/raise.c posix/sbrk.c posix/setenv.c posix/sleep.c posix/unsetenv.c posix/wait.c posix/write.c stdio/clearerr.c stdio/fclose.c stdio/fdopen.c stdio/feof.c stdio/ferror.c stdio/fflush.c stdio/fgetc.c stdio/fgets.c stdio/fileno.c stdio/fopen.c stdio/fprintf.c stdio/fputc.c stdio/fputs.c stdio/fread.c stdio/freopen.c stdio/fscanf.c stdio/fseek.c stdio/ftell.c stdio/fwrite.c stdio/getc.c stdio/getchar.c stdio/perror.c stdio/printf.c stdio/putc.c stdio/putchar.c stdio/remove.c stdio/snprintf.c stdio/sprintf.c stdio/sscanf.c stdio/ungetc.c stdio/vfprintf.c stdio/vfscanf.c stdio/vprintf.c stdio/vsnprintf.c stdio/vsprintf.c stdio/vsscanf.c stdlib/abort.c stdlib/abs.c stdlib/alloca.c stdlib/atexit.c stdlib/atof.c stdlib/atoi.c stdlib/atol.c stdlib/calloc.c stdlib/__exit.c stdlib/exit.c stdlib/free.c stdlib/mbstowcs.c stdlib/puts.c stdlib/qsort.c stdlib/realloc.c stdlib/strtod.c stdlib/strtof.c stdlib/strtol.c stdlib/strtold.c stdlib/strtoll.c stdlib/strtoul.c stdlib/strtoull.c string/bcmp.c string/bcopy.c string/bzero.c string/index.c string/memchr.c string/memcmp.c string/memcpy.c string/memmem.c string/memmove.c string/memset.c string/rindex.c string/strcat.c string/strchr.c string/strcmp.c string/strcpy.c string/strcspn.c string/strdup.c string/strerror.c string/strlen.c string/strlwr.c string/strncat.c string/strncmp.c string/strncpy.c string/strpbrk.c string/strrchr.c string/strspn.c string/strstr.c string/strupr.c stub/atan2.c stub/bsearch.c stub/chown.c stub/__cleanup.c stub/cos.c stub/ctime.c stub/exp.c stub/fpurge.c stub/freadahead.c stub/frexp.c stub/getgrgid.c stub/getgrnam.c stub/getlogin.c stub/getpgid.c stub/getpgrp.c stub/getpwnam.c stub/getpwuid.c stub/gmtime.c stub/ldexp.c stub/localtime.c stub/log.c stub/mktime.c stub/modf.c stub/mprotect.c stub/pclose.c stub/popen.c stub/pow.c stub/putenv.c stub/rand.c stub/realpath.c stub/rewind.c stub/setbuf.c stub/setgrent.c stub/setlocale.c stub/setvbuf.c stub/sigaction.c stub/sigaddset.c stub/sigblock.c stub/sigdelset.c stub/sigemptyset.c stub/sigsetmask.c stub/sin.c stub/sys_siglist.c stub/system.c stub/sqrt.c stub/strftime.c stub/times.c stub/ttyname.c stub/umask.c stub/utime.c ${MES_ARCH}-mes-gcc/setjmp.c
@@ -2465,22 +4034,338 @@ index 0000000..57afb8d
 +? UPDATE_CHECKSUMS True cp ${pkg}.${ARCH}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.${ARCH}.checksums
 diff --git a/steps/tcc-0.9.26/pass1.kaem b/steps/tcc-0.9.26/pass1.kaem
-index 3a5b669..b49a6b4 100755
+deleted file mode 100755
+index 3a5b669..0000000
 --- a/steps/tcc-0.9.26/pass1.kaem
-+++ b/steps/tcc-0.9.26/pass1.kaem
-@@ -28,10 +28,8 @@ cd build
- ungz --file ${DISTFILES}/${TCC_TAR}.tar.gz --output ${TCC_TAR}.tar
- ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
- untar --non-strict --file ${TCC_TAR}.tar
++++ /dev/null
+@@ -1,327 +0,0 @@
+-#!/bin/sh
+-
+-# SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
+-#
+-# SPDX-License-Identifier: GPL-3.0-or-later
+-
+-set -ex
+-
+-# Vars
+-MES_STACK=15000000
+-MES_ARENA=30000000
+-MES_MAX_ARENA=30000000
+-MES_LIB=${MES_PREFIX}/lib
+-MES_SOURCE=${MES_PREFIX}
+-MES=${BINDIR}/mes-m2
+-
+-TCC_TAR=tcc-0.9.26
+-TCC_PKG=tcc-0.9.26-1147-gee75a10c
+-
+-# Check tarball checksums
+-checksum-transcriber sources
+-sha256sum -c sources.SHA256SUM
+-
+-# Unpack
+-mkdir build
+-
+-cd build
+-ungz --file ${DISTFILES}/${TCC_TAR}.tar.gz --output ${TCC_TAR}.tar
+-ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
+-untar --non-strict --file ${TCC_TAR}.tar
 -simple-patch ${TCC_PKG}/tcctools.c \
 -    ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
 -simple-patch ${TCC_PKG}/tcctools.c \
 -    ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
-+simple-patch -Np0 -i ../patches/remove-fileopen.patch
-+simple-patch -Np0 -i ../patches/addback-fileopen.patch
- 
- untar --non-strict --file ${MES_PKG}.tar
- 
+-
+-untar --non-strict --file ${MES_PKG}.tar
+-
+-# Create config.h
+-catm ${MES_PKG}/include/mes/config.h
+-catm ${TCC_PKG}/config.h
+-cd ${TCC_PKG}
+-
+-if match ${ARCH} x86; then
+-    MES_ARCH=x86
+-    TCC_TARGET_ARCH=I386
+-    HAVE_LONG_LONG=0
+-fi
+-if match ${ARCH} amd64; then
+-    MES_ARCH=x86_64
+-    TCC_TARGET_ARCH=X86_64
+-    HAVE_LONG_LONG=1
+-fi
+-if match ${ARCH} riscv64; then
+-    MES_ARCH=riscv64
+-    TCC_TARGET_ARCH=RISCV64
+-    HAVE_LONG_LONG=1
+-fi
+-
+-
+-${MES} --no-auto-compile -e main ${BINDIR}/mescc.scm -- \
+-    -S \
+-    -o tcc.s \
+-    -I ${INCDIR} \
+-    -D BOOTSTRAP=1 \
+-    -D HAVE_LONG_LONG=${HAVE_LONG_LONG} \
+-    -I . \
+-    -D TCC_TARGET_${TCC_TARGET_ARCH}=1 \
+-    -D inline= \
+-    -D CONFIG_TCCDIR=\"${LIBDIR}/tcc\" \
+-    -D CONFIG_SYSROOT=\"/\" \
+-    -D CONFIG_TCC_CRTPREFIX=\"${LIBDIR}\" \
+-    -D CONFIG_TCC_ELFINTERP=\"/mes/loader\" \
+-    -D CONFIG_TCC_SYSINCLUDEPATHS=\"${PREFIX}/include/mes\" \
+-    -D TCC_LIBGCC=\"${LIBDIR}/libc.a\" \
+-    -D CONFIG_TCC_LIBTCC1_MES=0 \
+-    -D CONFIG_TCCBOOT=1 \
+-    -D CONFIG_TCC_STATIC=1 \
+-    -D CONFIG_USE_LIBGCC=1 \
+-    -D TCC_VERSION=\"0.9.26\" \
+-    -D ONE_SOURCE=1 \
+-    tcc.c
+-${MES} --no-auto-compile -e main ${BINDIR}/mescc.scm -- \
+-    --base-address 0x08048000 \
+-    -o tcc-mes \
+-    -L ${LIBDIR} \
+-    tcc.s \
+-    -l c+tcc
+-cp tcc-mes ${BINDIR}/
+-chmod 755 ${BINDIR}/tcc-mes
+-
+-# test tcc-mes
+-tcc-mes -version
+-
+-# Recompile the mes C library
+-cd ../${MES_PKG}
+-
+-# Create unified libc file
+-cd lib
+-catm ../unified-libc.c ctype/isalnum.c ctype/isalpha.c ctype/isascii.c ctype/iscntrl.c ctype/isdigit.c ctype/isgraph.c ctype/islower.c ctype/isnumber.c ctype/isprint.c ctype/ispunct.c ctype/isspace.c ctype/isupper.c ctype/isxdigit.c ctype/tolower.c ctype/toupper.c dirent/closedir.c dirent/__getdirentries.c dirent/opendir.c linux/readdir.c linux/access.c linux/brk.c linux/chdir.c linux/chmod.c linux/clock_gettime.c linux/close.c linux/dup2.c linux/dup.c linux/execve.c linux/fcntl.c linux/fork.c linux/fsync.c linux/fstat.c linux/_getcwd.c linux/getdents.c linux/getegid.c linux/geteuid.c linux/getgid.c linux/getpid.c linux/getppid.c linux/getrusage.c linux/gettimeofday.c linux/getuid.c linux/ioctl.c linux/ioctl3.c linux/kill.c linux/link.c linux/lseek.c linux/lstat.c linux/malloc.c linux/mkdir.c linux/mknod.c linux/nanosleep.c linux/_open3.c linux/pipe.c linux/_read.c linux/readlink.c linux/rename.c linux/rmdir.c linux/setgid.c linux/settimer.c linux/setuid.c linux/signal.c linux/sigprogmask.c linux/symlink.c linux/stat.c linux/time.c linux/unlink.c linux/waitpid.c linux/wait4.c linux/${MES_ARCH}-mes-gcc/_exit.c linux/${MES_ARCH}-mes-gcc/syscall.c linux/${MES_ARCH}-mes-gcc/_write.c math/ceil.c math/fabs.c math/floor.c mes/abtod.c mes/abtol.c mes/__assert_fail.c mes/assert_msg.c mes/__buffered_read.c mes/__init_io.c mes/cast.c mes/dtoab.c mes/eputc.c mes/eputs.c mes/fdgetc.c mes/fdgets.c mes/fdputc.c mes/fdputs.c mes/fdungetc.c mes/globals.c mes/itoa.c mes/ltoab.c mes/ltoa.c mes/__mes_debug.c mes/mes_open.c mes/ntoab.c mes/oputc.c mes/oputs.c mes/search-path.c mes/ultoa.c mes/utoa.c posix/alarm.c posix/buffered-read.c posix/execl.c posix/execlp.c posix/execv.c posix/execvp.c posix/getcwd.c posix/getenv.c posix/isatty.c posix/mktemp.c posix/open.c posix/pathconf.c posix/raise.c posix/sbrk.c posix/setenv.c posix/sleep.c posix/unsetenv.c posix/wait.c posix/write.c stdio/clearerr.c stdio/fclose.c stdio/fdopen.c stdio/feof.c stdio/ferror.c stdio/fflush.c stdio/fgetc.c stdio/fgets.c stdio/fileno.c stdio/fopen.c stdio/fprintf.c stdio/fputc.c stdio/fputs.c stdio/fread.c stdio/freopen.c stdio/fscanf.c stdio/fseek.c stdio/ftell.c stdio/fwrite.c stdio/getc.c stdio/getchar.c stdio/perror.c stdio/printf.c stdio/putc.c stdio/putchar.c stdio/remove.c stdio/snprintf.c stdio/sprintf.c stdio/sscanf.c stdio/ungetc.c stdio/vfprintf.c stdio/vfscanf.c stdio/vprintf.c stdio/vsnprintf.c stdio/vsprintf.c stdio/vsscanf.c stdlib/abort.c stdlib/abs.c stdlib/alloca.c stdlib/atexit.c stdlib/atof.c stdlib/atoi.c stdlib/atol.c stdlib/calloc.c stdlib/__exit.c stdlib/exit.c stdlib/free.c stdlib/mbstowcs.c stdlib/puts.c stdlib/qsort.c stdlib/realloc.c stdlib/strtod.c stdlib/strtof.c stdlib/strtol.c stdlib/strtold.c stdlib/strtoll.c stdlib/strtoul.c stdlib/strtoull.c string/bcmp.c string/bcopy.c string/bzero.c string/index.c string/memchr.c string/memcmp.c string/memcpy.c string/memmem.c string/memmove.c string/memset.c string/rindex.c string/strcat.c string/strchr.c string/strcmp.c string/strcpy.c string/strcspn.c string/strdup.c string/strerror.c string/strlen.c string/strlwr.c string/strncat.c string/strncmp.c string/strncpy.c string/strpbrk.c string/strrchr.c string/strspn.c string/strstr.c string/strupr.c stub/atan2.c stub/bsearch.c stub/chown.c stub/__cleanup.c stub/cos.c stub/ctime.c stub/exp.c stub/fpurge.c stub/freadahead.c stub/frexp.c stub/getgrgid.c stub/getgrnam.c stub/getlogin.c stub/getpgid.c stub/getpgrp.c stub/getpwnam.c stub/getpwuid.c stub/gmtime.c stub/ldexp.c stub/localtime.c stub/log.c stub/mktime.c stub/modf.c stub/mprotect.c stub/pclose.c stub/popen.c stub/pow.c stub/putenv.c stub/rand.c stub/realpath.c stub/rewind.c stub/setbuf.c stub/setgrent.c stub/setlocale.c stub/setvbuf.c stub/sigaction.c stub/sigaddset.c stub/sigblock.c stub/sigdelset.c stub/sigemptyset.c stub/sigsetmask.c stub/sin.c stub/sys_siglist.c stub/system.c stub/sqrt.c stub/strftime.c stub/times.c stub/ttyname.c stub/umask.c stub/utime.c ${MES_ARCH}-mes-gcc/setjmp.c
+-cd ..
+-
+-# crt1.o
+-tcc-mes -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crt1.o lib/linux/${MES_ARCH}-mes-gcc/crt1.c
+-
+-catm ${LIBDIR}/crtn.o
+-catm ${LIBDIR}/crti.o
+-if match ${ARCH} x86; then
+-    # crtn.o
+-    tcc-mes -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crtn.o lib/linux/${MES_ARCH}-mes-gcc/crtn.c
+-
+-    # crti.o
+-    tcc-mes -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crti.o lib/linux/${MES_ARCH}-mes-gcc/crti.c
+-fi
+-
+-# libc+gcc.a
+-tcc-mes -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o unified-libc.o unified-libc.c
+-tcc-mes -ar cr ${LIBDIR}/libc.a unified-libc.o
+-
+-# libtcc1.a
+-mkdir ${LIBDIR}/tcc
+-tcc-mes -c -D HAVE_CONFIG_H=1 -D HAVE_LONG_LONG=1 -D HAVE_FLOAT=1 -I include -I include/linux/${MES_ARCH} -o libtcc1.o lib/libtcc1.c
+-if match ${ARCH} riscv64; then
+-    tcc-mes -c -D HAVE_CONFIG_H=1 -D HAVE_LONG_LONG=1 -D HAVE_FLOAT=1 -I include -I include/linux/${MES_ARCH} -o lib-arm64.o ../${TCC_PKG}/lib/lib-arm64.c
+-    tcc-mes -ar cr ${LIBDIR}/tcc/libtcc1.a libtcc1.o lib-arm64.o
+-else
+-    tcc-mes -ar cr ${LIBDIR}/tcc/libtcc1.a libtcc1.o
+-fi
+-
+-# libgetopt.a
+-tcc-mes -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} lib/posix/getopt.c
+-tcc-mes -ar cr ${LIBDIR}/libgetopt.a getopt.o
+-
+-cd ../${TCC_PKG}
+-
+-# boot0 (ref comments here for all boot*)
+-# compile
+-tcc-mes \
+-    -g \
+-    -v \
+-    -static \
+-    -o tcc-boot0 \
+-    -D BOOTSTRAP=1 \
+-    -D HAVE_FLOAT=1 \
+-    -D HAVE_BITFIELD=1 \
+-    -D HAVE_LONG_LONG=1 \
+-    -D HAVE_SETJMP=1 \
+-    -I . \
+-    -I ${PREFIX}/include/mes \
+-    -D TCC_TARGET_${TCC_TARGET_ARCH}=1 \
+-    -D CONFIG_TCCDIR=\"${LIBDIR}/tcc\" \
+-    -D CONFIG_TCC_CRTPREFIX=\"${LIBDIR}\" \
+-    -D CONFIG_TCC_ELFINTERP=\"/mes/loader\" \
+-    -D CONFIG_TCC_LIBPATHS=\"${LIBDIR}:${LIBDIR}/tcc\" \
+-    -D CONFIG_TCC_SYSINCLUDEPATHS=\"${PREFIX}/include/mes\" \
+-    -D TCC_LIBGCC=\"${LIBDIR}/libc.a\" \
+-    -D TCC_LIBTCC1=\"libtcc1.a\" \
+-    -D CONFIG_TCCBOOT=1 \
+-    -D CONFIG_TCC_STATIC=1 \
+-    -D CONFIG_USE_LIBGCC=1 \
+-    -D TCC_VERSION=\"0.9.26\" \
+-    -D ONE_SOURCE=1 \
+-    -L . \
+-    -L ${LIBDIR} \
+-    tcc.c
+-# Install
+-cp tcc-boot0 ${BINDIR}/
+-chmod 755 ${BINDIR}/tcc-boot0
+-cd ../${MES_PKG}
+-# Recompile libc: crt{1,n,i}, libtcc.a, libc.a
+-tcc-boot0 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crt1.o lib/linux/${MES_ARCH}-mes-gcc/crt1.c
+-if match ${ARCH} x86; then
+-    tcc-boot0 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crtn.o lib/linux/${MES_ARCH}-mes-gcc/crtn.c
+-    tcc-boot0 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crti.o lib/linux/${MES_ARCH}-mes-gcc/crti.c
+-fi
+-
+-tcc-boot0 -c -D HAVE_CONFIG_H=1 -D HAVE_LONG_LONG=1 -D HAVE_FLOAT=1 -I include -I include/linux/${MES_ARCH} -o libtcc1.o lib/libtcc1.c
+-if match ${ARCH} riscv64; then
+-    tcc-boot0 -c -D HAVE_CONFIG_H=1 -D HAVE_LONG_LONG=1 -D HAVE_FLOAT=1 -I include -I include/linux/${MES_ARCH} -o lib-arm64.o ../${TCC_PKG}/lib/lib-arm64.c
+-    tcc-boot0 -ar cr ${LIBDIR}/tcc/libtcc1.a libtcc1.o lib-arm64.o
+-else
+-    tcc-boot0 -ar cr ${LIBDIR}/tcc/libtcc1.a libtcc1.o
+-fi
+-
+-tcc-boot0 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o unified-libc.o unified-libc.c
+-tcc-boot0 -ar cr ${LIBDIR}/libc.a unified-libc.o
+-cd ../${TCC_PKG}
+-
+-# Test boot0
+-tcc-boot0 -version
+-
+-# boot1
+-tcc-boot0 \
+-    -g \
+-    -v \
+-    -static \
+-    -o tcc-boot1 \
+-    -D BOOTSTRAP=1 \
+-    -D HAVE_FLOAT=1 \
+-    -D HAVE_BITFIELD=1 \
+-    -D HAVE_LONG_LONG=1 \
+-    -D HAVE_SETJMP=1 \
+-    -I . \
+-    -I ${PREFIX}/include/mes \
+-    -D TCC_TARGET_${TCC_TARGET_ARCH}=1 \
+-    -D CONFIG_TCCDIR=\"${LIBDIR}/tcc\" \
+-    -D CONFIG_TCC_CRTPREFIX=\"${LIBDIR}\" \
+-    -D CONFIG_TCC_ELFINTERP=\"/mes/loader\" \
+-    -D CONFIG_TCC_LIBPATHS=\"${LIBDIR}:${LIBDIR}/tcc\" \
+-    -D CONFIG_TCC_SYSINCLUDEPATHS=\"${PREFIX}/include/mes\" \
+-    -D TCC_LIBGCC=\"${LIBDIR}/libc.a\" \
+-    -D TCC_LIBTCC1=\"libtcc1.a\" \
+-    -D CONFIG_TCCBOOT=1 \
+-    -D CONFIG_TCC_STATIC=1 \
+-    -D CONFIG_USE_LIBGCC=1 \
+-    -D TCC_VERSION=\"0.9.26\" \
+-    -D ONE_SOURCE=1 \
+-    -L . \
+-    tcc.c
+-cp tcc-boot1 ${BINDIR}
+-chmod 755 ${BINDIR}/tcc-boot1
+-cd ../${MES_PKG}
+-tcc-boot1 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crt1.o lib/linux/${MES_ARCH}-mes-gcc/crt1.c
+-if match ${ARCH} x86; then
+-    tcc-boot1 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crtn.o lib/linux/${MES_ARCH}-mes-gcc/crtn.c
+-    tcc-boot1 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crti.o lib/linux/${MES_ARCH}-mes-gcc/crti.c
+-fi
+-
+-tcc-boot1 -c -D HAVE_CONFIG_H=1 -D HAVE_LONG_LONG=1 -D HAVE_FLOAT=1 -I include -I include/linux/${MES_ARCH} -o libtcc1.o lib/libtcc1.c
+-if match ${ARCH} riscv64; then
+-    tcc-boot1 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o lib-arm64.o ../${TCC_PKG}/lib/lib-arm64.c
+-    tcc-boot1 -ar cr ${LIBDIR}/tcc/libtcc1.a libtcc1.o lib-arm64.o
+-else
+-    tcc-boot1 -ar cr ${LIBDIR}/tcc/libtcc1.a libtcc1.o
+-fi
+-
+-tcc-boot1 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o unified-libc.o unified-libc.c
+-tcc-boot1 -ar cr ${LIBDIR}/libc.a unified-libc.o
+-cd ../${TCC_PKG}
+-
+-# Test boot1
+-tcc-boot1 -version
+-
+-# boot2
+-tcc-boot1 \
+-    -g \
+-    -v \
+-    -static \
+-    -o tcc-boot2 \
+-    -D BOOTSTRAP=1 \
+-    -D HAVE_BITFIELD=1 \
+-    -D HAVE_FLOAT=1 \
+-    -D HAVE_LONG_LONG=1 \
+-    -D HAVE_SETJMP=1 \
+-    -I . \
+-    -I ${PREFIX}/include/mes \
+-    -D TCC_TARGET_${TCC_TARGET_ARCH}=1 \
+-    -D CONFIG_TCCDIR=\"${LIBDIR}/tcc\" \
+-    -D CONFIG_TCC_CRTPREFIX=\"${LIBDIR}\" \
+-    -D CONFIG_TCC_ELFINTERP=\"/mes/loader\" \
+-    -D CONFIG_TCC_LIBPATHS=\"${LIBDIR}:${LIBDIR}/tcc\" \
+-    -D CONFIG_TCC_SYSINCLUDEPATHS=\"${PREFIX}/include/mes\" \
+-    -D TCC_LIBGCC=\"${LIBDIR}/libc.a\" \
+-    -D TCC_LIBTCC1=\"libtcc1.a\" \
+-    -D CONFIG_TCCBOOT=1 \
+-    -D CONFIG_TCC_STATIC=1 \
+-    -D CONFIG_USE_LIBGCC=1 \
+-    -D TCC_VERSION=\"0.9.26\" \
+-    -D ONE_SOURCE=1 \
+-    -L . \
+-    tcc.c
+-cp tcc-boot2 ${BINDIR}
+-chmod 755 ${BINDIR}/tcc-boot2
+-cd ../${MES_PKG}
+-tcc-boot2 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crt1.o lib/linux/${MES_ARCH}-mes-gcc/crt1.c
+-if match ${ARCH} x86; then
+-    tcc-boot2 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crtn.o lib/linux/${MES_ARCH}-mes-gcc/crtn.c
+-    tcc-boot2 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o ${LIBDIR}/crti.o lib/linux/${MES_ARCH}-mes-gcc/crti.c
+-fi
+-
+-tcc-boot2 -c -D HAVE_CONFIG_H=1 -D HAVE_LONG_LONG=1 -D HAVE_FLOAT=1 -I include -I include/linux/${MES_ARCH} -o libtcc1.o lib/libtcc1.c
+-if match ${ARCH} riscv64; then
+-    tcc-boot2 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o lib-arm64.o ../${TCC_PKG}/lib/lib-arm64.c
+-    tcc-boot2 -ar cr ${LIBDIR}/tcc/libtcc1.a libtcc1.o lib-arm64.o
+-else
+-    tcc-boot2 -ar cr ${LIBDIR}/tcc/libtcc1.a libtcc1.o
+-fi
+-
+-tcc-boot2 -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} -o unified-libc.o unified-libc.c
+-tcc-boot2 -ar cr ${LIBDIR}/libc.a unified-libc.o
+-cd ../${TCC_PKG}
+-
+-# Test boot2
+-tcc-boot2 -version
+-
+-# We have our final tcc 0.9.26!
+-cp ${BINDIR}/tcc-boot2 ${BINDIR}/tcc
+-chmod 755 ${BINDIR}/tcc
+-rm ${BINDIR}/tcc-boot2
+-cp ${BINDIR}/tcc ${BINDIR}/tcc-0.9.26
+-chmod 755 ${BINDIR}/tcc-0.9.26
+-
+-# Also recompile getopt, we don't need to do this during the boot* stages
+-# because nothing is linked against it
+-cd ../${MES_PKG}
+-tcc -c -D HAVE_CONFIG_H=1 -I include -I include/linux/${MES_ARCH} lib/posix/getopt.c
+-tcc -ar cr ${LIBDIR}/libgetopt.a getopt.o
+-
+-cd ../..
+-
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.${ARCH}.checksums \
+-        /usr/bin/tcc-mes \
+-        /usr/bin/tcc-boot0 \
+-        /usr/bin/tcc-boot1 \
+-        /usr/bin/tcc \
+-        /usr/lib/mes/libc.a \
+-        /usr/lib/mes/libgetopt.a \
+-        /usr/lib/mes/crt1.o \
+-        /usr/lib/mes/crti.o \
+-        /usr/lib/mes/crtn.o \
+-        /usr/lib/mes/tcc/libtcc1.a
+-
+-    cp ${pkg}.${ARCH}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.${ARCH}.checksums
+-fi
 diff --git a/steps/tcc-0.9.26/patches/addback-fileopen.patch b/steps/tcc-0.9.26/patches/addback-fileopen.patch
 new file mode 100644
 index 0000000..76f17bc
@@ -2566,10 +4451,16 @@ index 4641e1b..0000000
 -    }
 diff --git a/steps/tcc-0.9.27/pass1.bake b/steps/tcc-0.9.27/pass1.bake
 new file mode 100644
-index 0000000..5662833
+index 0000000..0a5f489
 --- /dev/null
 +++ b/steps/tcc-0.9.27/pass1.bake
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,47 @@
++# SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
++# SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
++# SPDX-FileCopyrightText: 2026 Ben Siraphob
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
 +: all build checksum
 +
 += TCC27_FLAGS -v -static -D TCC_TARGET_I386=1 -D CONFIG_TCCDIR="${LIBDIR}/tcc" -D CONFIG_TCC_CRTPREFIX="${LIBDIR}" -D CONFIG_TCC_ELFINTERP="/mes/loader" -D CONFIG_TCC_LIBPATHS="${LIBDIR}:${LIBDIR}/tcc" -D CONFIG_TCC_SYSINCLUDEPATHS="${PREFIX}/include/mes" -D TCC_LIBGCC="${LIBDIR}/libc.a" -D CONFIG_TCC_STATIC=1 -D CONFIG_USE_LIBGCC=1 -D TCC_VERSION="0.9.27" -D ONE_SOURCE=1
@@ -2612,29 +4503,94 @@ index 0000000..5662833
 +? UPDATE_CHECKSUMS True cp ${pkg}.checksums ${SRCDIR}
 +! UPDATE_CHECKSUMS True sha256sum -c ${pkg}.checksums
 diff --git a/steps/tcc-0.9.27/pass1.kaem b/steps/tcc-0.9.27/pass1.kaem
-index 29258c6..5e07fe9 100755
+deleted file mode 100755
+index 29258c6..0000000
 --- a/steps/tcc-0.9.27/pass1.kaem
-+++ b/steps/tcc-0.9.27/pass1.kaem
-@@ -17,15 +17,11 @@ cd build
- unbz2 --file ${DISTFILES}/${pkg}.tar.bz2 --output ${pkg}.tar
- ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
- untar --file ${pkg}.tar
++++ /dev/null
+@@ -1,83 +0,0 @@
+-#!/bin/sh
+-
+-# SPDX-FileCopyrightText: 2021-22 Samuel Tyler <samuel@samuelt.me>
+-# SPDX-FileCopyrightText: 2021 Andrius Štikonas <andrius@stikonas.eu>
+-#
+-# SPDX-License-Identifier: GPL-3.0-or-later
+-
+-set -ex
+-
+-# Check tarball checksums
+-checksum-transcriber sources
+-sha256sum -c sources.SHA256SUM
+-
+-# Extract
+-mkdir build
+-cd build
+-unbz2 --file ${DISTFILES}/${pkg}.tar.bz2 --output ${pkg}.tar
+-ungz --file ${DISTFILES}/${MES_PKG}.tar.gz --output ${MES_PKG}.tar
+-untar --file ${pkg}.tar
 -simple-patch tcc-0.9.27/tcctools.c \
 -    ../simple-patches/remove-fileopen.before ../simple-patches/remove-fileopen.after
 -simple-patch tcc-0.9.27/tcctools.c \
 -    ../simple-patches/addback-fileopen.before ../simple-patches/addback-fileopen.after
 -simple-patch tcc-0.9.27/tccelf.c \
 -    ../simple-patches/fiwix-paddr.before ../simple-patches/fiwix-paddr.after
-+simple-patch -Np0 -i ../patches/remove-fileopen.patch
-+simple-patch -Np0 -i ../patches/addback-fileopen.patch
-+simple-patch -Np0 -i ../patches/fiwix-paddr.patch
- # Fix SIGSEGV while building lwext4
+-# Fix SIGSEGV while building lwext4
 -simple-patch tcc-0.9.27/tccelf.c \
 -    ../simple-patches/check-reloc-null.before ../simple-patches/check-reloc-null.after
-+simple-patch -Np0 -i ../patches/check-reloc-null.patch
- untar --non-strict --file ${MES_PKG}.tar
- cd ${pkg}
- 
+-untar --non-strict --file ${MES_PKG}.tar
+-cd ${pkg}
+-
+-# Create config.h
+-catm config.h
+-
+-# Compile
+-tcc-0.9.26 \
+-    -v \
+-    -static \
+-    -o ${BINDIR}/tcc \
+-    -D TCC_TARGET_I386=1 \
+-    -D CONFIG_TCCDIR=\"${LIBDIR}/tcc\" \
+-    -D CONFIG_TCC_CRTPREFIX=\"${LIBDIR}\" \
+-    -D CONFIG_TCC_ELFINTERP=\"/mes/loader\" \
+-    -D CONFIG_TCC_LIBPATHS=\"${LIBDIR}:${LIBDIR}/tcc\" \
+-    -D CONFIG_TCC_SYSINCLUDEPATHS=\"${PREFIX}/include/mes\" \
+-    -D TCC_LIBGCC=\"${LIBDIR}/libc.a\" \
+-    -D CONFIG_TCC_STATIC=1 \
+-    -D CONFIG_USE_LIBGCC=1 \
+-    -D TCC_VERSION=\"0.9.27\" \
+-    -D ONE_SOURCE=1 \
+-    tcc.c
+-
+-# Recompile the mes C library
+-cd ../${MES_PKG}
+-
+-# Create unified libc file
+-cd lib
+-catm ../unified-libc.c ctype/isalnum.c ctype/isalpha.c ctype/isascii.c ctype/iscntrl.c ctype/isdigit.c ctype/isgraph.c ctype/islower.c ctype/isnumber.c ctype/isprint.c ctype/ispunct.c ctype/isspace.c ctype/isupper.c ctype/isxdigit.c ctype/tolower.c ctype/toupper.c dirent/closedir.c dirent/__getdirentries.c dirent/opendir.c linux/readdir.c linux/access.c linux/brk.c linux/chdir.c linux/chmod.c linux/clock_gettime.c linux/close.c linux/dup2.c linux/dup.c linux/execve.c linux/fcntl.c linux/fork.c linux/fsync.c linux/fstat.c linux/_getcwd.c linux/getdents.c linux/getegid.c linux/geteuid.c linux/getgid.c linux/getpid.c linux/getppid.c linux/getrusage.c linux/gettimeofday.c linux/getuid.c linux/ioctl.c linux/ioctl3.c linux/kill.c linux/link.c linux/lseek.c linux/lstat.c linux/malloc.c linux/mkdir.c linux/mknod.c linux/nanosleep.c linux/_open3.c linux/pipe.c linux/_read.c linux/readlink.c linux/rename.c linux/rmdir.c linux/setgid.c linux/settimer.c linux/setuid.c linux/signal.c linux/sigprogmask.c linux/symlink.c linux/stat.c linux/time.c linux/unlink.c linux/waitpid.c linux/x86-mes-gcc/_exit.c linux/x86-mes-gcc/syscall.c linux/x86-mes-gcc/_write.c math/ceil.c math/fabs.c math/floor.c mes/abtod.c mes/abtol.c mes/__assert_fail.c mes/assert_msg.c mes/__buffered_read.c mes/__init_io.c mes/cast.c mes/dtoab.c mes/eputc.c mes/eputs.c mes/fdgetc.c mes/fdgets.c mes/fdputc.c mes/fdputs.c mes/fdungetc.c mes/globals.c mes/itoa.c mes/ltoab.c mes/ltoa.c mes/__mes_debug.c mes/mes_open.c mes/ntoab.c mes/oputc.c mes/oputs.c mes/search-path.c mes/ultoa.c mes/utoa.c posix/alarm.c posix/buffered-read.c posix/execl.c posix/execlp.c posix/execv.c posix/execvp.c posix/getcwd.c posix/getenv.c posix/isatty.c posix/mktemp.c posix/open.c posix/pathconf.c posix/raise.c posix/sbrk.c posix/setenv.c posix/sleep.c posix/unsetenv.c posix/wait.c posix/write.c stdio/clearerr.c stdio/fclose.c stdio/fdopen.c stdio/feof.c stdio/ferror.c stdio/fflush.c stdio/fgetc.c stdio/fgets.c stdio/fileno.c stdio/fopen.c stdio/fprintf.c stdio/fputc.c stdio/fputs.c stdio/fread.c stdio/freopen.c stdio/fscanf.c stdio/fseek.c stdio/ftell.c stdio/fwrite.c stdio/getc.c stdio/getchar.c stdio/perror.c stdio/printf.c stdio/putc.c stdio/putchar.c stdio/remove.c stdio/snprintf.c stdio/sprintf.c stdio/sscanf.c stdio/ungetc.c stdio/vfprintf.c stdio/vfscanf.c stdio/vprintf.c stdio/vsnprintf.c stdio/vsprintf.c stdio/vsscanf.c stdlib/abort.c stdlib/abs.c stdlib/alloca.c stdlib/atexit.c stdlib/atof.c stdlib/atoi.c stdlib/atol.c stdlib/calloc.c stdlib/__exit.c stdlib/exit.c stdlib/free.c stdlib/mbstowcs.c stdlib/puts.c stdlib/qsort.c stdlib/realloc.c stdlib/strtod.c stdlib/strtof.c stdlib/strtol.c stdlib/strtold.c stdlib/strtoll.c stdlib/strtoul.c stdlib/strtoull.c string/bcmp.c string/bcopy.c string/bzero.c string/index.c string/memchr.c string/memcmp.c string/memcpy.c string/memmem.c string/memmove.c string/memset.c string/rindex.c string/strcat.c string/strchr.c string/strcmp.c string/strcpy.c string/strcspn.c string/strdup.c string/strerror.c string/strlen.c string/strlwr.c string/strncat.c string/strncmp.c string/strncpy.c string/strpbrk.c string/strrchr.c string/strspn.c string/strstr.c string/strupr.c stub/atan2.c stub/bsearch.c stub/chown.c stub/__cleanup.c stub/cos.c stub/ctime.c stub/exp.c stub/fpurge.c stub/freadahead.c stub/frexp.c stub/getgrgid.c stub/getgrnam.c stub/getlogin.c stub/getpgid.c stub/getpgrp.c stub/getpwnam.c stub/getpwuid.c stub/gmtime.c stub/ldexp.c stub/localtime.c stub/log.c stub/mktime.c stub/modf.c stub/mprotect.c stub/pclose.c stub/popen.c stub/pow.c stub/putenv.c stub/rand.c stub/realpath.c stub/rewind.c stub/setbuf.c stub/setgrent.c stub/setlocale.c stub/setvbuf.c stub/sigaction.c stub/sigaddset.c stub/sigblock.c stub/sigdelset.c stub/sigemptyset.c stub/sigsetmask.c stub/sin.c stub/sys_siglist.c stub/system.c stub/sqrt.c stub/strftime.c stub/times.c stub/ttyname.c stub/umask.c stub/utime.c x86-mes-gcc/setjmp.c
+-cd ..
+-
+-# Recompile libc: crt{1,n,i}, libtcc.a, libc.a
+-tcc -c -D HAVE_CONFIG_H=1 -I include -I include/linux/x86 -o ${LIBDIR}/crt1.o lib/linux/x86-mes-gcc/crt1.c
+-tcc -c -D HAVE_CONFIG_H=1 -I include -I include/linux/x86 -o ${LIBDIR}/crtn.o lib/linux/x86-mes-gcc/crtn.c
+-tcc -c -D HAVE_CONFIG_H=1 -I include -I include/linux/x86 -o ${LIBDIR}/crti.o lib/linux/x86-mes-gcc/crti.c
+-tcc -c -D HAVE_CONFIG_H=1 -D HAVE_LONG_LONG_STUB=1 -I include -I include/linux/x86 lib/libtcc1.c
+-tcc -c -D TCC_TARGET_I386=1 ../${pkg}/lib/libtcc1.c
+-tcc -ar cr ${LIBDIR}/tcc/libtcc1.a libtcc1.o
+-tcc -c -D HAVE_CONFIG_H=1 -I include -I include/linux/x86 -o unified-libc.o unified-libc.c
+-tcc -ar cr ${LIBDIR}/libc.a unified-libc.o
+-cd ../..
+-
+-# Test
+-tcc -version
+-
+-# Checksums
+-if match x${UPDATE_CHECKSUMS} xTrue; then
+-    sha256sum -o ${pkg}.checksums \
+-        /usr/bin/tcc
+-
+-    cp ${pkg}.checksums ${SRCDIR}
+-else
+-    sha256sum -c ${pkg}.checksums
+-fi
 diff --git a/steps/tcc-0.9.27/patches/addback-fileopen.patch b/steps/tcc-0.9.27/patches/addback-fileopen.patch
 new file mode 100644
 index 0000000..ceaf521

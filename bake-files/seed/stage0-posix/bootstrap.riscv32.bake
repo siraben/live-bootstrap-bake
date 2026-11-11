@@ -1,0 +1,7 @@
+: all
+= ARCH riscv32
+= ARCH_DIR riscv32
+= BLOOD_FLAG --little-endian
+= BASE_ADDRESS 0x00600000
+= ENDIAN_FLAG --little-endian
+./${ARCH_DIR}/bin/bake --file bootstrap.common.bake all

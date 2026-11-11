@@ -1,27 +1,23 @@
 : all after
 
-= ARCH x86
-= ARCH_DIR x86
 = M2LIBC ../M2libc
-= TOOLS ../x86/bin
-= BLOOD_FLAG
-= BASE_ADDRESS 0x08048000
-= ENDIAN_FLAG --little-endian
-= BINDIR ../x86/bin
-= BUILDDIR ../x86/artifact
-= TMPDIR ../x86/artifact
+= TOOLS ../${ARCH_DIR}/bin
+= BINDIR ../${ARCH_DIR}/bin
+= BUILDDIR ../${ARCH_DIR}/artifact
+= TMPDIR ../${ARCH_DIR}/artifact
 = OPERATING_SYSTEM Linux
 
 : mescc-tools-full
-./${ARCH_DIR}/bin/bake --file ${ARCH_DIR}/mescc-tools-full.bake all
+./${ARCH_DIR}/bin/bake --file mescc-tools-full.bake all
 
 : mescc-tools-extra mescc-tools-full
+export TMPDIR ${TMPDIR}
 cd mescc-tools-extra
 ${BINDIR}/bake --file mescc-tools-extra.bake tools
 cd ..
 
 : M2-Planet-pr mescc-tools-extra
-./${ARCH_DIR}/bin/bake --file ${ARCH_DIR}/mescc-tools-full.bake M2-Planet-pr
+./${ARCH_DIR}/bin/bake --file mescc-tools-full.bake M2-Planet-pr
 
 : wrap M2-Planet-pr
 cd mescc-tools-extra
@@ -29,7 +25,7 @@ ${BINDIR}/bake --file mescc-tools-extra.bake wrap
 cd ..
 
 : M2-Planet wrap
-./${ARCH_DIR}/bin/bake --file ${ARCH_DIR}/mescc-tools-full.bake M2-Planet
+./${ARCH_DIR}/bin/bake --file mescc-tools-full.bake M2-Planet
 
 : check M2-Planet
 ./${ARCH_DIR}/bin/sha256sum -c ${ARCH}.answers

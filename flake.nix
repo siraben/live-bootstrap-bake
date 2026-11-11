@@ -25,7 +25,9 @@
             pkgs.patch
             pkgs.shellcheck
             (pkgs.python3.withPackages (ps: [
+              ps.pylint
               ps.requests
+              ps.reuse
             ]))
             pkgs.which
           ];

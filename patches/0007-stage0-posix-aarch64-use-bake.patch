@@ -1,0 +1,372 @@
+diff --git a/GAS/cc_aarch64.S b/GAS/cc_aarch64.S
+index 3994ade..6b96cda 100644
+--- a/GAS/cc_aarch64.S
++++ b/GAS/cc_aarch64.S
+@@ -3591,10 +3591,12 @@ common_recursion:
+ // require_global_token function
+ // Aborts if global_token is NULL before callers dereference it
+ require_global_token:
++    push x0                     // Preserve live type/expression operands
+     adr x9, global_token
+     ldr x0, [x9]
+     cmp x0, 0
+     b.eq Exit_Failure
++    pop x0
+     ret
+ 
+ // require_match function
+diff --git a/README.md b/README.md
+index a26baf9..01f9b78 100644
+--- a/README.md
++++ b/README.md
+@@ -3,6 +3,6 @@ This folder contains the AArch64 specific parts of stage0-posix and was separate
+ To use this in your project:
+ 1) add it as a git submodule (or just extract into a folder) named AArch64
+ 2) create a kaem.aarch64 file (if you are using bootstrap-seeds)
+-3) create an after.kaem file to hook your tools you wish to have built after these
++3) create an after.bake file with an all target to build your tools after these
+ 
+ The master location of this code is: https://github.com/oriansj/stage0-posix-aarch64
+diff --git a/cc_aarch64.M1 b/cc_aarch64.M1
+index 3ce0a91..d1803d0 100644
+--- a/cc_aarch64.M1
++++ b/cc_aarch64.M1
+@@ -5311,6 +5311,7 @@ DEFINE RBRANCH 17
+ # require_global_token function
+ # Aborts if global_token is NULL before callers dereference it
+ :require_global_token
++    PUSH_X0                             # Preserve live type/expression operands
+     LOAD_W9_AHEAD                       # Using global_token
+     SKIP_32_DATA
+     &global_token
+@@ -5318,6 +5319,7 @@ DEFINE RBRANCH 17
+     CMP_X0_TO_0                         # Check for EOF
+     SKIP_INST_NE                        # Abort on EOF
+     ^~Exit_Failure FBRANCH
++    POP_X0
+     RETURN
+ 
+ # require_match function
+diff --git a/kaem.run b/kaem.run
+index 1741df9..8a81177 100644
+--- a/kaem.run
++++ b/kaem.run
+@@ -18,34 +18,4 @@
+ # You should have received a copy of the GNU General Public License
+ # along with Mes.  If not, see <http://www.gnu.org/licenses/>.
+ 
+-# To run in kaem simply: kaem --verbose --strict
+-
+-ARCH="aarch64"
+-ARCH_DIR="AArch64"
+-M2LIBC="../M2libc"
+-TOOLS="../${ARCH_DIR}/bin"
+-BLOOD_FLAG="--64"
+-BASE_ADDRESS="0x00600000"
+-ENDIAN_FLAG="--little-endian"
+-BINDIR="../${ARCH_DIR}/bin"
+-BUILDDIR="../${ARCH_DIR}/artifact"
+-TMPDIR="${BUILDDIR}"
+-OPERATING_SYSTEM="Linux"
+-
+-################################################
+-# Phase 12-15 Rebuild M2-Planet from C sources #
+-################################################
+-./${ARCH_DIR}/bin/kaem --verbose --strict --file ${ARCH_DIR}/mescc-tools-full-kaem.kaem
+-
+-######################################################
+-# Phase 16-23 Build mescc-tools-extra from M2-Planet #
+-######################################################
+-cd mescc-tools-extra
+-${BINDIR}/kaem --verbose --strict --file mescc-tools-extra.kaem
+-cd ..
+-./${ARCH_DIR}/bin/sha256sum -c ${ARCH}.answers
+-
+-#########################
+-# Load after.kaem hook  #
+-#########################
+-exec ./${ARCH_DIR}/bin/kaem --verbose --strict --file ./after.kaem
++./AArch64/bin/bake --file bootstrap.aarch64.bake all
+diff --git a/mescc-tools-full-kaem.kaem b/mescc-tools-full-kaem.kaem
+deleted file mode 100644
+index 840a88a..0000000
+--- a/mescc-tools-full-kaem.kaem
++++ /dev/null
+@@ -1,196 +0,0 @@
+-#!/usr/bin/env bash
+-# Mes --- Maxwell Equations of Software
+-# Copyright © 2017,2019 Jan Nieuwenhuizen <janneke@gnu.org>
+-# Copyright © 2017,2019 Jeremiah Orians
+-#
+-# This file is part of Mes.
+-#
+-# Mes is free software; you can redistribute it and/or modify it
+-# under the terms of the GNU General Public License as published by
+-# the Free Software Foundation; either version 3 of the License, or (at
+-# your option) any later version.
+-#
+-# Mes is distributed in the hope that it will be useful, but
+-# WITHOUT ANY WARRANTY; without even the implied warranty of
+-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-# GNU General Public License for more details.
+-#
+-# You should have received a copy of the GNU General Public License
+-# along with Mes.  If not, see <http://www.gnu.org/licenses/>.
+-
+-cd ${ARCH_DIR}
+-
+-###############################################
+-# Phase-12 Build M2-Mesoplanet from M2-Planet #
+-###############################################
+-
+-./artifact/M2 --architecture ${ARCH} \
+-	-f ../M2libc/sys/types.h \
+-	-f ../M2libc/stddef.h \
+-	-f ../M2libc/${ARCH}/linux/fcntl.c \
+-	-f ../M2libc/fcntl.c \
+-	-f ../M2libc/sys/utsname.h \
+-	-f ../M2libc/${ARCH}/linux/unistd.c \
+-	-f ../M2libc/${ARCH}/linux/sys/stat.c \
+-	-f ../M2libc/ctype.c \
+-	-f ../M2libc/stdlib.c \
+-	-f ../M2libc/stdarg.h \
+-	-f ../M2libc/stdio.h \
+-	-f ../M2libc/stdio.c \
+-	-f ../M2libc/string.c \
+-	-f ../M2libc/bootstrappable.c \
+-	-f ../M2-Mesoplanet/cc.h \
+-	-f ../M2-Mesoplanet/cc_globals.c \
+-	-f ../M2-Mesoplanet/cc_env.c \
+-	-f ../M2-Mesoplanet/cc_reader.c \
+-	-f ../M2-Mesoplanet/cc_spawn.c \
+-	-f ../M2-Mesoplanet/cc_core.c \
+-	-f ../M2-Mesoplanet/cc_macro.c \
+-	-f ../M2-Mesoplanet/cc.c \
+-	--debug \
+-	-o ./artifact/M2-Mesoplanet-1.M1
+-
+-./artifact/blood-elf-0 ${ENDIAN_FLAG} ${BLOOD_FLAG} -f ./artifact/M2-Mesoplanet-1.M1 -o ./artifact/M2-Mesoplanet-1-footer.M1
+-
+-./bin/M1 --architecture ${ARCH} \
+-	${ENDIAN_FLAG} \
+-	-f ../M2libc/${ARCH}/${ARCH}_defs.M1 \
+-	-f ../M2libc/${ARCH}/libc-full.M1 \
+-	-f ./artifact/M2-Mesoplanet-1.M1 \
+-	-f ./artifact/M2-Mesoplanet-1-footer.M1 \
+-	-o ./artifact/M2-Mesoplanet-1.hex2
+-
+-./bin/hex2 --architecture ${ARCH} \
+-	${ENDIAN_FLAG} \
+-	--base-address ${BASE_ADDRESS} \
+-	-f ../M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 \
+-	-f ./artifact/M2-Mesoplanet-1.hex2 \
+-	-o ./bin/M2-Mesoplanet
+-
+-#################################################
+-# Phase-13 Build final blood-elf from C sources #
+-#################################################
+-
+-./artifact/M2 --architecture ${ARCH} \
+-	-f ../M2libc/sys/types.h \
+-	-f ../M2libc/stddef.h \
+-	-f ../M2libc/${ARCH}/linux/fcntl.c \
+-	-f ../M2libc/fcntl.c \
+-	-f ../M2libc/sys/utsname.h \
+-	-f ../M2libc/${ARCH}/linux/unistd.c \
+-	-f ../M2libc/ctype.c \
+-	-f ../M2libc/stdlib.c \
+-	-f ../M2libc/stdarg.h \
+-	-f ../M2libc/stdio.h \
+-	-f ../M2libc/stdio.c \
+-	-f ../M2libc/bootstrappable.c \
+-	-f ../mescc-tools/stringify.c \
+-	-f ../mescc-tools/blood-elf.c \
+-	--debug \
+-	-o ./artifact/blood-elf-1.M1
+-
+-./artifact/blood-elf-0 ${BLOOD_FLAG} ${ENDIAN_FLAG} -f ./artifact/blood-elf-1.M1 -o ./artifact/blood-elf-1-footer.M1
+-./bin/M1 --architecture ${ARCH} \
+-	${ENDIAN_FLAG} \
+-	-f ../M2libc/${ARCH}/${ARCH}_defs.M1 \
+-	-f ../M2libc/${ARCH}/libc-full.M1 \
+-	-f ./artifact/blood-elf-1.M1 \
+-	-f ./artifact/blood-elf-1-footer.M1 \
+-	-o ./artifact/blood-elf-1.hex2
+-
+-./bin/hex2 --architecture ${ARCH} \
+-	${ENDIAN_FLAG} \
+-	--base-address ${BASE_ADDRESS} \
+-	-f ../M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 \
+-	-f ./artifact/blood-elf-1.hex2 \
+-	-o ./bin/blood-elf
+-
+-# Now we have our shipping debuggable blood-elf, the rest will be down hill from
+-# here as we have ALL of the core pieces of compiling and assembling debuggable
+-# programs in a debuggable form with corresponding C source code.
+-
+-#############################################
+-# Phase-14 Build get_machine from C sources #
+-#############################################
+-
+-./artifact/M2 --architecture ${ARCH} \
+-	-f ../M2libc/sys/types.h \
+-	-f ../M2libc/stddef.h \
+-	-f ../M2libc/sys/utsname.h \
+-	-f ../M2libc/${ARCH}/linux/unistd.c \
+-	-f ../M2libc/${ARCH}/linux/fcntl.c \
+-	-f ../M2libc/fcntl.c \
+-	-f ../M2libc/ctype.c \
+-	-f ../M2libc/stdlib.c \
+-	-f ../M2libc/stdarg.h \
+-	-f ../M2libc/stdio.h \
+-	-f ../M2libc/stdio.c \
+-	-f ../M2libc/bootstrappable.c \
+-	-f ../mescc-tools/get_machine.c \
+-	--debug \
+-	-o artifact/get_machine.M1
+-
+-./bin/blood-elf ${BLOOD_FLAG} ${ENDIAN_FLAG} -f ./artifact/get_machine.M1 -o ./artifact/get_machine-footer.M1
+-
+-./bin/M1 --architecture ${ARCH} \
+-	${ENDIAN_FLAG} \
+-	-f ../M2libc/${ARCH}/${ARCH}_defs.M1 \
+-	-f ../M2libc/${ARCH}/libc-full.M1 \
+-	-f ./artifact/get_machine.M1 \
+-	-f ./artifact/get_machine-footer.M1 \
+-	-o ./artifact/get_machine.hex2
+-
+-./bin/hex2 --architecture ${ARCH} \
+-	${ENDIAN_FLAG} \
+-	--base-address ${BASE_ADDRESS} \
+-	-f ../M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 \
+-	-f ./artifact/get_machine.hex2 \
+-	-o ./bin/get_machine
+-
+-############################################
+-# Phase-15 Build M2-Planet from M2-Planet  #
+-############################################
+-
+-./artifact/M2 --architecture ${ARCH} \
+-	-f ../M2libc/sys/types.h \
+-	-f ../M2libc/stddef.h \
+-	-f ../M2libc/sys/utsname.h \
+-	-f ../M2libc/${ARCH}/linux/unistd.c \
+-	-f ../M2libc/${ARCH}/linux/fcntl.c \
+-	-f ../M2libc/fcntl.c \
+-	-f ../M2libc/ctype.c \
+-	-f ../M2libc/stdlib.c \
+-	-f ../M2libc/stdarg.h \
+-	-f ../M2libc/stdio.h \
+-	-f ../M2libc/stdio.c \
+-	-f ../M2libc/bootstrappable.c \
+-	-f ../M2-Planet/cc.h \
+-	-f ../M2-Planet/cc_globals.c \
+-	-f ../M2-Planet/cc_reader.c \
+-	-f ../M2-Planet/cc_strings.c \
+-	-f ../M2-Planet/cc_types.c \
+-	-f ../M2-Planet/cc_emit.c \
+-	-f ../M2-Planet/cc_core.c \
+-	-f ../M2-Planet/cc_macro.c \
+-	-f ../M2-Planet/cc.c \
+-	--debug \
+-	-o ./artifact/M2-1.M1
+-
+-./bin/blood-elf ${ENDIAN_FLAG} ${BLOOD_FLAG} -f ./artifact/M2-1.M1 -o ./artifact/M2-1-footer.M1
+-
+-./bin/M1 --architecture ${ARCH} \
+-	${ENDIAN_FLAG} \
+-	-f ../M2libc/${ARCH}/${ARCH}_defs.M1 \
+-	-f ../M2libc/${ARCH}/libc-full.M1 \
+-	-f ./artifact/M2-1.M1 \
+-	-f ./artifact/M2-1-footer.M1 \
+-	-o ./artifact/M2-1.hex2
+-
+-./bin/hex2 --architecture ${ARCH} \
+-	${ENDIAN_FLAG} \
+-	--base-address ${BASE_ADDRESS} \
+-	-f ../M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 \
+-	-f ./artifact/M2-1.hex2 \
+-	-o ./bin/M2-Planet
+-
+-cd ..
+diff --git a/mescc-tools-mini-kaem.kaem b/mescc-tools-mini-kaem.kaem
+index ddfb6ff..0b641de 100644
+--- a/mescc-tools-mini-kaem.kaem
++++ b/mescc-tools-mini-kaem.kaem
+@@ -248,7 +248,7 @@
+ 
+ 
+ #####################################
+-# Phase-11 Build kaem from C sources#
++# Phase-11 Build bake from C source #
+ #####################################
+ ./AArch64/artifact/M2 --architecture aarch64 \
+ 	-f ./M2libc/sys/types.h \
+@@ -264,26 +264,23 @@
+ 	-f ./M2libc/stdio.h \
+ 	-f ./M2libc/stdio.c \
+ 	-f ./M2libc/bootstrappable.c \
+-	-f ./mescc-tools/Kaem/kaem.h \
+-	-f ./mescc-tools/Kaem/variable.c \
+-	-f ./mescc-tools/Kaem/kaem_globals.c \
+-	-f ./mescc-tools/Kaem/kaem.c \
++	-f ./mescc-tools/bake.c \
+ 	--debug \
+-	-o ./AArch64/artifact/kaem.M1
++	-o ./AArch64/artifact/bake.M1
+ 
+-./AArch64/artifact/blood-elf-0 --64 --little-endian -f ./AArch64/artifact/kaem.M1 -o ./AArch64/artifact/kaem-footer.M1
++./AArch64/artifact/blood-elf-0 --64 --little-endian -f ./AArch64/artifact/bake.M1 -o ./AArch64/artifact/bake-footer.M1
+ 
+ ./AArch64/bin/M1 --architecture aarch64 \
+ 	--little-endian \
+ 	-f ./M2libc/aarch64/aarch64_defs.M1 \
+ 	-f ./M2libc/aarch64/libc-full.M1 \
+-	-f ./AArch64/artifact/kaem.M1 \
+-	-f ./AArch64/artifact/kaem-footer.M1 \
+-	-o ./AArch64/artifact/kaem.hex2
++	-f ./AArch64/artifact/bake.M1 \
++	-f ./AArch64/artifact/bake-footer.M1 \
++	-o ./AArch64/artifact/bake.hex2
+ 
+ ./AArch64/bin/hex2 --architecture aarch64 \
+ 	--little-endian \
+ 	--base-address 0x00600000 \
+ 	-f ./M2libc/aarch64/ELF-aarch64-debug.hex2 \
+-	-f ./AArch64/artifact/kaem.hex2 \
+-	-o ./AArch64/bin/kaem
++	-f ./AArch64/artifact/bake.hex2 \
++	-o ./AArch64/bin/bake
+diff --git a/test/cc_aarch64-fuzz.sh b/test/cc_aarch64-fuzz.sh
+index 0a1067e..15c4293 100755
+--- a/test/cc_aarch64-fuzz.sh
++++ b/test/cc_aarch64-fuzz.sh
+@@ -37,6 +37,28 @@ else
+ 	echo "skipping GAS/cc_aarch64.S: no aarch64 assembler or clang found"
+ fi
+ 
++check_result()
++{
++	name=$1
++	input=$2
++	expected=$3
++	for target in $targets; do
++		printf '%s\n' "$input" > "$tmp/$name.c"
++		"$QEMU" "$target" "$tmp/$name.c" "$tmp/$name.M1"
++		"$M1" --little-endian --architecture aarch64 \
++			-f aarch64_defs.M1 -f libc-core.M1 -f "$tmp/$name.M1" -o "$tmp/$name.hex2"
++		"$HEX2" --little-endian --architecture aarch64 --base-address 0x100000 \
++			-f ELF-aarch64.hex2 -f "$tmp/$name.hex2" -o "$tmp/$name"
++		chmod +x "$tmp/$name"
++		if "$QEMU" "$tmp/$name"; then status=0; else status=$?; fi
++		test "$status" -eq "$expected"
++	done
++}
++
++# Token guards must preserve live type pointers and other x0 operands.
++check_result global-index 'char*p;int main(){p="Z";return p[0];}' 90
++check_result local-index 'int main(){char*p;p="A";return p[0];}' 65
++
+ check_no_crash()
+ {
+ 	name=$1

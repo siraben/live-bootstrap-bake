@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2023 Richard Masters <grick23@gmail.com>
+# SPDX-FileCopyrightText: 2026 Ben Siraphob
+#
+# SPDX-License-Identifier: MIT
+
 : all build checksum
 
 : build

@@ -1,3 +1,106 @@
+diff --git a/README.md b/README.md
+index fee9b97..8e2d5b4 100644
+--- a/README.md
++++ b/README.md
+@@ -7,7 +7,7 @@ following:
+   - blood-elf
+   - get_machine
+   - hex2
+-  - kaem
++  - bake
+ - mescc-tools-extra (https://github.com/oriansj/mescc-tools-extra), containing:
+   - catm
+   - cp
+@@ -81,13 +81,12 @@ https://github.com/oriansj/talk-notes/blob/master/bootstrappable.org
+ 
+ ## How does this process work?
+ 
+-It is highly recommended that after reading this you go through the kaem.run for
+-your architecture and see each of these steps in action. Note that the kaem.run
+-is split into two kaem files to make it simpler to grasp. These two files are
+-mescc-tools-mini-kaem.kaem for Phase 0-9 (uses the simple kaem),
+-mescc-tools-full-kaem.kaem for Phase 10-12 (uses the full kaem for the rest of
+-mescc-tools) and mes-m2.kaem for Phase 13, contained in the same folder as
+-kaem.run.
++Start with kaem.<architecture>: seed/minimal kaem builds the initial tools
++and bake in mescc-tools-mini-kaem.kaem. The architecture's bootstrap.*.bake
++then supplies machine parameters to bootstrap.common.bake. The shared
++mescc-tools-full.bake rebuilds the full tools before the extra tools and
++checksum verification. No full kaem interpreter or duplicated full-tool
++rebuild scripts are needed.
+ 
+ ALL of these steps have a NASM or GAS version in the NASM/ or GAS/ subdirectory
+ of the folder for the architecture.
+@@ -187,10 +186,11 @@ features provided by M2libc and M2-Planet to enable significantly faster builds.
+ This is the final debuggable version of hex2 with all of the optimizations and
+ features provided by M2libc and M2-Planet to enable significantly faster builds.
+ 
+-### Phase 11: Build kaem
++### Phase 11: Build bake
+ 
+-kaem is what was being used to run kaem.run scripts, and is useful for
+-later stages of the bootstrap process outside this repository.
++The seed-built compiler builds bake, which runs named targets and dependencies
++for the rest of the bootstrap. The minimal kaem seed is still required for the
++initial steps; the full kaem interpreter is replaced.
+ 
+ ### Phase 12: Build blood-elf implementation in M2-Planet
+ 
+@@ -271,9 +271,8 @@ supported) and replaces it with the desired replacement.
+ If you need a chroot or to isolate what you are doing; wrap is the first tool
+ available for that job and does it well enough to get you quite far.
+ 
+-### Phase 28: after.kaem
++### Phase 28: after.bake
+ 
+-after.kaem exists for you to replace with anything you want to kick off your
+-bootstrap chain.
++after.bake provides the `all` target for continuing your bootstrap chain.
+ 
+ Enjoy
+diff --git a/aarch64.answers b/aarch64.answers
+index ecde716..7698f58 100644
+--- a/aarch64.answers
++++ b/aarch64.answers
+@@ -1,19 +1,19 @@
+-51b98418ce041773b4317968768ce703414c1958bb2c341bc0926a49f839008c  AArch64/bin/blood-elf
+-46afd1af20a9320fdb4789a9b9d7f0b6e0d4bfce599a74dac600e06389d3a46e  AArch64/bin/catm
+-8978670ed799e0c385ac59feb338413bab4aac6213512d999738292d04878b2d  AArch64/bin/chmod
+-24ce34505e734c2953e6e9d1ca1e2218abcc65f0aa5db05d667a194e62f14fae  AArch64/bin/cp
+-367f15b687d4076b24ff9fd13f9726d27f9743a22d4a7aa26f3ed84361c4866f  AArch64/bin/get_machine
+-3154db7cab4dd8e5ac0f2dcb6d612a7c1ad99bcaafae6386d4add9a85025f0c1  AArch64/bin/hex2
+-b661b2a7f3423f1c926eae39c3b0f90af834f1ed59a232e6df30c25c0ae6e037  AArch64/bin/kaem
+-4c11c50e6ef27e7660f4fe6d1fbc134876a758f9720e7e6e10c4cda4b3550fe9  AArch64/bin/M1
+-4c416086ac82e1f15e407fb3bab60b7800a9cd310933825a0b241146ee950a6f  AArch64/bin/M2-Mesoplanet
+-ce3c490ce1edd0046c2b4e845559ffe94b28efdc97a9b5a3be10a71936317504  AArch64/bin/M2-Planet
+-299d7edec2c048fc16bab170921625405718a28747e575e4f66f472289fa045f  AArch64/bin/match
+-69cc0c5dae97931abe9c56368d730919aeca50c180305a20fd47711f963ce5cf  AArch64/bin/mkdir
+-decd95c7e6029b043502dbd312fc7f51bcfcdc0bf240573d03141813d8083b36  AArch64/bin/replace
+-d0b98e8d96f59318c6421eda98f8c786ec99568261bc44facaa53966f8eb5bc4  AArch64/bin/rm
+-f2f002fc3d1c9988e429b46c864c445e972942f1d2c18fa015bee451f1ccddd4  AArch64/bin/sha256sum
+-96674eba07393184b9511ddd55f74a65fa24f17d6b2c284710949b0e7cad03ca  AArch64/bin/ungz
+-7fac766b6cbdc9efa69f116ade89beaf1f0379f09fdb26ce9d2d5795de0b0bec  AArch64/bin/unbz2
+-3512aaea69b075aed15c9e3054ae606220804947887fe3caa8785691132bfcce  AArch64/bin/unxz
+-f06948caa43c7ce3711c5e1d4d4605e77efdaa617a75df828e5dde505df6232a  AArch64/bin/untar
++a8eac222e9a6bf3b250956aba597495deeb24f71bb183d845be631f4a408459f  AArch64/bin/blood-elf
++3761c59ec756c7a719d13345a35966e6a3600a015da9650cc3bbb324b22eb0d0  AArch64/bin/catm
++d5e46ae1ec4e1aa923d0c9fd6e39cd0d966302c675c38d9550fd4db01fcb9269  AArch64/bin/chmod
++6ff5ba91fb958725e86d0a1ee5c2f77e68ae82521e5b7fe5356478cee7e14cf3  AArch64/bin/cp
++2d35a73959cd36410f81b613032732b45742b0930bba37cdc6da771189a0c06a  AArch64/bin/get_machine
++10a762f197e56e3b05cfd70004f1e6b5548ddcc31d49caf1668bcda11ae7b97d  AArch64/bin/hex2
++76396d5614e5c6cd4e76407840d857dfbe235d76a4740da344562d7f775e5fa9  AArch64/bin/M1
++95478c868f1d0d31659f41a9750193a0851a2bbb148635ec086ad5b8ba190ffc  AArch64/bin/M2-Mesoplanet
++b4c176782a0f951c351b1056d0ab3727899b9f3328674c800f607c2845ca308c  AArch64/bin/M2-Planet
++3bb3fb51ffafbdeb96a246545ebe8f84dd7ff46dfd44440fbdc4088a4f4d9398  AArch64/bin/match
++5b8088affea0cadb14e0376bc84004fac2d1c9810926ffd6003c997ccfebae08  AArch64/bin/mkdir
++65ee2f3d46fd0e45102e018579e6d177b0cc32010828888d51efeddce629ece7  AArch64/bin/replace
++d9f7a55ac57655605ffacca8baa243a343e444e0db68a7a65f1daad70d12c20c  AArch64/bin/rm
++c7cf3bce07ac9c0bcb54b7b19babc361c985ecfd4057f335a7246c5c35aee0b1  AArch64/bin/sha256sum
++f7f5c9d2d486cfc9949ac41db1d45636e8c7a6e8f03531700aae09fed61c591d  AArch64/bin/ungz
++8f10c58cb55eca0b6fe330a12c84c4e854ffa8d7337dce27bb153d509d25e513  AArch64/bin/unbz2
++03a0320972b35734830ea731e42781cdbc7ea81576cddcf8fcac66f8589af50c  AArch64/bin/unxz
++0b728cfa739f7140b4bd03d6048d68a3dffdae58d0f2a5c3b41c5ec2ae512157  AArch64/bin/untar
++e9d88da8d9052243d296ab54b61423d0ab514e1f54467342c2aca9385637f23c  AArch64/bin/bake
 diff --git a/after.bake b/after.bake
 new file mode 100644
 index 0000000..a2d598f
@@ -5,23 +108,264 @@ index 0000000..a2d598f
 +++ b/after.bake
 @@ -0,0 +1 @@
 +: all
+diff --git a/after.kaem b/after.kaem
+deleted file mode 100644
+index fda7388..0000000
+--- a/after.kaem
++++ /dev/null
+@@ -1,21 +0,0 @@
+-#! /usr/bin/env bash
+-# Mes --- Maxwell Equations of Software
+-# Copyright © 2017,2019 Jan Nieuwenhuizen <janneke@gnu.org>
+-# Copyright © 2017,2019 Jeremiah Orians
+-#
+-# This file is part of Mes.
+-#
+-# Mes is free software; you can redistribute it and/or modify it
+-# under the terms of the GNU General Public License as published by
+-# the Free Software Foundation; either version 3 of the License, or (at
+-# your option) any later version.
+-#
+-# Mes is distributed in the hope that it will be useful, but
+-# WITHOUT ANY WARRANTY; without even the implied warranty of
+-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-# GNU General Public License for more details.
+-#
+-# You should have received a copy of the GNU General Public License
+-# along with Mes.  If not, see <http://www.gnu.org/licenses/>.
+-
+-echo "Replace me if you wish to do more"
+diff --git a/amd64.answers b/amd64.answers
+index 33a75bc..528405c 100644
+--- a/amd64.answers
++++ b/amd64.answers
+@@ -1,19 +1,19 @@
+-6d1c534225ac7a3e74e29cb17579f5dd720547c19e7eea6bfe742326fb4a0bc7  AMD64/bin/blood-elf
+-c13daf05065008a1e7bc4852fcce016df24edb1c633961f462421b8b0ab176ca  AMD64/bin/catm
+-55e78986bd1a5641f6a665ecb8be51aff06ce805b700b246821a001e9afc60e8  AMD64/bin/chmod
+-aa8eb71e83570f84b3fe13c08f28e3861e59681b178e38b6fd8f0a4cafaebc27  AMD64/bin/cp
+-379cb35a87bd7a9c190d79d3141af897869aae5e4cb0ac9e03235c78b84e1be7  AMD64/bin/get_machine
+-f782df6d59f7ff930e67f34dde7ea62288b12d6d1a0b036ef465ad06b4a4b97a  AMD64/bin/hex2
+-6364de59b36f8575fd938779476a9a121878fc0e2d65cc01ae5372aad2d028b5  AMD64/bin/kaem
+-fc68c115384852b827a35b607de382592a475c324e1e11ca7cf5b9e840ce15a9  AMD64/bin/M1
+-f24855886c8a7e63015b8c8b6aeb4a03556540be16baab62d234deb4c57625b4  AMD64/bin/M2-Mesoplanet
+-7cf19de29a4ae63637898f6093d0526b73108040ab3634f11232030439602fc1  AMD64/bin/M2-Planet
+-962d44ad6cc75ee1f51fbb0d07c5e4fdf9479540d46ceae26d1bb34558feaa2f  AMD64/bin/match
+-c8bdd424b1e588714c654de9e1df3de690301cf2ff883e93da1f01b86806cc20  AMD64/bin/mkdir
+-88bfafe232428196a056b1ef517d4f797c68f0eaabc3dce84f66194899dbf864  AMD64/bin/replace
+-c7ac6f9ca26a0b771c130b43c8b536b300445f696e04b5db4f0f4eb949613459  AMD64/bin/rm
+-f7c0fcae688ec01050d836771392f4d81f5ad6788590278ec76ccd17cdd89e48  AMD64/bin/sha256sum
+-0769b2c0af733b62db727a73c04cbdadafa747ed15c0ade42c6c613c18e165ec  AMD64/bin/ungz
+-2e2ff2ae38b2d4e9ca2268b3265b0d82b79a931ce25aa91daf36c006537f2d45  AMD64/bin/unbz2
+-1960964e6d73cdc3b55f2bb3b2f2c33668025a802d86cef48f39bdaa9a5ea201  AMD64/bin/unxz
+-8100ef93f3f078fb825d97eb53773f9f3d6e420d5bd40f8b0e3285e405544e9c  AMD64/bin/untar
++a81a36ccc1634abd14a69313816aa6dc03233a895a9a2f0c5f0073d54eb5fe89  AMD64/bin/blood-elf
++fd7b3806cd6ffee78bd341138289a8c39286a95909f68e3e3c1098214f429596  AMD64/bin/catm
++83254a5429b2eee68cac47a199a1c2c99d6c0a536d71b415be370a9ee37fd0e0  AMD64/bin/chmod
++e03b536e965564d7a1be88e4877098da9a4ebee0f6cf4072644aa98afc4659cc  AMD64/bin/cp
++d9328ebf2c655b4718104a66fec89fee72c6707ac4fb358a572882396e01c0ee  AMD64/bin/get_machine
++787006fb63e083bef6c56c4f4cdc9a62c098953dd2da3eaae8a1fe1f14be7fc2  AMD64/bin/hex2
++8e53068f8eb80645075de6aff258e3c1d15e85ab02ad061ff07b830b4d9f7379  AMD64/bin/M1
++a63864c9afd152600bc8bf74fc2303d77affe0b78d70866c83df05b9ce94af24  AMD64/bin/M2-Mesoplanet
++00208efc93632eae6d6b195096ae5821a1f37bb109cd11391e211f4b3b7e73e2  AMD64/bin/M2-Planet
++f9df9473a7794028f9dab1b0ded76880e02b46d3342fa12424743c60fedef6fc  AMD64/bin/match
++b61d7f901008ab7e61e580b75a0b1c55daaf3a3f785d6b36871ca72054bc7017  AMD64/bin/mkdir
++34217ee4be233083d3677cb4c8cf63abb9b2f31bde9a1e4d7e8c5ac61a7dbbd7  AMD64/bin/replace
++ea6a9ba22d5ef911ddb60d7095a2a6358ae682a55363b5c9c347ff3cbdcda021  AMD64/bin/rm
++d24c0246d85425b850cf05ea5ff0f1a66b36674010062ac43f027e22d7554f2e  AMD64/bin/sha256sum
++b32bf21d8351c5ab0d166fee6e22cac726dd8c315de99b24dbf937ab6ada07e5  AMD64/bin/ungz
++1d94f728ed46c9afd8ab0e1c82ee6e09879619f37b38b8bd35a5a337ef73f7d2  AMD64/bin/unbz2
++1ed5e1fe5dcb736e1416a3157e281deb1ab2f1471b767ad4b082418a282a6996  AMD64/bin/unxz
++c02ed9016a9e1abdc2a3497b06781b871d18385c3664072232f6864bbd959157  AMD64/bin/untar
++e6c6c4f20797868d607d94484eabe284aaec6ee572d252746fa8a2ced5b4139a  AMD64/bin/bake
+diff --git a/bootstrap.aarch64.bake b/bootstrap.aarch64.bake
+new file mode 100644
+index 0000000..f5ff536
+--- /dev/null
++++ b/bootstrap.aarch64.bake
+@@ -0,0 +1,7 @@
++: all
++= ARCH aarch64
++= ARCH_DIR AArch64
++= BLOOD_FLAG --64 --little-endian
++= BASE_ADDRESS 0x00400000
++= ENDIAN_FLAG --little-endian
++./${ARCH_DIR}/bin/bake --file bootstrap.common.bake all
+diff --git a/bootstrap.amd64.bake b/bootstrap.amd64.bake
+new file mode 100644
+index 0000000..904db01
+--- /dev/null
++++ b/bootstrap.amd64.bake
+@@ -0,0 +1,7 @@
++: all
++= ARCH amd64
++= ARCH_DIR AMD64
++= BLOOD_FLAG --64 --little-endian
++= BASE_ADDRESS 0x00600000
++= ENDIAN_FLAG --little-endian
++./${ARCH_DIR}/bin/bake --file bootstrap.common.bake all
+diff --git a/bootstrap.common.bake b/bootstrap.common.bake
+new file mode 100644
+index 0000000..f86d986
+--- /dev/null
++++ b/bootstrap.common.bake
+@@ -0,0 +1,34 @@
++: all after
++
++= M2LIBC ../M2libc
++= TOOLS ../${ARCH_DIR}/bin
++= BINDIR ../${ARCH_DIR}/bin
++= BUILDDIR ../${ARCH_DIR}/artifact
++= TMPDIR ../${ARCH_DIR}/artifact
++= OPERATING_SYSTEM Linux
++
++: mescc-tools-full
++./${ARCH_DIR}/bin/bake --file mescc-tools-full.bake all
++
++: mescc-tools-extra mescc-tools-full
++export TMPDIR ${TMPDIR}
++cd mescc-tools-extra
++${BINDIR}/bake --file mescc-tools-extra.bake tools
++cd ..
++
++: M2-Planet-pr mescc-tools-extra
++./${ARCH_DIR}/bin/bake --file mescc-tools-full.bake M2-Planet-pr
++
++: wrap M2-Planet-pr
++cd mescc-tools-extra
++${BINDIR}/bake --file mescc-tools-extra.bake wrap
++cd ..
++
++: M2-Planet wrap
++./${ARCH_DIR}/bin/bake --file mescc-tools-full.bake M2-Planet
++
++: check M2-Planet
++./${ARCH_DIR}/bin/sha256sum -c ${ARCH}.answers
++
++: after check
++./${ARCH_DIR}/bin/bake --file ./after.bake all
+diff --git a/bootstrap.riscv32.bake b/bootstrap.riscv32.bake
+new file mode 100644
+index 0000000..55d3c4b
+--- /dev/null
++++ b/bootstrap.riscv32.bake
+@@ -0,0 +1,7 @@
++: all
++= ARCH riscv32
++= ARCH_DIR riscv32
++= BLOOD_FLAG --little-endian
++= BASE_ADDRESS 0x00600000
++= ENDIAN_FLAG --little-endian
++./${ARCH_DIR}/bin/bake --file bootstrap.common.bake all
+diff --git a/bootstrap.riscv64.bake b/bootstrap.riscv64.bake
+new file mode 100644
+index 0000000..e255da3
+--- /dev/null
++++ b/bootstrap.riscv64.bake
+@@ -0,0 +1,7 @@
++: all
++= ARCH riscv64
++= ARCH_DIR riscv64
++= BLOOD_FLAG --64 --little-endian
++= BASE_ADDRESS 0x00600000
++= ENDIAN_FLAG --little-endian
++./${ARCH_DIR}/bin/bake --file bootstrap.common.bake all
+diff --git a/bootstrap.x86.bake b/bootstrap.x86.bake
+new file mode 100644
+index 0000000..53166b4
+--- /dev/null
++++ b/bootstrap.x86.bake
+@@ -0,0 +1,7 @@
++: all
++= ARCH x86
++= ARCH_DIR x86
++= BLOOD_FLAG --little-endian
++= BASE_ADDRESS 0x08048000
++= ENDIAN_FLAG --little-endian
++./${ARCH_DIR}/bin/bake --file bootstrap.common.bake all
+diff --git a/kaem.aarch64 b/kaem.aarch64
+index 75038c1..ef34296 100644
+--- a/kaem.aarch64
++++ b/kaem.aarch64
+@@ -29,8 +29,4 @@
+ 
+ ./bootstrap-seeds/POSIX/AArch64/kaem-optional-seed ./AArch64/mescc-tools-seed-kaem.kaem
+ ./AArch64/artifact/kaem-0 ./AArch64/mescc-tools-mini-kaem.kaem
+-
+-#######################################
+-# Run remaining phases with full kaem #
+-#######################################
+-./AArch64/bin/kaem --verbose --strict --file ./AArch64/kaem.run
++./AArch64/bin/bake --file bootstrap.aarch64.bake all
+diff --git a/kaem.amd64 b/kaem.amd64
+index cf01e38..12c8ee9 100644
+--- a/kaem.amd64
++++ b/kaem.amd64
+@@ -29,8 +29,4 @@
+ 
+ ./bootstrap-seeds/POSIX/AMD64/kaem-optional-seed ./AMD64/mescc-tools-seed-kaem.kaem
+ ./AMD64/artifact/kaem-0 ./AMD64/mescc-tools-mini-kaem.kaem
+-
+-#######################################
+-# Run remaining phases with full kaem #
+-#######################################
+-./AMD64/bin/kaem --verbose --strict --file ./AMD64/kaem.run
++./AMD64/bin/bake --file bootstrap.amd64.bake all
+diff --git a/kaem.riscv32 b/kaem.riscv32
+index bfc7c6c..6a15750 100644
+--- a/kaem.riscv32
++++ b/kaem.riscv32
+@@ -29,8 +29,4 @@
+ 
+ ./bootstrap-seeds/POSIX/riscv32/kaem-optional-seed ./riscv32/mescc-tools-seed-kaem.kaem
+ ./riscv32/artifact/kaem-0 ./riscv32/mescc-tools-mini-kaem.kaem
+-
+-#######################################
+-# Run remaining phases with full kaem #
+-#######################################
+-./riscv32/bin/kaem --verbose --strict --file ./riscv32/kaem.run
++./riscv32/bin/bake --file bootstrap.riscv32.bake all
+diff --git a/kaem.riscv64 b/kaem.riscv64
+index 1a1eb95..0416a13 100644
+--- a/kaem.riscv64
++++ b/kaem.riscv64
+@@ -29,8 +29,4 @@
+ 
+ ./bootstrap-seeds/POSIX/riscv64/kaem-optional-seed ./riscv64/mescc-tools-seed-kaem.kaem
+ ./riscv64/artifact/kaem-0 ./riscv64/mescc-tools-mini-kaem.kaem
+-
+-#######################################
+-# Run remaining phases with full kaem #
+-#######################################
+-./riscv64/bin/kaem --verbose --strict --file ./riscv64/kaem.run
++./riscv64/bin/bake --file bootstrap.riscv64.bake all
 diff --git a/kaem.x86 b/kaem.x86
-index ae54f74..d8ae1df 100755
+index ae54f74..8663257 100755
 --- a/kaem.x86
 +++ b/kaem.x86
-@@ -31,6 +31,6 @@
- ./x86/artifact/kaem-0 ./x86/mescc-tools-mini-kaem.kaem
+@@ -29,8 +29,4 @@
  
- #######################################
+ ./bootstrap-seeds/POSIX/x86/kaem-optional-seed ./x86/mescc-tools-seed-kaem.kaem
+ ./x86/artifact/kaem-0 ./x86/mescc-tools-mini-kaem.kaem
+-
+-#######################################
 -# Run remaining phases with full kaem #
-+# Run remaining phases with bake      #
- #######################################
+-#######################################
 -./x86/bin/kaem --verbose --strict --file ./x86/kaem.run
-+./x86/bin/bake --file ./x86/bootstrap.bake all
++./x86/bin/bake --file bootstrap.x86.bake all
 diff --git a/makefile b/makefile
-index 3399ba1..eaff688 100644
+index 3399ba1..6a69d85 100644
 --- a/makefile
 +++ b/makefile
+@@ -27,7 +27,7 @@ x86/bin/chmod \
+ x86/bin/cp \
+ x86/bin/get_machine \
+ x86/bin/hex2 \
+-x86/bin/kaem \
++x86/bin/bake \
+ x86/bin/M1 \
+ x86/bin/M2-Mesoplanet \
+ x86/bin/M2-Planet \
 @@ -36,6 +36,7 @@ x86/bin/mkdir \
  x86/bin/replace \
  x86/bin/rm \
@@ -30,11 +374,103 @@ index 3399ba1..eaff688 100644
  x86/bin/ungz \
  x86/bin/unbz2 \
  x86/bin/unxz \
+@@ -48,7 +49,7 @@ AMD64/bin/chmod \
+ AMD64/bin/cp \
+ AMD64/bin/get_machine \
+ AMD64/bin/hex2 \
+-AMD64/bin/kaem \
++AMD64/bin/bake \
+ AMD64/bin/M1 \
+ AMD64/bin/M2-Mesoplanet \
+ AMD64/bin/M2-Planet \
+@@ -69,7 +70,7 @@ AArch64/bin/chmod \
+ AArch64/bin/cp \
+ AArch64/bin/get_machine \
+ AArch64/bin/hex2 \
+-AArch64/bin/kaem \
++AArch64/bin/bake \
+ AArch64/bin/M1 \
+ AArch64/bin/M2-Mesoplanet \
+ AArch64/bin/M2-Planet \
+@@ -90,7 +91,7 @@ riscv32/bin/chmod \
+ riscv32/bin/cp \
+ riscv32/bin/get_machine \
+ riscv32/bin/hex2 \
+-riscv32/bin/kaem \
++riscv32/bin/bake \
+ riscv32/bin/M1 \
+ riscv32/bin/M2-Mesoplanet \
+ riscv32/bin/M2-Planet \
+@@ -111,7 +112,7 @@ riscv64/bin/chmod \
+ riscv64/bin/cp \
+ riscv64/bin/get_machine \
+ riscv64/bin/hex2 \
+-riscv64/bin/kaem \
++riscv64/bin/bake \
+ riscv64/bin/M1 \
+ riscv64/bin/M2-Mesoplanet \
+ riscv64/bin/M2-Planet \
+diff --git a/mescc-tools-full.bake b/mescc-tools-full.bake
+new file mode 100644
+index 0000000..dd2fe77
+--- /dev/null
++++ b/mescc-tools-full.bake
+@@ -0,0 +1,26 @@
++: all M2-Mesoplanet blood-elf get_machine M2-Planet
++: M2-Mesoplanet
++./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} --debug -o ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.M1 ./M2libc/sys/types.h ./M2libc/stddef.h ./M2libc/signal.h ./M2libc/${ARCH}/linux/fcntl.c ./M2libc/fcntl.c ./M2libc/sys/utsname.h ./M2libc/${ARCH}/linux/unistd.c ./M2libc/${ARCH}/linux/sys/stat.c ./M2libc/ctype.c ./M2libc/stdlib.c ./M2libc/stdarg.h ./M2libc/stdio.h ./M2libc/stdio.c ./M2libc/string.c ./M2libc/bootstrappable.c ./M2-Mesoplanet/cc.h ./M2-Mesoplanet/cc_globals.c ./M2-Mesoplanet/cc_env.c ./M2-Mesoplanet/cc_reader.c ./M2-Mesoplanet/cc_spawn.c ./M2-Mesoplanet/cc_core.c ./M2-Mesoplanet/cc_macro.c ./M2-Mesoplanet/cc.c
++./${ARCH_DIR}/artifact/blood-elf-0 ${BLOOD_FLAG} -o ./${ARCH_DIR}/artifact/M2-Mesoplanet-1-footer.M1 ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.M1
++./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.hex2 ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.M1 ./${ARCH_DIR}/artifact/M2-Mesoplanet-1-footer.M1
++./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/M2-Mesoplanet ./${ARCH_DIR}/artifact/M2-Mesoplanet-1.hex2
++: blood-elf M2-Mesoplanet
++./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} --debug -o ./${ARCH_DIR}/artifact/blood-elf-1.M1 ./M2libc/sys/types.h ./M2libc/stddef.h ./M2libc/signal.h ./M2libc/${ARCH}/linux/fcntl.c ./M2libc/fcntl.c ./M2libc/sys/utsname.h ./M2libc/${ARCH}/linux/unistd.c ./M2libc/ctype.c ./M2libc/stdlib.c ./M2libc/stdarg.h ./M2libc/stdio.h ./M2libc/stdio.c ./M2libc/bootstrappable.c ./mescc-tools/stringify.c ./mescc-tools/blood-elf.c
++./${ARCH_DIR}/artifact/blood-elf-0 ${BLOOD_FLAG} -o ./${ARCH_DIR}/artifact/blood-elf-1-footer.M1 ./${ARCH_DIR}/artifact/blood-elf-1.M1
++./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/blood-elf-1.hex2 ./${ARCH_DIR}/artifact/blood-elf-1.M1 ./${ARCH_DIR}/artifact/blood-elf-1-footer.M1
++./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/blood-elf ./${ARCH_DIR}/artifact/blood-elf-1.hex2
++: get_machine blood-elf
++./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} --debug -o ./${ARCH_DIR}/artifact/get_machine.M1 ./M2libc/sys/types.h ./M2libc/stddef.h ./M2libc/signal.h ./M2libc/sys/utsname.h ./M2libc/${ARCH}/linux/unistd.c ./M2libc/${ARCH}/linux/fcntl.c ./M2libc/fcntl.c ./M2libc/ctype.c ./M2libc/stdlib.c ./M2libc/stdarg.h ./M2libc/stdio.h ./M2libc/stdio.c ./M2libc/bootstrappable.c ./mescc-tools/get_machine.c
++./${ARCH_DIR}/bin/blood-elf ${BLOOD_FLAG} -o ./${ARCH_DIR}/artifact/get_machine-footer.M1 ./${ARCH_DIR}/artifact/get_machine.M1
++./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/get_machine.hex2 ./${ARCH_DIR}/artifact/get_machine.M1 ./${ARCH_DIR}/artifact/get_machine-footer.M1
++./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/get_machine ./${ARCH_DIR}/artifact/get_machine.hex2
++: M2-Planet get_machine
++./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} --debug -o ./${ARCH_DIR}/artifact/M2-1.M1 ./M2libc/sys/types.h ./M2libc/stddef.h ./M2libc/signal.h ./M2libc/sys/utsname.h ./M2libc/${ARCH}/linux/unistd.c ./M2libc/${ARCH}/linux/fcntl.c ./M2libc/fcntl.c ./M2libc/ctype.c ./M2libc/stdlib.c ./M2libc/stdarg.h ./M2libc/stdio.h ./M2libc/stdio.c ./M2libc/bootstrappable.c ./M2-Planet/cc.h ./M2-Planet/cc_globals.c ./M2-Planet/cc_reader.c ./M2-Planet/cc_strings.c ./M2-Planet/cc_types.c ./M2-Planet/cc_emit.c ./M2-Planet/cc_core.c ./M2-Planet/cc_macro.c ./M2-Planet/cc.c
++./${ARCH_DIR}/bin/blood-elf ${BLOOD_FLAG} -o ./${ARCH_DIR}/artifact/M2-1-footer.M1 ./${ARCH_DIR}/artifact/M2-1.M1
++./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/M2-1.hex2 ./${ARCH_DIR}/artifact/M2-1.M1 ./${ARCH_DIR}/artifact/M2-1-footer.M1
++./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/M2-Planet ./${ARCH_DIR}/artifact/M2-1.hex2
++: M2-Planet-pr get_machine
++./${ARCH_DIR}/artifact/M2 --architecture ${ARCH} --debug -o ./${ARCH_DIR}/artifact/M2-pr.M1 ./M2libc/sys/types.h ./M2libc/stddef.h ./M2libc/signal.h ./M2libc/sys/utsname.h ./M2libc/${ARCH}/linux/unistd.c ./M2libc/${ARCH}/linux/fcntl.c ./M2libc/fcntl.c ./M2libc/ctype.c ./M2libc/stdlib.c ./M2libc/stdarg.h ./M2libc/stdio.h ./M2libc/stdio.c ./M2libc/bootstrappable.c ./M2-Planet-pr/cc.h ./M2-Planet-pr/cc_globals.c ./M2-Planet-pr/cc_reader.c ./M2-Planet-pr/cc_strings.c ./M2-Planet-pr/cc_types.c ./M2-Planet-pr/cc_emit.c ./M2-Planet-pr/cc_core.c ./M2-Planet-pr/cc_macro.c ./M2-Planet-pr/cc.c
++./${ARCH_DIR}/bin/blood-elf ${BLOOD_FLAG} -o ./${ARCH_DIR}/artifact/M2-pr-footer.M1 ./${ARCH_DIR}/artifact/M2-pr.M1
++./${ARCH_DIR}/bin/M1 --architecture ${ARCH} ${ENDIAN_FLAG} ./M2libc/${ARCH}/${ARCH}_defs.M1 ./M2libc/${ARCH}/libc-full.M1 -o ./${ARCH_DIR}/artifact/M2-pr.hex2 ./${ARCH_DIR}/artifact/M2-pr.M1 ./${ARCH_DIR}/artifact/M2-pr-footer.M1
++./${ARCH_DIR}/bin/hex2 --architecture ${ARCH} ${ENDIAN_FLAG} --base-address ${BASE_ADDRESS} ./M2libc/${ARCH}/ELF-${ARCH}-debug.hex2 -o ./${ARCH_DIR}/bin/M2-Planet ./${ARCH_DIR}/artifact/M2-pr.hex2
+diff --git a/riscv32.answers b/riscv32.answers
+index 8483d39..383cf6c 100644
+--- a/riscv32.answers
++++ b/riscv32.answers
+@@ -4,7 +4,6 @@ a29a384c4d32943a25dc474ac762ad4f88bb6cabfde1adf1638638891706b860  riscv32/bin/ca
+ e67d886f365c4f2937c7482c31ef844902c89caad9bfcaec07e8bb94a71b906f  riscv32/bin/cp
+ 3a539d0c26770c6342cc01af88130a2d5bd2522cff4f669d10aa7d5bff0abf8b  riscv32/bin/get_machine
+ 62961ca08444bc457958596223635b178fd0080ed697c8b562e37f6cb3725d32  riscv32/bin/hex2
+-e8317acc33a5a08c4541b4e4df79dad3d292ff6685879257cb4b98ee113c4f20  riscv32/bin/kaem
+ 4f79a27f5426923aab96d17a3e5676734fc3a65ba4f384fb8f723318253da93e  riscv32/bin/M1
+ fb0fcca69c1602218654d4fbee0308d3ef127875350c1845b9c9f4306a24d50d  riscv32/bin/M2-Mesoplanet
+ 641e17675afa7fabfaae2a489fb3802cc4dfd6d2bb304902791d294acbaf6666  riscv32/bin/M2-Planet
+diff --git a/riscv64.answers b/riscv64.answers
+index 4bb2c8f..e77e447 100644
+--- a/riscv64.answers
++++ b/riscv64.answers
+@@ -4,7 +4,6 @@
+ bb8846c0ea56c140407f402f270079b4c18f6a85a59d3bc2dc9abf5237172872  riscv64/bin/cp
+ 01cb2bdc40b15edd087460a578e12a2a47e6dc32d9bce582db2a3ce2bc0bd4fa  riscv64/bin/get_machine
+ 96ce368b0ec942470c08a8cbe197f843781ca2d1f4a7a64d3908d5f62c3d0d07  riscv64/bin/hex2
+-0c2fdf2057b404707c6c589280c5bf99b33a62b6649bfd0cedbb699a3d0d7c00  riscv64/bin/kaem
+ 4a917f903f07f0c45bfcf440c4c1fa8401f896c9e4c4086cc2295f01f914e74e  riscv64/bin/M1
+ 6145503eb287b8afaa3df54a838b33b5838d04c86c19a00833c83d19e07ab8d1  riscv64/bin/M2-Mesoplanet
+ fed7b57d9a208e3a9a52f84e298e3811c14dbd2403fefedbe3e3d1efd991d8c8  riscv64/bin/M2-Planet
 diff --git a/x86.answers b/x86.answers
-index 4f57177..c4040dc 100644
+index 4f57177..ca43781 100644
 --- a/x86.answers
 +++ b/x86.answers
-@@ -1,19 +1,20 @@
+@@ -1,19 +1,19 @@
 -b93feaca9bddea7c8f3d27a7482f0f7e570026ec2e152bbaa24686f361b9eacb  x86/bin/blood-elf
 -2d78a820d9bb59d98a4acd05c8ce8d964b9c1bc48c75d258c27c1b40c37812a0  x86/bin/catm
 -d6a770e195b2270b8c9053991f69e37b23d155ee96e421bf8925bc2a5cc1f583  x86/bin/chmod
@@ -60,7 +496,6 @@ index 4f57177..c4040dc 100644
 +a8d5dbdfedad3856dac78366c991e73f510c59b8c446039938a757fa54236175  x86/bin/cp
 +3a5507302ff8d50c52dcbf62d7030c287d6d7c409bcecf39518f28db3d68e601  x86/bin/get_machine
 +d17040bdbc614595292ea0d2ee1ac93efc50a6bd45d8f4d4c0cd301337095e11  x86/bin/hex2
-+1c266e193fdef64f691b1fbd9b96ce5b295c6345f4cab6c8a59589abc198c2e9  x86/bin/kaem
 +b28eb8070067179a56f6d3c13bc1e244c01dfa4569f375ef4131ed1137e30a40  x86/bin/M1
 +d2b66c70eb95c25e4ad6969dad8d11174f0758a2a50170cacba51b5b5c8dbb90  x86/bin/M2-Mesoplanet
 +12aa80f0e66eecff1611c04a3ee2a5814bf130a6b581a04a444beee829b19edf  x86/bin/M2-Planet
@@ -69,7 +504,7 @@ index 4f57177..c4040dc 100644
 +0703868bda31e0137e6a6385a6e8745f9d53d1eecd0a8bb330aacbcfdd46e8ba  x86/bin/replace
 +458b64e17765e2112a845e0ad0891dfb51390e749d36bca2ee30fd7e8b93f0b3  x86/bin/rm
 +dd5a9ab5b687edceb906be3320efacc614f948e44e9e9d07b8491dda8a73bb9f  x86/bin/sha256sum
-+3a60baf00b942989cd39295d47a171dc0c1e9586fbc2c7f360209faadfa9d989  x86/bin/bake
++59c35dc76b954e8eaac25a34920df45176d67ed71dd54f73f93d7be81a83af8d  x86/bin/bake
 +9163a0bcedc1232686e8190d98d0b52d075dbe86f9e858e7c261e6ef5b5159c8  x86/bin/ungz
 +afeae39808d34529a29a8505224ee72b162194d3b71ed9c9fa291dd0cbb09db2  x86/bin/unbz2
 +ef5a652dc89684594d7502e138256649c2647679fda4a8c5fdc9c32f4ded24ff  x86/bin/unxz
