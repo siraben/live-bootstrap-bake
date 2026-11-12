@@ -8,7 +8,7 @@ revisions:
 
 | project | upstream | base |
 | --- | --- | --- |
-| live-bootstrap | `https://github.com/fosslinux/live-bootstrap.git` | `199086e8d4aaab9e609b5f5eddaa9dfbb375ed1e` |
+| live-bootstrap | `https://github.com/fosslinux/live-bootstrap.git` | `bdf6ab5afbd3f443314b689bbf44ee9072189bc0` (PR #588) |
 | builder-hex0 | `https://github.com/ironmeld/builder-hex0.git` | `b8a2047910d47c62fe65bcd762f6c747c45c7549` |
 | stage0-posix | `https://github.com/oriansj/stage0-posix.git` | `643598041bf7639883874fe2cdc9d9693c9b03d5` |
 | M2-Planet | `https://github.com/oriansj/M2-Planet.git` | `ebfecc2fcb2c66925b94bdd4aa11fd6ac48bb172` |
@@ -26,11 +26,12 @@ revisions:
 | stage0-posix-riscv64 | `https://github.com/oriansj/stage0-posix-riscv64.git` | `7446a846e3e5b97eba5227e4b756f4ef257aa9e5` |
 
 The defaults live in `scripts/pins.sh`; all are immutable commit IDs, including
-snapshots of the still-unmerged PRs. M2-Planet-pr supplies normal pointer
+snapshots of the still-unmerged PRs. The live-bootstrap base is PR #588's Mes
+0.28 update, with nyacc retained at 1.00.2. M2-Planet-pr supplies normal pointer
 arithmetic for `wrap`, mescc-tools-extra removes its old workaround, and M2libc
-supplies their runtime fixes. Other projects track the latest upstream default
-branches at the pin refresh. The Nix development environment is pinned separately
-in `flake.lock`. Only the x86 pre-bash path is validated end to end.
+supplies their runtime fixes. Other dependency pins and the Nix development
+environment in `flake.lock` are unchanged from the previous pin refresh.
+Only the x86 pre-bash path is validated end to end.
 
 ## Run
 
@@ -53,18 +54,25 @@ hex0 -> cc_x86 -> M2 -> M1/hex2 -> x86/bin/bake
 
 This pin set passed a fresh source preparation and end-to-end build with
 `UPDATE_CHECKSUMS=False`, ending in `/usr/bin/bash: OK`. The resulting bash is
-byte-identical to the existing expected build:
+byte-identical to PR #588's expected Mes 0.28 build:
 
 ```text
-d6f725a9998443629e9d8496df3ed4a938a9bdc80cd1aab2b31b011b99f0dae4
+556d874e7ccfce0adda5043b337a2791392ac76f481fe51c397ed0b8b62e006e
 ```
 
 The Mes recipe unlinks the SRFI-9 destination symlinks before copying their
 referents, avoiding source truncation with the corrected libc stream behavior.
 The local run passed 137 checksum entries with recording disabled. Shellcheck,
 a smoke test of the bootstrapped bash, and native mescc-tools/bake tests passed.
-AMD64 and AArch64 stage0 toolchains each reproduced 19 checked binary hashes.
-The AArch64 M1 and GAS compiler regression suites also passed.
+The Mes M2 input list matches all 105 inputs, in order, from the 0.28 release's
+`kaem.run`. The obsolete wait4 patch, MES_STACK settings, and cc.h install are
+removed. Only the existing Mes interpreter and adapted kexec checksum overlays
+are refreshed from actual bootstrap artifacts; the other new PR checksums are
+retained unchanged.
+
+The unchanged AMD64 and AArch64 stage0 pins previously reproduced 19 checked
+binary hashes each. The AArch64 M1 and GAS compiler regression suites also
+passed at that pin refresh.
 
 RISC-V validation is deferred. Its recipe ports are not certified with these
 pins, and its upstream answer lists have not been regenerated; those targets
@@ -98,7 +106,7 @@ The full materialized branch audit gives:
 
 | area | added | deleted | delta |
 | --- | ---: | ---: | ---: |
-| live-bootstrap | 1965 | 2298 | -333 |
+| live-bootstrap | 1950 | 2284 | -334 |
 | live-bootstrap/builder-hex0 | 0 | 0 | +0 |
 | stage0-posix | 177 | 124 | +53 |
 | stage0-posix/AArch64 | 37 | 240 | -203 |
@@ -118,7 +126,7 @@ The full materialized branch audit gives:
 | stage0-posix/riscv64 | 11 | 240 | -229 |
 | stage0-posix/x86 | 12 | 241 | -229 |
 | stage0-posix/M2-Planet-pr | 0 | 0 | +0 |
-| total | 3302 | 6192 | -2890 |
+| total | 3287 | 6178 | -2891 |
 
 The converted package wrappers are removed, not retained alongside their bake
 replacements. All five stage0 architectures share the full-tool rebuild and
@@ -173,7 +181,7 @@ applying the patch stack.
   duplicated full-tool rebuild scripts. The AArch64 patch also preserves live
   operands across token guards and adds compile-and-run regressions.
 
-For the currently covered package wrappers, the recipe layer goes from 2037
-lines of `pass1.kaem` to 843 lines of `pass1.bake`, including preserved SPDX
+For the currently covered package wrappers, the recipe layer goes from 2030
+lines of `pass1.kaem` to 839 lines of `pass1.bake`, including preserved SPDX
 attribution and license headers. Fiwix and lwext4 now use
 their upstream Makefiles after small bootstrap-environment patches.

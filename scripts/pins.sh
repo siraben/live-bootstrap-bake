@@ -1,6 +1,7 @@
 # shellcheck shell=sh
 # Exact source snapshots; environment overrides are supported by prepare.sh.
-LIVE_BASE=${LIVE_BASE:-199086e8d4aaab9e609b5f5eddaa9dfbb375ed1e}
+# PR #588 updates Mes to 0.28 and its downstream expected binaries.
+LIVE_BASE=${LIVE_BASE:-bdf6ab5afbd3f443314b689bbf44ee9072189bc0}
 BUILDER_HEX0_REF=${BUILDER_HEX0_REF:-b8a2047910d47c62fe65bcd762f6c747c45c7549}
 STAGE0_BASE=${STAGE0_BASE:-643598041bf7639883874fe2cdc9d9693c9b03d5}
 M2_PLANET_BASE=${M2_PLANET_BASE:-ebfecc2fcb2c66925b94bdd4aa11fd6ac48bb172}
