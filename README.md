@@ -8,7 +8,7 @@ revisions:
 
 | project | upstream | base |
 | --- | --- | --- |
-| live-bootstrap | `https://github.com/fosslinux/live-bootstrap.git` | `bdf6ab5afbd3f443314b689bbf44ee9072189bc0` (PR #588) |
+| live-bootstrap | `https://github.com/fosslinux/live-bootstrap.git` | `8b5297ecae74ecd88a5af62e822379e5f18ca2b6` (master) |
 | builder-hex0 | `https://github.com/ironmeld/builder-hex0.git` | `b8a2047910d47c62fe65bcd762f6c747c45c7549` |
 | stage0-posix | `https://github.com/oriansj/stage0-posix.git` | `643598041bf7639883874fe2cdc9d9693c9b03d5` |
 | M2-Planet | `https://github.com/oriansj/M2-Planet.git` | `ebfecc2fcb2c66925b94bdd4aa11fd6ac48bb172` |
@@ -25,12 +25,9 @@ revisions:
 | stage0-posix-riscv32 | `https://github.com/oriansj/stage0-posix-riscv32.git` | `2135f3203632b5d1bd5239f84bac50eccaeaf74f` |
 | stage0-posix-riscv64 | `https://github.com/oriansj/stage0-posix-riscv64.git` | `7446a846e3e5b97eba5227e4b756f4ef257aa9e5` |
 
-The defaults live in `scripts/pins.sh`; all are immutable commit IDs, including
-snapshots of the still-unmerged PRs. The live-bootstrap base is PR #588's Mes
-0.28 update, with nyacc retained at 1.00.2. M2-Planet-pr supplies normal pointer
-arithmetic for `wrap`, mescc-tools-extra removes its old workaround, and M2libc
-supplies their runtime fixes. Other dependency pins and the Nix development
-environment in `flake.lock` are unchanged from the previous pin refresh.
+The latest pinned sources use live-bootstrap master, Mes 0.28, and nyacc 1.00.2.
+All source revisions in `scripts/pins.sh` are immutable commit IDs. The Nix
+development environment is pinned separately in `flake.lock`.
 Only the x86 pre-bash path is validated end to end.
 
 ## Run
@@ -54,7 +51,7 @@ hex0 -> cc_x86 -> M2 -> M1/hex2 -> x86/bin/bake
 
 This pin set passed a fresh source preparation and end-to-end build with
 `UPDATE_CHECKSUMS=False`, ending in `/usr/bin/bash: OK`. The resulting bash is
-byte-identical to PR #588's expected Mes 0.28 build:
+byte-identical to upstream's expected build:
 
 ```text
 556d874e7ccfce0adda5043b337a2791392ac76f481fe51c397ed0b8b62e006e
@@ -64,15 +61,12 @@ The Mes recipe unlinks the SRFI-9 destination symlinks before copying their
 referents, avoiding source truncation with the corrected libc stream behavior.
 The local run passed 137 checksum entries with recording disabled. Shellcheck,
 a smoke test of the bootstrapped bash, and native mescc-tools/bake tests passed.
-The Mes M2 input list matches all 105 inputs, in order, from the 0.28 release's
-`kaem.run`. The obsolete wait4 patch, MES_STACK settings, and cc.h install are
-removed. Only the existing Mes interpreter and adapted kexec checksum overlays
-are refreshed from actual bootstrap artifacts; the other new PR checksums are
-retained unchanged.
+The Mes M2 input list matches all 105 inputs, in order, from the release's
+`kaem.run`. The Mes interpreter and adapted kexec checksum overlays match actual
+bootstrap artifacts; Mes libraries and other downstream checksums match upstream.
 
-The unchanged AMD64 and AArch64 stage0 pins previously reproduced 19 checked
-binary hashes each. The AArch64 M1 and GAS compiler regression suites also
-passed at that pin refresh.
+The pinned AMD64 and AArch64 stage0 toolchains reproduce 19 checked binary
+hashes each. The AArch64 M1 and GAS compiler regression suites also passed.
 
 RISC-V validation is deferred. Its recipe ports are not certified with these
 pins, and its upstream answer lists have not been regenerated; those targets
